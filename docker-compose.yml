@@ -1,0 +1,111 @@
+# ==============================================================================
+# UNDC — Sistema de Gestión RSU · Docker Compose — PostgreSQL 18
+# Ley 30220 Art.124-125 · SUNEDU Ind.29 · SINEACE Est.25 — Cañete, Lima
+# Stack: postgres:18-alpine + Go 1.22 (Gin/GORM) + Node 20 / Nginx 1.27
+# Uso: docker compose up --build -d  →  http://localhost:5173  +  http://localhost:8080/health
+# ==============================================================================
+name: undc-rsu
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: undc_rsu_db
+    restart: unless-stopped
+    # Env desde .env (con defaults fallback)
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-undc}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-undc2026}
+      POSTGRES_DB: ${POSTGRES_DB:-undc_rsu}
+      TZ: America/Lima
+      PGTZ: America/Lima
+      # Tuning liviano para dev
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-undc} -d ${POSTGRES_DB:-undc_rsu}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    networks:
+      - undc-net
+    # Opcional: limitar recursos en prod
+    # deploy:
+    #   resources:
+    #     limits: { cpus: '1', memory: 1G }
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: undc_rsu_api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - path: ./.env
+        required: false
+      - path: ./backend/.env.example
+        required: false
+    environment:
+      PORT: 8080
+      GIN_MODE: ${GIN_MODE:-release}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-undc}
+      DB_PASS: ${POSTGRES_PASSWORD:-undc2026}
+      DB_NAME: ${POSTGRES_DB:-undc_rsu}
+      JWT_SECRET: ${JWT_SECRET:-undc-rsu-super-secret-2026}
+      UPLOAD_DIR: /app/uploads
+      TZ: America/Lima
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    volumes:
+      - backend_uploads:/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - undc-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      # VITE_API_URL vacio = usa proxy relativo /api via nginx → backend
+      # Si quieres apuntar directo al backend en dev, pon http://localhost:8080
+      args:
+        VITE_API_URL: ${VITE_API_URL:-}
+    container_name: undc_rsu_web
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    networks:
+      - undc-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/ || wget -qO- http://localhost/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+networks:
+  undc-net:
+    name: undc-rsu-net
+    driver: bridge
+
+volumes:
+  pgdata:
+    name: undc-rsu-pgdata-18
+  backend_uploads:
+    name: undc-rsu-uploads

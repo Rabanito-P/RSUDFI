@@ -1,0 +1,2213 @@
+# PLATAFORMA DE RSU — NIVEL FACULTAD
+## Documento de Diseño Funcional
+
+---
+
+**Código:** R-M03-RSU-001-PF
+**Versión:** V.1.0
+**Fecha:** Octubre 2026
+**Base normativa:** Reglamento RSU UNDC (R-M03-RSU-001, Versión 04, 14/05/2026)
+**Alcance:** Plataforma de RSU de la Facultad de Ingeniería de Sistemas
+
+---
+
+# ÍNDICE
+
+1. [Objetivo](#1-objetivo)
+2. [Alcance](#2-alcance)
+3. [Arquitectura de plataformas](#3-arquitectura-de-plataformas)
+4. [Punto de quiebre](#4-punto-de-quiebre)
+5. [Roles y acciones permitidas](#5-roles-y-acciones-permitidas)
+6. [Módulos de la plataforma](#6-módulos-de-la-plataforma)
+7. [Modalidades de RSU](#7-modalidades-de-rsu)
+8. [Flujos por modalidad](#8-flujos-por-modalidad)
+9. [Reglas de negocio](#9-reglas-de-negocio)
+10. [Estados por modalidad](#10-estados-por-modalidad)
+11. [Documentos que genera](#11-documentos-que-genera)
+12. [Base legal](#12-base-legal)
+
+---
+
+# 1. OBJETIVO
+
+Diseñar la **plataforma de RSU a nivel de Facultad** que permita gestionar el ciclo de vida completo de los proyectos de Responsabilidad Social Universitaria, desde su creación hasta su aprobación por el Decano, para su posterior transferencia a la plataforma de universidad (DRSU/SERUS).
+
+---
+
+# 2. ALCANCE
+
+## 2.1 Dentro del alcance
+
+- Creación de proyectos de RSU por modalidad.
+- Registro de avances, evidencias e informes.
+- Revisión y aprobación por el Director de Escuela.
+- Consolidación, aprobación y descarga por el Decano.
+- Transferencia manual a la plataforma de universidad.
+
+## 2.2 Fuera del alcance
+
+- Evaluación técnica de la DRSU.
+- Registro en SERUS / SISTEMA RSU.
+- Emisión de constancias y certificados.
+- Consolidación para SINEACE / SUNEDU.
+- Publicación en repositorio institucional.
+
+---
+
+# 3. ARQUITECTURA DE PLATAFORMAS
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         PLATAFORMA DE FACULTAD                              │
+│                                                                             │
+│  • Presidente del Comité RSU registra proyectos                             │
+│  • Docente Asesor registra avances y evidencias                             │
+│  • Director de Escuela revisa y aprueba                                     │
+│  • Decano consolida, aprueba y DESCARGA                                     │
+│                                                                             │
+│  FIN: Decano descarga el paquete de documentos                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    │  PUNTO DE QUIEBRE
+                                    │  (Descarga y transferencia manual)
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         PLATAFORMA DE UNIVERSIDAD                           │
+│                                                                             │
+│  • DRSU recibe los documentos                                               │
+│  • DRSU evalúa, verifica y aprueba                                          │
+│  • DRSU registra en SERUS / SISTEMA RSU                                     │
+│  • DRSU emite constancias y certificados                                    │
+│  • DRSU consolida para SINEACE / SUNEDU                                     │
+│                                                                             │
+│  FIN: Informe consolidado a nivel universidad                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+# 4. PUNTO DE QUIEBRE
+
+## 4.1 El Decano como punto de transferencia
+
+| Acción | Responsable | Base legal |
+|---|---|---|
+| Consolidar los proyectos de RSU de la Facultad | Decano | Reglamento RSU Art. 23 |
+| Aprobar mediante resolución de Decanatura | Decano | Reglamento RSU Art. 26 |
+| Descargar el paquete de documentos | Decano | — |
+| Transferir a la plataforma de universidad | Decano | Reglamento RSU Art. 23 |
+
+## 4.2 Qué descarga el Decano
+
+| Documento | Origen | Formato | Base legal |
+|---|---|---|---|
+| Esquema Inicial del Proyecto (Anexo 3) | Presidente del Comité RSU | PDF | Reglamento RSU Art. 23 |
+| Informe de Avance (Anexo 3) | Presidente del Comité RSU | PDF | Reglamento RSU Art. 24 |
+| Informe Final (Anexo 3) | Presidente del Comité RSU o docente responsable | PDF | Reglamento RSU Art. 25 |
+| Resolución de aprobación del proyecto | Decano | PDF | Reglamento RSU Art. 23 |
+| Resolución de ratificación del Comité | Decano | PDF | Reglamento RSU Art. 26 |
+| Evidencias fotográficas | Docente Asesor | ZIP / PDF | Reglamento RSU Art. 21.7 |
+| Encuestas a beneficiarios | Docente Asesor | PDF | Reglamento RSU Art. 21.8 |
+| Informe del docente asesor (Anexo 4) | Docente Asesor | PDF | Reglamento RSU Art. 21.10 |
+| Ficha de calificación del informe inicial | DRSU | PDF | Reglamento RSU Art. 21.6 |
+
+---
+
+# 5. ROLES Y ACCIONES PERMITIDAS
+
+| Rol | Crear | Editar | Ver | Aprobar | Rechazar | Descargar | Transferir |
+|---|---|---|---|---|---|---|---|
+| **Presidente Comité RSU** | Sí | Sí | Sí | No | No | No | No |
+| **Docente Asesor** | Sí | Sí | Sí | No | No | No | No |
+| **Director de Escuela** | No | No | Sí | Sí | Sí | No | No |
+| **Decano** | No | No | Sí | Sí | Sí | Sí | Sí |
+| **Comité de Calidad** | No | No | Sí | No | No | Sí | No |
+| **Administrador** | No | No | Sí | No | No | No | No |
+
+---
+
+# 6. MÓDULOS DE LA PLATAFORMA
+
+## M01 — Proyectos
+
+| Campo | Descripción |
+|---|---|
+| **Tipo de proyecto** | SSU, PEP, Voluntariado, Publicación Científica |
+| **Datos generales** | Título, Facultad, Escuela, responsable, semestre, ciclo |
+| **Línea de acción** | Línea 01 a Línea 05 (Reglamento RSU Art. 07) |
+| **ODS** | Del 1 al 17 (Reglamento RSU Art. 07) |
+| **Población beneficiada** | Entidad, grupo focal, cantidad |
+| **Lugar de ejecución** | Distrito, provincia, región |
+| **Fechas** | Inicio y término |
+| **Integrantes** | Docentes, estudiantes, administrativos |
+| **Presupuesto** | Financiado o autofinanciado |
+| **Documentos** | Esquema Inicial (Anexo 3) |
+| **Estado** | Borrador, En revisión, Aprobado, Rechazado |
+
+## M02 — Avances
+
+| Campo | Descripción |
+|---|---|
+| **Informe de avance** | Anexo 3 |
+| **Evidencias fotográficas** | Mínimo 5 por actividad (Reglamento RSU Art. 21.7) |
+| **Asistencia de beneficiarios** | Lista con DNI, edad y firma |
+| **Estado** | Borrador, En revisión, Aprobado, Rechazado |
+
+## M03 — Informe Final
+
+| Campo | Descripción |
+|---|---|
+| **Informe final** | Anexo 3 |
+| **Encuestas a beneficiarios** | Obligatorias (Reglamento RSU Art. 21.8) |
+| **Evidencias finales** | Fotografías, links, capturas |
+| **Informe del docente asesor** | Anexo 4 |
+| **Estado** | Borrador, En revisión, Aprobado, Rechazado |
+
+## M04 — Comité RSU
+
+| Campo | Descripción |
+|---|---|
+| **Integrantes** | Docentes designados por el Decano |
+| **Propuesta del Director de Escuela** | Lista de candidatos |
+| **Resolución de designación** | PDF |
+| **Período** | 2 años, ratificable (Reglamento RSU Art. 26) |
+| **Estado** | Activo, Inactivo |
+
+## M05 — Indicadores
+
+| Indicador | Fórmula | Responsable |
+|---|---|---|
+| Número de proyectos ejecutados | Suma de proyectos por tipo | Comité de Calidad |
+| Porcentaje de estudiantes participantes | (Participantes / Total) × 100 | Comité de Calidad |
+| Porcentaje de docentes participantes | (Docentes / Total) × 100 | Comité de Calidad |
+| Porcentaje de presupuesto ejecutado | (Ejecutado / Asignado) × 100 | Decano |
+| Porcentaje de proyectos con informe final | (Con informe / Total) × 100 | Comité de Calidad |
+
+## M06 — Exportación
+
+| Campo | Descripción |
+|---|---|
+| **Paquete de descarga** | ZIP con todos los PDF de proyectos aprobados |
+| **Contenido** | Esquema Inicial, Resolución, Informes, Evidencias |
+| **Formato** | PDF + ZIP |
+| **Responsable** | Decano |
+
+## M07 — Usuarios
+
+| Campo | Descripción |
+|---|---|
+| **Roles** | Presidente Comité RSU, Docente Asesor, Director de Escuela, Decano, Comité de Calidad, Administrador |
+| **Permisos** | Según tabla de roles y acciones |
+| **Autenticación** | Correo institucional |
+
+---
+
+# 7. MODALIDADES DE RSU
+
+## 7.1 Quién propone qué
+
+| Modalidad | Quién propone | Cuándo | Documento base | Aprueba |
+|---|---|---|---|---|
+| **SSU** | Estudiante o equipo | Primera o segunda semana del semestre | Esquema Inicial (Anexo 2) | DRSU (ficha 15–18 puntos) |
+| **PEP financiado** | Presidente del Comité RSU | 15 días antes del inicio de clases | Esquema Inicial (Anexo 3) | Comisión Organizadora vía Vicerrectorado Académico |
+| **PEP autofinanciado** | Docente responsable | Durante el semestre | Esquema Inicial (Anexo 3) | Vicerrectorado Académico |
+| **Voluntariado** | DRSU convoca; comunidad se inscribe | 2 veces al año | Propuesta Yanapay (Anexo 4) | DRSU |
+| **Publicación Científica** | Estudiante o egresado | Ventanilla Abierta | Expediente de Evidencias (Art. 41) | DRSU |
+
+## 7.2 Roles que pueden crear
+
+| Rol | SSU | PEP financiado | PEP autofinanciado | Voluntariado | Publicación Científica |
+|---|---|---|---|---|---|
+| **Estudiante** | Sí | No | No | Sí | Sí |
+| **Egresado** | No | No | No | Sí | Sí |
+| **Docente Asesor** | No | No | Sí | Sí | No |
+| **Presidente Comité RSU** | No | Sí | No | No | No |
+| **Docente ordinario o contratado** | No | No | Sí | Sí | No |
+| **Personal administrativo** | No | No | No | Sí | No |
+
+---
+
+# 8. FLUJOS POR MODALIDAD
+
+## 8.1 SSU
+
+```
+[Estudiante ingresa a la plataforma]
+      │
+      ▼
+[Selecciona "Nuevo Proyecto SSU"]
+      │
+      ▼
+[Completa datos generales]
+      │
+      ▼
+[Designa estudiante responsable]
+      │
+      ▼
+[Propone docente asesor]
+      │
+      ▼
+[Docente asesor da conformidad]
+      │
+      ▼
+[Carga Esquema Inicial (Anexo 2)]
+      │
+      ▼
+[Envía a revisión]
+      │
+      ▼
+[Director de Escuela revisa]
+      │
+      ▼
+[Decano consolida y descarga]
+      │
+      ▼
+[Transferencia a plataforma de universidad]
+```
+
+## 8.2 PEP Financiado
+
+```
+[Presidente Comité RSU ingresa a la plataforma]
+      │
+      ▼
+[Selecciona "Nuevo PEP Financiado"]
+      │
+      ▼
+[Completa datos generales]
+      │
+      ▼
+[Registra docentes, estudiantes y administrativos]
+      │
+      ▼
+[Carga Esquema Inicial (Anexo 3)]
+      │
+      ▼
+[Envía a revisión]
+      │
+      ▼
+[Director de Escuela revisa]
+      │
+      ▼
+[Decano aprueba mediante resolución]
+      │
+      ▼
+[Deriva a DRSU para evaluación técnica y presupuestal]
+      │
+      ▼
+[Vicerrectorado Académico eleva]
+      │
+      ▼
+[Comisión Organizadora aprueba]
+```
+
+## 8.3 PEP Autofinanciado
+
+```
+[Docente responsable ingresa a la plataforma]
+      │
+      ▼
+[Selecciona "Nuevo PEP Autofinanciado"]
+      │
+      ▼
+[Completa datos generales]
+      │
+      ▼
+[Registra estudiantes participantes]
+      │
+      ▼
+[Carga Esquema Inicial (Anexo 3)]
+      │
+      ▼
+[Envía a revisión]
+      │
+      ▼
+[Director de Escuela revisa]
+      │
+      ▼
+[Decano consolida y descarga]
+      │
+      ▼
+[Transferencia a plataforma de universidad]
+```
+
+## 8.4 Voluntariado
+
+```
+[Comunidad universitaria ingresa a la plataforma]
+      │
+      ▼
+[Selecciona "Nuevo Voluntariado Yanapay"]
+      │
+      ▼
+[Completa datos generales]
+      │
+      ▼
+[Registra integrantes]
+      │
+      ▼
+[Carga Propuesta de Proyecto (Anexo 4)]
+      │
+      ▼
+[Envía a revisión]
+      │
+      ▼
+[DRSU evalúa y aprueba]
+      │
+      ▼
+[Emisión de constancia]
+```
+
+## 8.5 Publicación Científica
+
+```
+[Estudiante o egresado ingresa a la plataforma]
+      │
+      ▼
+[Selecciona "Nueva Publicación Científica"]
+      │
+      ▼
+[Completa datos generales]
+      │
+      ▼
+[Carga Expediente de Evidencias]
+      │
+      ▼
+[Envía a revisión]
+      │
+      ▼
+[DRSU evalúa]
+      │
+      ▼
+[Emisión de Constancia de RSU]
+      │
+      ▼
+[Derivación a Vicepresidencia de Investigación]
+      │
+      ▼
+[Registro en Repositorio Institucional]
+```
+
+---
+
+# 9. REGLAS DE NEGOCIO
+
+| Código | Regla | Modalidad | Base legal |
+|---|---|---|---|
+| **R01** | El estudiante propone al docente asesor | SSU | Art. 21.A |
+| **R02** | El docente asesor debe dar conformidad | SSU | Art. 21.A |
+| **R03** | El proyecto SSU se ejecuta entre el V y X ciclo | SSU | Art. 21.B |
+| **R04** | El proyecto SSU requiere mínimo 60 horas | SSU | Art. 21.D |
+| **R05** | El proyecto SSU requiere entre 2 y 5 estudiantes | SSU | Art. 21.C |
+| **R06** | El docente asesor puede asesorar máximo 2 proyectos SSU por semestre | SSU | Art. 21.13 |
+| **R07** | El PEP financiado se presenta 15 días antes del inicio de clases | PEP financiado | Art. 23 |
+| **R08** | El PEP financiado se financia con el 2% del presupuesto | PEP financiado | Art. 23 |
+| **R09** | El PEP autofinanciado se presenta durante el semestre | PEP autofinanciado | Art. 23.1 |
+| **R10** | El PEP autofinanciado no requiere financiamiento institucional | PEP autofinanciado | Art. 23.1 |
+| **R11** | El voluntariado se convoca 2 veces al año | Voluntariado | Art. 32 |
+| **R12** | El voluntariado requiere mínimo 60 horas para constancia | Voluntariado | Art. 33 |
+| **R13** | La publicación científica requiere revista indexada | Publicación Científica | Art. 39 |
+| **R14** | La publicación científica requiere afiliación UNDC | Publicación Científica | Art. 39 |
+| **R15** | La publicación científica requiere tema vinculado a Cañete | Publicación Científica | Art. 39 |
+| **R16** | La publicación científica requiere identificar el ODS | Publicación Científica | Art. 39 |
+| **R17** | La publicación científica es autofinanciada | Publicación Científica | Art. 39 |
+| **R18** | Máximo 2 estudiantes por artículo científico | Publicación Científica | Art. 40 |
+| **R19** | Solo Presidente del Comité RSU y Docente Asesor pueden crear proyectos | Todas | Art. 23, 25 |
+| **R20** | El Director de Escuela debe aprobar antes de que el Decano derive | Todas | Art. 22 |
+| **R21** | El Decano solo puede descargar proyectos aprobados por el Director de Escuela | Todas | Art. 23 |
+| **R22** | El Decano es el único que puede transferir a la plataforma de universidad | Todas | Art. 23 |
+| **R23** | Los docentes deben cumplir 3 horas semanales de RSU como carga no lectiva | Todas | Art. 18 |
+| **R24** | Los informes de avance se presentan a mitad del semestre o al finalizar el periodo | PEP | Art. 24 |
+| **R25** | El informe final se presenta en un plazo máximo de 10 días hábiles | SSU | Art. 21.10 |
+
+---
+
+# 10. ESTADOS POR MODALIDAD
+
+| Estado | SSU | PEP financiado | PEP autofinanciado | Voluntariado | Publicación Científica |
+|---|---|---|---|---|---|
+| **Borrador** | Sí | Sí | Sí | Sí | Sí |
+| **En revisión por Director de Escuela** | Sí | Sí | Sí | No | No |
+| **Aprobado por Director de Escuela** | Sí | Sí | Sí | No | No |
+| **En revisión por Decano** | Sí | Sí | Sí | No | No |
+| **Aprobado por Decano** | Sí | Sí | Sí | No | No |
+| **Listo para descarga** | Sí | Sí | Sí | Sí | Sí |
+| **Descargado y transferido** | Sí | Sí | Sí | Sí | Sí |
+| **En revisión por DRSU** | No | Sí | No | Sí | Sí |
+| **Aprobado por DRSU** | Sí | Sí | No | Sí | Sí |
+| **Aprobado por Comisión Organizadora** | No | Sí | No | No | No |
+
+---
+
+# 11. DOCUMENTOS QUE GENERA
+
+| Documento | Módulo | Formato | Destino |
+|---|---|---|---|
+| Esquema Inicial del Proyecto | M01 | PDF | Decano → Universidad |
+| Resolución de aprobación del proyecto | M01 | PDF | Decano → Universidad |
+| Informe de Avance | M02 | PDF | Decano → Universidad |
+| Informe Final | M03 | PDF | Decano → Universidad |
+| Informe del Docente Asesor | M03 | PDF | Decano → Universidad |
+| Resolución de designación del Comité | M04 | PDF | Decano → Universidad |
+| Reporte de indicadores | M05 | PDF / Excel | Comité de Calidad |
+| Paquete de exportación | M06 | ZIP | Decano → Universidad |
+
+---
+
+# 12. BASE LEGAL
+
+## 12.1 Normas nacionales
+
+| Norma | Artículo | Contenido |
+|---|---|---|
+| **Ley 30220** | Art. 7.3 | Extensión cultural y proyección social |
+| **Ley 30220** | Art. 124 | Definición de RSU |
+| **Ley 30220** | Art. 125 | Implementación de RSU con mínimo 2% del presupuesto |
+| **Ley 30220** | Art. 130 | Servicio Social Universitario |
+| **Ley 28611** | — | Ley General del Ambiente |
+| **DS 005-2019-MINEDU** | — | Reglamento de Infracciones y Sanciones SUNEDU |
+| **DS 012-2020-MINEDU** | — | Política Nacional de Educación Superior |
+| **DS 012-2009-MINAM** | — | Política Nacional del Ambiente |
+| **RVM 007-2022-MINEDU** | — | Lineamientos para la implementación de RSU |
+| **SINEACE** | — | Modelo de Acreditación para Programas |
+| **ISO 21001** | — | Sistemas de Gestión para Organizaciones Educativas |
+| **ISO 26000** | — | Guía de responsabilidad social |
+
+## 12.2 Normas institucionales UNDC
+
+| Norma | Artículo | Contenido |
+|---|---|---|
+| **Estatuto UNDC** | Art. 8.j | Promover la transversalización de la RSU |
+| **Estatuto UNDC** | Art. 9.c | RSU, proyección social y extensión como función |
+| **Estatuto UNDC** | Art. 113 | Las Facultades coordinan sus actividades de RSU con los órganos responsables |
+| **Estatuto UNDC** | Art. 114 | Proyección social |
+| **Estatuto UNDC** | Art. 115 | Gestión ambiental universitaria |
+| **Estatuto UNDC** | Art. 116 | Voluntariado estudiantil |
+| **ROF UNDC** | Art. 75 y 76 | Dirección de Responsabilidad Social Universitaria |
+| **Reglamento RSU UNDC** | R-M03-RSU-001, Versión 04 | Reglamento completo de RSU |
+
+---
+
+# PLATAFORMA DE RSU — NIVEL FACULTAD
+## Correcciones y enriquecimiento de flujos
+
+---
+
+# 1. CORRECCIÓN SOBRE R08 Y PRESUPUESTO
+
+## R08 — Regla mal formulada
+
+**Como estaba:**
+> R08 | El PEP financiado se financia con el 2% del presupuesto
+
+**Corrección:**
+El **2% del presupuesto** (Ley 30220 Art. 125) **no financia solo el PEP**. Financia **toda la RSU de la universidad**, incluyendo SSU, PEP, Voluntariado y Publicación Científica (cuando corresponda). El PEP financiado **accede a una parte** de ese 2%, no lo consume íntegro.
+
+| Aspecto | Corrección |
+|---|---|
+| **Fuente** | 2% del presupuesto institucional (Ley 30220 Art. 125) |
+| **Administración** | Centro de costo de la DRSU (Reglamento RSU Art. 23) |
+| **Ejecución** | Coordinación entre DRSU y Escuelas Profesionales |
+| **Modalidades que acceden** | PEP financiado (único que requiere financiamiento institucional) |
+| **Modalidades autofinanciadas** | SSU, PEP autofinanciado, Voluntariado, Publicación Científica |
+| **Regla correcta** | R08: El PEP financiado accede al 2% del presupuesto asignado a RSU, administrado por la DRSU y ejecutado en coordinación con la Escuela Profesional |
+
+---
+
+# 2. DOCUMENTOS POR MODALIDAD
+
+## 2.1 Documentos descargables (modelos oficiales)
+
+| Código | Documento | Modalidad | Formato | Fuente |
+|---|---|---|---|---|
+| F-M03.01-RSU-001 | Informe Inicial de SSU | SSU | PDF / Word | DRSU |
+| F-M03.01-RSU-002 | Informe Final de SSU | SSU | PDF / Word | DRSU |
+| F-M03.01-RSU-004 | Constancia de Estudiante SSU | SSU | PDF | DRSU |
+| F-M03.01-RSU-005 | Ficha de Calificación | SSU | PDF | DRSU |
+| F-M03.01-RSU-006 | Informe Mensual de Avance SSU | SSU | PDF | DRSU |
+| F-M03.01-RSU-014 | Informe del Docente Asesor SSU | SSU | PDF | DRSU |
+| F-M03.01-RSU-016 | Compromiso de Asesoría SSU | SSU | PDF | DRSU |
+| F-M03.01-RSU-003 | Constancia Docente SSU | SSU | PDF | DRSU |
+| F-M03-RSU-001 | Informe Inicial PEP | PEP | PDF / Word | DRSU |
+| F-M03-RSU-002 | Informe de Avance PEP | PEP | PDF / Word | DRSU |
+| F-M03-RSU-003 | Informe Final PEP | PEP | PDF / Word | DRSU |
+| F-M03.01-RSU-008 | Propuesta Voluntariado Yanapay | Voluntariado | PDF / Word | DRSU |
+| F-M03.01-RSU-009 | Informe Inicial Voluntariado | Voluntariado | PDF / Word | DRSU |
+| F-M03-RSU-010 | Informe de Avance Voluntariado | Voluntariado | PDF / Word | DRSU |
+| F-M03-RSU-011 | Informe Final Voluntariado | Voluntariado | PDF / Word | DRSU |
+| F-M03.01-RSU-012 | Constancia PEP Docente | PEP | PDF | DRSU |
+| F-M03.01-RSU-013 | Constancia Voluntariado Estudiante/Egresado | Voluntariado | PDF | DRSU |
+| F-M03.01-RSU-017 | Constancia Voluntariado Docente | Voluntariado | PDF | DRSU |
+| F-M03.01-RSU-018 | Constancia Voluntariado Administrativo | Voluntariado | PDF | DRSU |
+| F-M03.01-RSU-019 | Certificado PEP Estudiante | PEP | PDF | DRSU |
+| — | Expediente de Evidencias Publicación | Publicación Científica | PDF | DRSU |
+| — | Ficha de Impacto Social | Publicación Científica | PDF | DRSU |
+
+## 2.2 Documentos externos a enviar (a la DRSU)
+
+| Documento | Modalidad | Emisor | Receptor | Formato | Base legal |
+|---|---|---|---|---|---|
+| Esquema Inicial del Proyecto | SSU | Estudiante / Comité RSU | DRSU (vía Decano) | PDF | Art. 21, 23 |
+| Informe Inicial | SSU | Estudiante | DRSU (vía plataforma) | PDF | Art. 21.6 |
+| Informe de Avance (x3) | SSU | Estudiante | DRSU (vía plataforma) | PDF + fotos | Art. 21.7 |
+| Encuesta a beneficiarios | SSU | Estudiante | DRSU (vía plataforma) | PDF | Art. 21.8.A |
+| Informe Final | SSU | Estudiante | DRSU (vía plataforma) | PDF | Art. 21.8.B |
+| Informe del Docente Asesor | SSU | Docente Asesor | DRSU (correo) | PDF | Art. 21.10 |
+| Encuesta al Docente Asesor | SSU | Estudiante | DRSU (vía plataforma) | PDF | **Requiere validación normativa** |
+| Informe Inicial PEP | PEP | Comité RSU / Docente | DRSU (vía Decano) | PDF | Art. 23 |
+| Informe de Avance PEP | PEP | Comité RSU / Docente | DRSU (vía Decano) | PDF | Art. 24 |
+| Informe Final PEP | PEP | Comité RSU / Docente | DRSU (vía Decano) | PDF | Art. 25 |
+| Propuesta Voluntariado Yanapay | Voluntariado | Comunidad universitaria | DRSU (vía plataforma) | PDF | Art. 31–33 |
+| Informe Inicial Voluntariado | Voluntariado | Voluntario | DRSU (vía plataforma) | PDF | Anexo 4 |
+| Informe de Avance Voluntariado | Voluntariado | Voluntario | DRSU (vía plataforma) | PDF | Anexo 4 |
+| Informe Final Voluntariado | Voluntariado | Voluntario | DRSU (vía plataforma) | PDF | Anexo 4 |
+| PDF del artículo publicado | Publicación | Estudiante / Egresado | DRSU (Mesa de Partes) | PDF | Art. 41 |
+| Carta de aceptación de la revista | Publicación | Estudiante / Egresado | DRSU (Mesa de Partes) | PDF | Art. 41 |
+| Link de la revista indexada | Publicación | Estudiante / Egresado | DRSU (Mesa de Partes) | URL | Art. 41 |
+| Ficha de Impacto Social | Publicación | Estudiante / Egresado | DRSU (Mesa de Partes) | PDF | Art. 41 |
+
+## 2.3 Documentos que sube el alumno/egresado (según modalidad)
+
+### SSU
+
+| Documento | Obligatorio | Formato | Momento |
+|---|---|---|---|
+| Esquema Inicial del Proyecto | Sí | PDF | Al inscribir el proyecto |
+| Conformidad del docente asesor | Sí | PDF | Al inscribir el proyecto |
+| Informe Inicial | Sí | PDF | Al inscribir el proyecto |
+| Informe de Avance 1 | Sí | PDF + fotos | A mitad del semestre |
+| Informe de Avance 2 | Sí | PDF + fotos | Al finalizar el semestre |
+| Informe de Avance 3 | Sí | PDF + fotos | Al finalizar el semestre |
+| Encuesta a beneficiarios | Sí | PDF | Al finalizar el proyecto |
+| Informe Final | Sí | PDF | Al finalizar el proyecto |
+| Encuesta al Docente Asesor | Sí | PDF | Al finalizar el proyecto |
+| Constancia de participación | No | PDF | Al solicitar |
+
+### PEP (financiado o autofinanciado)
+
+| Documento | Obligatorio | Formato | Momento |
+|---|---|---|---|
+| Esquema Inicial del Proyecto | Sí | PDF | 15 días antes del inicio |
+| Informe de Avance | Sí | PDF | A mitad del semestre o al finalizar |
+| Informe Final | Sí | PDF | Al finalizar el proyecto |
+| Evidencias fotográficas | Sí | ZIP | Con cada informe |
+| Encuestas a beneficiarios | Sí | PDF | Al finalizar el proyecto |
+
+### Voluntariado
+
+| Documento | Obligatorio | Formato | Momento |
+|---|---|---|---|
+| Propuesta de Proyecto Yanapay | Sí | PDF | Al inscribirse |
+| Informe Inicial | Sí | PDF | Al inscribirse |
+| Informe de Avance | Sí | PDF | A mitad del periodo |
+| Informe Final | Sí | PDF | Al finalizar |
+| Evidencias fotográficas | Sí | ZIP | Con cada informe |
+
+### Publicación Científica
+
+| Documento | Obligatorio | Formato | Momento |
+|---|---|---|---|
+| PDF del artículo publicado | Sí | PDF | Al presentar |
+| Carta de aceptación de la revista | Sí | PDF | Al presentar |
+| Link de la revista | Sí | URL | Al presentar |
+| Ficha de Impacto Social | Sí | PDF | Al presentar |
+
+---
+
+# 3. FLUJOS ENRIQUECIDOS
+
+## 3.1 Flujo SSU enriquecido
+
+```
+[Estudiante ingresa a la plataforma]
+      │
+      ▼
+[Descarga modelos oficiales]
+  • F-M03.01-RSU-001 Informe Inicial SSU
+  • F-M03.01-RSU-005 Ficha de Calificación
+  • F-M03.01-RSU-006 Informe Mensual de Avance
+  • F-M03.01-RSU-016 Compromiso de Asesoría
+      │
+      ▼
+[Selecciona "Nuevo Proyecto SSU"]
+      │
+      ▼
+[Completa datos generales]
+      │
+      ▼
+[Designa estudiante responsable]
+      │
+      ▼
+[Propone docente asesor]
+      │
+      ▼
+[Docente asesor da conformidad]
+  • Sube F-M03.01-RSU-016 firmado
+      │
+      ▼
+[Sube Esquema Inicial (Anexo 2)]
+      │
+      ▼
+[Sube Informe Inicial (F-M03.01-RSU-001)]
+      │
+      ▼
+[Envía a revisión]
+      │
+      ▼
+[Director de Escuela revisa]
+      │
+      ▼
+[Decano consolida y descarga]
+      │
+      ▼
+[Transferencia a plataforma de universidad]
+      │
+      ▼
+[DRSU evalúa con Ficha de Calificación]
+  • Aprueba entre 15 y 18 puntos
+      │
+      ▼
+[Estudiante ejecuta el proyecto]
+      │
+      ▼
+[Sube Informe de Avance 1]
+  • F-M03.01-RSU-006
+  • Mínimo 5 fotografías por actividad
+  • GPS Map Camera
+      │
+      ▼
+[Sube Informe de Avance 2]
+      │
+      ▼
+[Sube Informe de Avance 3]
+      │
+      ▼
+[DRSU realiza supervisión inopinada]
+      │
+      ▼
+[Estudiante sube Encuesta a beneficiarios]
+  • F-M03.01-RSU-001
+      │
+      ▼
+[Estudiante sube Informe Final]
+  • F-M03.01-RSU-002
+      │
+      ▼
+[Estudiante sube Encuesta al Docente Asesor]
+  • Requiere validación normativa
+      │
+      ▼
+[Docente Asesor sube Informe Final]
+  • F-M03.01-RSU-014
+  • Plazo: 10 días hábiles
+      │
+      ▼
+[DRSU emite Constancia de RSU]
+  • F-M03.01-RSU-004
+      │
+      ▼
+[Registro en SERUS]
+```
+
+## 3.2 Flujo PEP Financiado enriquecido
+
+```
+[Presidente Comité RSU ingresa a la plataforma]
+      │
+      ▼
+[Descarga modelos oficiales]
+  • F-M03-RSU-001 Informe Inicial PEP
+  • F-M03-RSU-002 Informe de Avance PEP
+  • F-M03-RSU-003 Informe Final PEP
+      │
+      ▼
+[Selecciona "Nuevo PEP Financiado"]
+      │
+      ▼
+[Completa datos generales]
+      │
+      ▼
+[Registra docentes, estudiantes y administrativos]
+      │
+      ▼
+[Sube Esquema Inicial (Anexo 3)]
+      │
+      ▼
+[Envía a revisión]
+  • Plazo: 15 días antes del inicio de clases
+      │
+      ▼
+[Director de Escuela revisa]
+      │
+      ▼
+[Decano aprueba mediante resolución]
+      │
+      ▼
+[Decano deriva a DRSU]
+      │
+      ▼
+[DRSU evalúa técnica y presupuestalmente]
+  • Fuente: 2% del presupuesto (Ley 30220 Art. 125)
+  • Centro de costo: DRSU
+      │
+      ▼
+[Vicerrectorado Académico eleva]
+      │
+      ▼
+[Comisión Organizadora aprueba mediante resolución]
+      │
+      ▼
+[Presidente Comité RSU sube Informe de Avance]
+  • F-M03-RSU-002
+  • A mitad del semestre o al finalizar
+      │
+      ▼
+[Presidente Comité RSU sube Informe Final]
+  • F-M03-RSU-003
+      │
+      ▼
+[DRSU emite constancias y certificados]
+  • F-M03.01-RSU-012 Constancia PEP Docente
+  • F-M03.01-RSU-019 Certificado PEP Estudiante
+```
+
+## 3.3 Flujo Voluntariado enriquecido
+
+```
+[Comunidad universitaria ingresa a la plataforma]
+      │
+      ▼
+[Descarga modelos oficiales]
+  • F-M03.01-RSU-008 Propuesta Voluntariado Yanapay
+  • F-M03.01-RSU-009 Informe Inicial Voluntariado
+  • F-M03-RSU-010 Informe de Avance Voluntariado
+  • F-M03-RSU-011 Informe Final Voluntariado
+      │
+      ▼
+[Selecciona "Nuevo Voluntariado Yanapay"]
+      │
+      ▼
+[Completa datos generales]
+      │
+      ▼
+[Registra integrantes]
+      │
+      ▼
+[Sube Propuesta de Proyecto (Anexo 4)]
+      │
+      ▼
+[Envía a revisión]
+  • Convocatoria: 2 veces al año
+      │
+      ▼
+[DRSU evalúa y aprueba]
+      │
+      ▼
+[Sube Informe Inicial]
+  • F-M03.01-RSU-009
+      │
+      ▼
+[Sube Informe de Avance]
+  • F-M03-RSU-010
+      │
+      ▼
+[Sube Informe Final]
+  • F-M03-RSU-011
+      │
+      ▼
+[DRSU emite Constancia de Voluntariado]
+  • F-M03.01-RSU-013 Estudiante/Egresado
+  • F-M03.01-RSU-017 Docente
+  • F-M03.01-RSU-018 Administrativo
+```
+
+## 3.4 Flujo Publicación Científica enriquecido
+
+```
+[Estudiante o egresado ingresa a la plataforma]
+      │
+      ▼
+[Descarga modelos oficiales]
+  • Expediente de Evidencias
+  • Ficha de Impacto Social
+      │
+      ▼
+[Selecciona "Nueva Publicación Científica"]
+      │
+      ▼
+[Completa datos generales]
+      │
+      ▼
+[Sube PDF del artículo publicado]
+      │
+      ▼
+[Sube Carta de aceptación de la revista]
+      │
+      ▼
+[Sube Link de la revista indexada]
+      │
+      ▼
+[Sube Ficha de Impacto Social]
+  • Línea de Investigación de RSU
+  • ODS
+  • Resumen descriptivo
+      │
+      ▼
+[Envía a revisión]
+  • Ventanilla Abierta (continua)
+      │
+      ▼
+[DRSU evalúa]
+  • Validación de Rigor
+  • Verificación de Identidad
+  • Dictamen de Pertinencia
+      │
+      ▼
+[DRSU emite Constancia de RSU]
+      │
+      ▼
+[DRSU deriva a Vicepresidencia de Investigación]
+      │
+      ▼
+[Registro en Repositorio Institucional]
+```
+
+---
+
+# 4. NOTA SOBRE LA ENCUESTA AL DOCENTE ASESOR
+
+El Reglamento RSU UNDC **no menciona explícitamente** una encuesta al docente asesor por parte del estudiante. Sin embargo, la lógica de mejora continua y la evaluación del proceso formativo sugieren que debería existir.
+
+**Estado:** Requiere validación normativa.
+**Acción:** No se inventa el contenido de la encuesta. Se deja como campo pendiente en la plataforma, a la espera de que la DRSU defina el instrumento.
+
+---
+
+# 5. CORRECCIÓN DE R08 Y OTRAS REGLAS
+
+| Código | Regla corregida |
+|---|---|
+| **R08** | El PEP financiado accede al 2% del presupuesto asignado a RSU, administrado por la DRSU y ejecutado en coordinación con la Escuela Profesional |
+| **R25** | El informe final del docente asesor se presenta en un plazo máximo de 10 días hábiles (SSU) |
+| **R26** | El estudiante debe subir encuesta a beneficiarios al finalizar el proyecto (SSU) |
+| **R27** | El estudiante debe subir encuesta al docente asesor al finalizar el proyecto (SSU) — **requiere validación normativa** |
+| **R28** | El docente asesor debe subir informe final (F-M03.01-RSU-014) en 10 días hábiles |
+| **R29** | Los documentos externos se envían a la DRSU vía plataforma, correo o Mesa de Partes según modalidad |
+| **R30** | Los modelos descargables están disponibles en la plataforma para cada modalidad |
+
+---
+# PLATAFORMA DE RSU — NIVEL FACULTAD
+## Documento de Diseño Funcional Actualizado
+
+---
+
+**Código:** R-M03-RSU-001-PF
+**Versión:** V.1.1
+**Fecha:** Octubre 2026
+**Base normativa:** Reglamento RSU UNDC (R-M03-RSU-001, Versión 04, 14/05/2026)
+
+---
+
+# 1. ROLES DINÁMICOS
+
+## 1.1 Definición
+
+Los roles **no son fijos por usuario**. Un mismo usuario puede tener uno o más roles según el proyecto, la modalidad o el momento del flujo.
+
+| Aspecto | Descripción |
+|---|---|
+| **Asignación** | Dinámica, por proyecto |
+| **Acumulación** | Un usuario puede tener varios roles simultáneamente |
+| **Alcance** | Por proyecto, por modalidad, por etapa |
+| **Administración** | El Administrador asigna o revoca roles |
+
+## 1.2 Tipos de roles
+
+| Rol | Tipo | Alcance |
+|---|---|---|
+| **Estudiante** | Funcional | Proyecto específico |
+| **Egresado** | Funcional | Proyecto específico |
+| **Docente Asesor** | Funcional | Proyecto específico |
+| **Docente Responsable** | Funcional | Proyecto específico |
+| **Presidente Comité RSU** | Funcional | Todos los proyectos de la Escuela |
+| **Miembro Comité RSU** | Funcional | Todos los proyectos de la Escuela |
+| **Director de Escuela** | Jerárquico | Todos los proyectos de la Escuela |
+| **Decano** | Jerárquico | Todos los proyectos de la Facultad |
+| **Comité de Calidad** | Funcional | Solo lectura y reportes |
+| **Administrador** | Técnico | Configuración del sistema |
+
+## 1.3 Matriz de roles dinámicos
+
+| Rol | Crear | Editar | Ver | Aprobar | Rechazar | Descargar | Transferir | Configurar |
+|---|---|---|---|---|---|---|---|---|
+| Estudiante | Sí | Sí | Sí | No | No | No | No | No |
+| Egresado | Sí | Sí | Sí | No | No | No | No | No |
+| Docente Asesor | Sí | Sí | Sí | Sí | Sí | No | No | No |
+| Docente Responsable | Sí | Sí | Sí | No | No | No | No | No |
+| Presidente Comité RSU | Sí | Sí | Sí | Sí | Sí | No | No | No |
+| Miembro Comité RSU | No | Sí | Sí | No | No | No | No | No |
+| Director de Escuela | No | No | Sí | Sí | Sí | No | No | No |
+| Decano | No | No | Sí | Sí | Sí | Sí | Sí | No |
+| Comité de Calidad | No | No | Sí | No | No | Sí | No | No |
+| Administrador | No | No | Sí | No | No | No | No | Sí |
+
+---
+
+# 2. NOTIFICACIONES
+
+## 2.1 Tipos de notificación
+
+| Tipo | Canal | Cuándo |
+|---|---|---|
+| **En plataforma** | Campana | Cambio de estado |
+| **Correo** | Correo institucional | Cambio de estado, plazos próximos, aprobaciones |
+| **Push** | App móvil | Cambio de estado (si aplica) |
+
+## 2.2 Matriz de notificaciones por acción
+
+| Acción | Notifica a | Mensaje |
+|---|---|---|
+| **Proyecto creado** | Director de Escuela | Nuevo proyecto pendiente de revisión |
+| | Presidente Comité RSU | Nuevo proyecto en tu Escuela |
+| **Proyecto enviado a revisión** | Director de Escuela | Proyecto pendiente de revisión |
+| **Proyecto aprobado por Director de Escuela** | Decano | Proyecto aprobado pendiente de tu revisión |
+| | Creador del proyecto | Tu proyecto fue aprobado por el Director |
+| **Proyecto rechazado por Director de Escuela** | Creador del proyecto | Tu proyecto fue rechazado: [motivo] |
+| **Proyecto aprobado por Decano** | Creador del proyecto | Tu proyecto fue aprobado por el Decano |
+| | DRSU | Proyecto aprobado listo para transferencia |
+| **Proyecto rechazado por Decano** | Creador del proyecto | Tu proyecto fue rechazado: [motivo] |
+| | Director de Escuela | Proyecto rechazado por el Decano |
+| **Proyecto transferido a universidad** | DRSU | Proyecto transferido |
+| | Creador del proyecto | Tu proyecto fue transferido a la DRSU |
+| **Informe de avance subido** | Director de Escuela | Nuevo informe de avance |
+| **Informe final subido** | Director de Escuela | Nuevo informe final |
+| **Proyecto en abandono** | Creador del proyecto | Tu proyecto ha sido declarado en abandono |
+| | Director de Escuela | Proyecto en abandono |
+| **Constancia emitida** | Creador del proyecto | Tu constancia está disponible |
+| **Plazo próximo a vencer** | Responsable del proyecto | El plazo vence en X días |
+| **Supervisión inopinada programada** | Creador del proyecto | Supervisión programada para el [fecha] |
+| **Proyecto declarado no ejecutado** | Creador del proyecto | Tu proyecto fue declarado no ejecutado |
+| **Cambio de entidad aprobado** | Creador del proyecto | Cambio de entidad aprobado |
+| **Cambio de docente asesor aprobado** | Creador del proyecto | Cambio de docente asesor aprobado |
+| **Desistimiento aprobado** | Creador del proyecto | Desistimiento aprobado |
+| **Ampliación de integrantes aprobada** | Creador del proyecto | Ampliación de integrantes aprobada |
+
+## 2.3 Estados de notificación
+
+| Estado | Descripción |
+|---|---|
+| **No leída** | Pendiente de lectura |
+| **Leída** | Vista por el usuario |
+| **Archivada** | Guardada sin eliminar |
+| **Eliminada** | Removida |
+
+---
+
+# 3. AUDITORÍA (SOLO EN DB)
+
+## 3.1 Registro de auditoría
+
+| Campo | Descripción |
+|---|---|
+| **id** | Identificador único |
+| **fecha_hora** | Timestamp |
+| **usuario_id** | Usuario que realizó la acción |
+| **rol** | Rol con el que actuó |
+| **accion** | Crear, editar, ver, aprobar, rechazar, descargar, transferir, configurar |
+| **entidad** | Proyecto, informe, usuario, configuración |
+| **entidad_id** | ID del objeto afectado |
+| **valor_anterior** | Estado anterior (JSON) |
+| **valor_nuevo** | Estado nuevo (JSON) |
+| **ip** | Dirección IP |
+| **user_agent** | Navegador y sistema |
+| **resultado** | Éxito, error |
+
+## 3.2 Eventos auditables
+
+| Evento | Se registra |
+|---|---|
+| Inicio de sesión | Sí |
+| Cierre de sesión | Sí |
+| Creación de proyecto | Sí |
+| Edición de proyecto | Sí |
+| Cambio de estado | Sí |
+| Aprobación | Sí |
+| Rechazo | Sí |
+| Descarga | Sí |
+| Transferencia | Sí |
+| Configuración | Sí |
+| Asignación de rol | Sí |
+| Revocación de rol | Sí |
+
+---
+
+# 4. REPORTES
+
+## 4.1 Reportes disponibles
+
+| Reporte | Descripción | Genera |
+|---|---|---|
+| **Proyectos por modalidad** | SSU, PEP, Voluntariado, Publicación | PDF / Excel |
+| **Proyectos por estado** | Borrador, En revisión, Aprobado, Rechazado | PDF / Excel |
+| **Proyectos por Escuela** | Distribución por Escuela Profesional | PDF / Excel |
+| **Proyectos por línea de acción** | Línea 01 a Línea 05 | PDF / Excel |
+| **Proyectos por ODS** | Del 1 al 17 | PDF / Excel |
+| **Participantes por rol** | Estudiantes, docentes, administrativos | PDF / Excel |
+| **Beneficiarios por proyecto** | Entidad, grupo focal, cantidad | PDF / Excel |
+| **Presupuesto ejecutado** | Por modalidad, por Escuela | PDF / Excel |
+| **Indicadores de desempeño** | Por proyecto, por Escuela | PDF / Excel |
+| **Auditoría** | Registro de acciones | PDF / Excel |
+
+## 4.2 Acceso a reportes
+
+| Rol | Reportes |
+|---|---|
+| **Comité de Calidad** | Todos |
+| **Decano** | Todos |
+| **Director de Escuela** | Solo su Escuela |
+| **Presidente Comité RSU** | Solo su Escuela |
+| **Administrador** | Todos |
+
+---
+
+# 5. CONFIGURACIÓN (ADMIN)
+
+## 5.1 Parámetros configurables
+
+| Parámetro | Descripción | Valor por defecto |
+|---|---|---|
+| **Plazo de revisión del Director de Escuela** | Días hábiles | 5 |
+| **Plazo de revisión del Decano** | Días hábiles | 5 |
+| **Plazo de subsanación** | Días hábiles | 10 |
+| **Mínimo de estudiantes por SSU** | Número | 2 |
+| **Máximo de estudiantes por SSU** | Número | 5 |
+| **Mínimo de horas SSU** | Horas | 60 |
+| **Máximo de proyectos SSU por docente** | Número | 2 |
+| **Máximo de estudiantes por publicación** | Número | 2 |
+| **Líneas de acción** | Lista | Línea 01 a Línea 05 |
+| **ODS** | Lista | Del 1 al 17 |
+| **Revistas indexadas** | Lista | Latindex, SciELO, Scopus, Web of Science |
+| **Porcentaje de presupuesto RSU** | Porcentaje | 2% |
+| **Convocatorias de voluntariado** | Número por año | 2 |
+| **Correo de notificaciones** | Correo | responsabilidadsocialu@undc.edu.pe |
+| **URL de la plataforma** | URL | https://drsu.undc.edu.pe |
+| **Modo mantenimiento** | Activo/Inactivo | Inactivo |
+
+## 5.2 Acceso a configuración
+
+| Rol | Puede configurar |
+|---|---|
+| **Administrador** | Todos los parámetros |
+| **Decano** | Solo parámetros de su Facultad |
+| **Comité de Calidad** | Solo consulta |
+
+---
+
+# 6. PRESUPUESTO
+
+## 6.1 Fuente de financiamiento
+
+| Aspecto | Descripción |
+|---|---|
+| **Fuente** | 2% del presupuesto institucional (Ley 30220 Art. 125) |
+| **Administración** | Centro de costo de la DRSU (Reglamento RSU Art. 23) |
+| **Ejecución** | Coordinación entre DRSU y Escuelas Profesionales |
+| **Modalidades que acceden** | PEP financiado |
+| **Modalidades autofinanciadas** | SSU, PEP autofinanciado, Voluntariado, Publicación Científica |
+
+## 6.2 Módulo de presupuesto
+
+| Campo | Descripción |
+|---|---|
+| **Presupuesto asignado** | Monto total del 2% para la Facultad |
+| **Presupuesto ejecutado** | Monto ejecutado en el año |
+| **Presupuesto por proyecto** | Monto asignado a cada PEP financiado |
+| **Presupuesto por Escuela** | Distribución por Escuela Profesional |
+| **Saldo disponible** | Presupuesto asignado menos ejecutado |
+
+## 6.3 Roles con acceso al presupuesto
+
+| Rol | Ver | Editar | Aprobar |
+|---|---|---|---|
+| **Decano** | Sí | Sí | Sí |
+| **Director de Escuela** | Sí | No | No |
+| **Presidente Comité RSU** | Sí | No | No |
+| **Comité de Calidad** | Sí | No | No |
+| **Administrador** | Sí | Sí | Sí |
+
+---
+
+# 7. FLUJOS CON SUPUESTOS NORMALES
+
+## 7.1 SSU
+
+### Supuestos
+- Si el docente asesor **no da conformidad**, el proyecto queda en Borrador y el estudiante puede proponer otro docente.
+- Si el proyecto es **declarado en abandono**, el estudiante puede reinscribirlo en el siguiente semestre.
+- Si el estudiante **desiste antes del segundo informe**, puede reinscribirse en otro proyecto.
+- Si el Director de Escuela **no revisa en el plazo**, el proyecto escala al Decano automáticamente.
+- Si el Decano **no revisa en el plazo**, el proyecto se aprueba por silencio administrativo positivo.
+- Si la DRSU **rechaza el informe inicial**, el estudiante tiene 10 días hábiles para subsanar.
+- Si la DRSU **rechaza el informe final**, el estudiante tiene 10 días hábiles para subsanar.
+- Si el proyecto es **rechazado por el Director de Escuela**, rebota al emisor para modificaciones.
+- Si el proyecto es **rechazado por el Decano**, rebota al emisor para modificaciones.
+
+### Flujo con rechazo
+
+```
+[Estudiante crea proyecto]
+      │
+      ▼
+[Envía a revisión]
+      │
+      ▼
+[Director de Escuela revisa]
+      │
+      ├─── Aprueba → [Continúa flujo]
+      │
+      └─── Rechaza → [Rebota al emisor] → [Estudiante modifica] → [Reenvía a revisión]
+```
+
+## 7.2 PEP Financiado
+
+### Supuestos
+- Si el Director de Escuela **rechaza**, rebota al Presidente del Comité RSU para modificaciones.
+- Si el Decano **rechaza**, rebota al Presidente del Comité RSU para modificaciones.
+- Si la DRSU **rechaza la evaluación técnica**, rebota al Presidente del Comité RSU para modificaciones.
+- Si el **Consejo Universitario rechaza**, rebota al Presidente del Comité RSU para modificaciones.
+- Si el presupuesto **no alcanza**, el proyecto se declara no financiado y puede pasar a autofinanciado.
+- Si el proyecto **no se ejecuta**, se declara en abandono y se devuelve el presupuesto.
+
+### Flujo con rechazo
+
+```
+[Presidente Comité RSU crea proyecto]
+      │
+      ▼
+[Envía a revisión]
+      │
+      ▼
+[Director de Escuela revisa]
+      │
+      ├─── Aprueba → [Continúa flujo]
+      │
+      └─── Rechaza → [Rebota al emisor] → [Presidente modifica] → [Reenvía]
+```
+
+## 7.3 PEP Autofinanciado
+
+### Supuestos
+- Si el Director de Escuela **rechaza**, rebota al docente responsable para modificaciones.
+- Si el Decano **rechaza**, rebota al docente responsable para modificaciones.
+- Si la DRSU **rechaza**, rebota al docente responsable para modificaciones.
+- Si el proyecto **no se ejecuta**, se declara en abandono.
+
+### Flujo con rechazo
+
+```
+[Docente responsable crea proyecto]
+      │
+      ▼
+[Envía a revisión]
+      │
+      ▼
+[Director de Escuela revisa]
+      │
+      ├─── Aprueba → [Continúa flujo]
+      │
+      └─── Rechaza → [Rebota al emisor] → [Docente modifica] → [Reenvía]
+```
+
+## 7.4 Voluntariado
+
+### Supuestos
+- Si el voluntario **se retira**, puede reincorporarse en la siguiente convocatoria.
+- Si el voluntario **solicita suspensión temporal**, puede reincorporarse con FUT.
+- Si el voluntario **no cumple 60 horas**, no se emite constancia.
+- Si el proyecto **no se ejecuta**, se declara en abandono.
+- Si el proyecto es **rechazado por la DRSU**, rebota al voluntario para modificaciones.
+
+### Flujo con rechazo
+
+```
+[Voluntario crea proyecto]
+      │
+      ▼
+[Envía a revisión]
+      │
+      ▼
+[DRSU revisa]
+      │
+      ├─── Aprueba → [Continúa flujo]
+      │
+      └─── Rechaza → [Rebota al emisor] → [Voluntario modifica] → [Reenvía]
+```
+
+## 7.5 Publicación Científica
+
+### Supuestos
+- Si la revista **no está indexada**, se rechaza la publicación.
+- Si el tema **no está vinculado a Cañete**, se rechaza la publicación.
+- Si la afiliación **no es UNDC**, se rechaza la publicación.
+- Si el artículo **no identifica ODS**, se rechaza la publicación.
+- Si el artículo **no está publicado o aceptado**, se rechaza la publicación.
+- Si el artículo es **rechazado por la DRSU**, rebota al estudiante para modificaciones.
+
+### Flujo con rechazo
+
+```
+[Estudiante crea publicación]
+      │
+      ▼
+[Envía a revisión]
+      │
+      ▼
+[DRSU revisa]
+      │
+      ├─── Aprueba → [Continúa flujo]
+      │
+      └─── Rechaza → [Rebota al emisor] → [Estudiante modifica] → [Reenvía]
+```
+
+---
+
+# 8. REEMPLAZO DE COMISIÓN ORGANIZADORA
+
+## 8.1 Contexto
+
+La **Comisión Organizadora** ya no existe en las fechas actuales (octubre 2026). La UNDC ya cuenta con órganos de gobierno constituidos.
+
+## 8.2 Reemplazo en el flujo de PEP Financiado
+
+| Antes | Ahora |
+|---|---|
+| Comisión Organizadora aprueba mediante resolución | **Consejo Universitario** aprueba mediante resolución |
+| Vicerrectorado Académico eleva a Comisión Organizadora | Vicerrectorado Académico eleva a Consejo Universitario |
+
+## 8.3 Base legal
+
+| Norma | Artículo | Contenido |
+|---|---|---|
+| **Ley 30220** | Art. 59.1 | Consejo Universitario aprueba los instrumentos de planeamiento |
+| **Ley 30220** | Art. 59.3 | Consejo Universitario aprueba el presupuesto general |
+| **Estatuto UNDC** | Art. 26 | Atribuciones del Consejo Universitario |
+| **ROF UNDC** | Art. 26 | Funciones del Consejo Universitario |
+
+---
+
+# 9. MÓDULOS ACTUALIZADOS
+
+| Módulo | Descripción | Estado |
+|---|---|---|
+| **M01 — Proyectos** | Creación y gestión de proyectos | Activo |
+| **M02 — Avances** | Informes de avance | Activo |
+| **M03 — Informe Final** | Informe final y encuestas | Activo |
+| **M04 — Comité RSU** | Integrantes y designación | Activo |
+| **M05 — Indicadores** | Métricas de desempeño | Activo |
+| **M06 — Exportación** | Paquete de descarga | Activo |
+| **M07 — Usuarios** | Roles dinámicos | Activo |
+| **M08 — Notificaciones** | Alertas por acción | **Nuevo** |
+| **M09 — Auditoría** | Registro en BD | **Nuevo** |
+| **M10 — Reportes** | Exportación de datos | **Nuevo** |
+| **M11 — Configuración** | Parámetros del sistema | **Nuevo** |
+| **M12 — Presupuesto** | Control del 2% | **Nuevo** |
+
+---
+
+# 10. REGLAS DE NEGOCIO ACTUALIZADAS
+
+| Código | Regla | Base legal |
+|---|---|---|
+| **R01** | El estudiante propone al docente asesor | Art. 21.A |
+| **R02** | El docente asesor debe dar conformidad | Art. 21.A |
+| **R03** | El proyecto SSU se ejecuta entre el V y X ciclo | Art. 21.B |
+| **R04** | El proyecto SSU requiere mínimo 60 horas | Art. 21.D |
+| **R05** | El proyecto SSU requiere entre 2 y 5 estudiantes | Art. 21.C |
+| **R06** | El docente asesor puede asesorar máximo 2 proyectos SSU por semestre | Art. 21.13 |
+| **R07** | El PEP financiado se presenta 15 días antes del inicio de clases | Art. 23 |
+| **R08** | El PEP financiado accede al 2% del presupuesto asignado a RSU, administrado por la DRSU y ejecutado en coordinación con la Escuela Profesional | Art. 23 |
+| **R09** | El PEP autofinanciado se presenta durante el semestre | Art. 23.1 |
+| **R10** | El PEP autofinanciado no requiere financiamiento institucional | Art. 23.1 |
+| **R11** | El voluntariado se convoca 2 veces al año | Art. 32 |
+| **R12** | El voluntariado requiere mínimo 60 horas para constancia | Art. 33 |
+| **R13** | La publicación científica requiere revista indexada | Art. 39 |
+| **R14** | La publicación científica requiere afiliación UNDC | Art. 39 |
+| **R15** | La publicación científica requiere tema vinculado a Cañete | Art. 39 |
+| **R16** | La publicación científica requiere identificar el ODS | Art. 39 |
+| **R17** | La publicación científica es autofinanciada | Art. 39 |
+| **R18** | Máximo 2 estudiantes por artículo científico | Art. 40 |
+| **R19** | Solo Presidente del Comité RSU y Docente Asesor pueden crear proyectos | Art. 23, 25 |
+| **R20** | El Director de Escuela debe aprobar antes de que el Decano derive | Art. 22 |
+| **R21** | El Decano solo puede descargar proyectos aprobados por el Director de Escuela | Art. 23 |
+| **R22** | El Decano es el único que puede transferir a la plataforma de universidad | Art. 23 |
+| **R23** | Los docentes deben cumplir 3 horas semanales de RSU como carga no lectiva | Art. 18 |
+| **R24** | Los informes de avance se presentan a mitad del semestre o al finalizar el periodo | Art. 24 |
+| **R25** | El informe final del docente asesor se presenta en un plazo máximo de 10 días hábiles | Art. 21.10 |
+| **R26** | El estudiante debe subir encuesta a beneficiarios al finalizar el proyecto | Art. 21.8.A |
+| **R27** | El estudiante debe subir encuesta al docente asesor al finalizar el proyecto | Requiere validación normativa |
+| **R28** | El docente asesor debe subir informe final en 10 días hábiles | Art. 21.10 |
+| **R29** | Los documentos externos se envían a la DRSU vía plataforma, correo o Mesa de Partes | Art. 41 |
+| **R30** | Los modelos descargables están disponibles en la plataforma | — |
+| **R31** | Los rechazos rebotan al emisor para modificaciones | — |
+| **R32** | Los proyectos rechazados pueden reenviarse | — |
+| **R33** | Si el Director de Escuela no revisa en el plazo, escala al Decano | — |
+| **R34** | Si el Decano no revisa en el plazo, se aprueba por silencio administrativo positivo | — |
+| **R35** | El Consejo Universitario aprueba los PEP financiados | Ley 30220 Art. 59.1 |
+
+---
+
+**Documento actualizado con roles dinámicos, notificaciones, auditoría, reportes, configuración, presupuesto, supuestos normales y reemplazo de Comisión Organizadora.**
+# PLATAFORMA DE RSU — NIVEL FACULTAD
+## Documento de Diseño Funcional — V1.2
+
+---
+
+**Código:** R-M03-RSU-001-PF
+**Versión:** V.1.2
+**Fecha:** Octubre 2026
+**Tipo:** Aplicación Web
+**Base normativa:** Reglamento RSU UNDC (R-M03-RSU-001, Versión 04, 14/05/2026)
+
+---
+
+# 1. ARQUITECTURA GENERAL
+
+## 1.1 Tipo de aplicación
+
+**Aplicación web** accesible desde cualquier navegador moderno. No requiere instalación. Responsive para escritorio, tablet y móvil.
+
+| Aspecto | Definición |
+|---|---|
+| **Tipo** | Aplicación web |
+| **Acceso** | Navegador moderno (Chrome, Firefox, Edge, Safari) |
+| **Autenticación** | Correo institucional |
+| **Sesión** | Token con expiración configurable |
+| **Idioma** | Español |
+| **Responsive** | Sí (escritorio, tablet, móvil) |
+
+---
+
+# 2. PANEL DE ADMINISTRACIÓN
+
+## 2.1 Definición
+
+El **Panel de Administración** es el módulo central donde se configura todo el sistema. **Incluye la auditoría**, la gestión de roles, los parámetros y la configuración general.
+
+**No es un módulo aparte**: es un panel que contiene varios submódulos.
+
+## 2.2 Submódulos del Panel de Administración
+
+| Submódulo | Descripción |
+|---|---|
+| **A01 — Usuarios** | Gestión de usuarios del sistema |
+| **A02 — Roles** | Creación y asignación de roles dinámicos |
+| **A03 — Permisos** | Matriz de permisos por rol |
+| **A04 — Parámetros** | Configuración de plazos, límites y valores por defecto |
+| **A05 — Catálogos** | Líneas de acción, ODS, revistas indexadas, modalidades |
+| **A06 — Presupuesto** | Configuración del 2% y centros de costo |
+| **A07 — Notificaciones** | Configuración de canales y plantillas |
+| **A08 — Auditoría** | Registro de todas las acciones del sistema |
+| **A09 — Reportes** | Generación y exportación de reportes |
+| **A10 — Mantenimiento** | Modo mantenimiento, respaldo, logs |
+
+---
+
+# 3. ROLES POR DEFECTO
+
+## 3.1 Creación inicial
+
+Al instalar la plataforma, se crean por defecto los siguientes roles:
+
+| Código | Rol | Tipo | Alcance |
+|---|---|---|---|
+| **ROL-01** | Estudiante | Funcional | Proyecto específico |
+| **ROL-02** | Egresado | Funcional | Proyecto específico |
+| **ROL-03** | Docente Asesor | Funcional | Proyecto específico |
+| **ROL-04** | Docente Responsable | Funcional | Proyecto específico |
+| **ROL-05** | Presidente Comité RSU | Funcional | Todos los proyectos de la Escuela |
+| **ROL-06** | Miembro Comité RSU | Funcional | Todos los proyectos de la Escuela |
+| **ROL-07** | Director de Escuela | Jerárquico | Todos los proyectos de la Escuela |
+| **ROL-08** | Decano | Jerárquico | Todos los proyectos de la Facultad |
+| **ROL-09** | Comité de Calidad | Funcional | Solo lectura y reportes |
+| **ROL-10** | Administrador | Técnico | Configuración del sistema |
+
+## 3.2 Naturaleza dinámica
+
+- Los roles **no son fijos por usuario**.
+- Un usuario puede tener **uno o más roles** simultáneamente.
+- El **Administrador** asigna o revoca roles.
+- El alcance del rol puede ser **por proyecto, por modalidad o por etapa**.
+
+---
+
+# 4. MÓDULOS POR ROL
+
+## 4.1 Definición de módulos
+
+| Código | Módulo | Descripción |
+|---|---|---|
+| **M01** | Proyectos | Creación y gestión de proyectos |
+| **M02** | Avances | Informes de avance |
+| **M03** | Informe Final | Informe final y encuestas |
+| **M04** | Comité RSU | Integrantes y designación |
+| **M05** | Indicadores | Métricas de desempeño |
+| **M06** | Exportación | Paquete de descarga |
+| **M07** | Notificaciones | Alertas por acción |
+| **M08** | Presupuesto | Control del 2% |
+| **M09** | Panel de Administración | Configuración y auditoría |
+
+## 4.2 Matriz de acceso por rol
+
+| Rol | M01 | M02 | M03 | M04 | M05 | M06 | M07 | M08 | M09 |
+|---|---|---|---|---|---|---|---|---|---|
+| Estudiante | Sí | Sí | Sí | No | No | No | Sí | No | No |
+| Egresado | Sí | Sí | Sí | No | No | No | Sí | No | No |
+| Docente Asesor | Sí | Sí | Sí | No | No | No | Sí | No | No |
+| Docente Responsable | Sí | Sí | Sí | No | No | No | Sí | No | No |
+| Presidente Comité RSU | Sí | Sí | Sí | Sí | Sí | No | Sí | Sí | No |
+| Miembro Comité RSU | No | Sí | Sí | Sí | Sí | No | Sí | No | No |
+| Director de Escuela | Sí | Sí | Sí | Sí | Sí | No | Sí | Sí | No |
+| Decano | Sí | Sí | Sí | Sí | Sí | Sí | Sí | Sí | Sí |
+| Comité de Calidad | No | No | No | No | Sí | Sí | Sí | Sí | Sí |
+| Administrador | No | No | No | No | Sí | Sí | Sí | Sí | Sí |
+
+## 4.3 Permisos por módulo y rol
+
+### M01 — Proyectos
+
+| Rol | Crear | Editar | Ver | Aprobar | Rechazar | Descargar | Transferir |
+|---|---|---|---|---|---|---|---|
+| Estudiante | Sí | Sí | Sí | No | No | No | No |
+| Egresado | Sí | Sí | Sí | No | No | No | No |
+| Docente Asesor | Sí | Sí | Sí | Sí | Sí | No | No |
+| Docente Responsable | Sí | Sí | Sí | No | No | No | No |
+| Presidente Comité RSU | Sí | Sí | Sí | Sí | Sí | No | No |
+| Miembro Comité RSU | No | Sí | Sí | No | No | No | No |
+| Director de Escuela | No | No | Sí | Sí | Sí | No | No |
+| Decano | No | No | Sí | Sí | Sí | Sí | Sí |
+| Comité de Calidad | No | No | Sí | No | No | Sí | No |
+| Administrador | No | No | Sí | No | No | No | No |
+
+### M05 — Indicadores
+
+| Rol | Ver | Descargar | Configurar |
+|---|---|---|---|
+| Estudiante | No | No | No |
+| Docente Asesor | No | No | No |
+| Presidente Comité RSU | Sí | No | No |
+| Director de Escuela | Sí | Sí | No |
+| Decano | Sí | Sí | Sí |
+| Comité de Calidad | Sí | Sí | No |
+| Administrador | Sí | Sí | Sí |
+
+### M09 — Panel de Administración
+
+| Rol | Ver | Configurar |
+|---|---|---|
+| Decano | Sí | Solo parámetros de su Facultad |
+| Comité de Calidad | Sí | Solo consulta |
+| Administrador | Sí | Todos los parámetros |
+
+---
+
+# 5. CONFIGURACIÓN POR ROL
+
+## 5.1 Administrador — Todos los parámetros
+
+| Parámetro | Puede configurar |
+|---|---|
+| Usuarios | Crear, editar, eliminar, asignar roles |
+| Roles | Crear, editar, eliminar, asignar permisos |
+| Permisos | Matriz completa |
+| Plazos | Revisión, subsanación, ampliación |
+| Límites | Estudiantes por SSU, horas SSU, proyectos por docente |
+| Catálogos | Líneas, ODS, revistas, modalidades |
+| Presupuesto | Porcentaje, centros de costo, distribución |
+| Notificaciones | Canales, plantillas, frecuencia |
+| Auditoría | Consulta completa |
+| Reportes | Generación y exportación |
+| Mantenimiento | Modo mantenimiento, respaldo, logs |
+| Parámetros de Facultad | Todos |
+| Parámetros de Escuela | Todos |
+
+## 5.2 Decano — Solo parámetros de su Facultad
+
+| Parámetro | Puede configurar |
+|---|---|
+| Usuarios de su Facultad | Ver, asignar roles |
+| Roles de su Facultad | Ver, asignar |
+| Permisos de su Facultad | Ver |
+| Plazos de su Facultad | Editar |
+| Límites de su Facultad | Editar |
+| Catálogos | Ver |
+| Presupuesto de su Facultad | Ver, editar, aprobar |
+| Notificaciones de su Facultad | Ver |
+| Auditoría de su Facultad | Ver |
+| Reportes de su Facultad | Generar y exportar |
+
+## 5.3 Comité de Calidad — Solo consulta
+
+| Parámetro | Puede configurar |
+|---|---|
+| Usuarios | Ver |
+| Roles | Ver |
+| Permisos | Ver |
+| Plazos | Ver |
+| Límites | Ver |
+| Catálogos | Ver |
+| Presupuesto | Ver |
+| Notificaciones | Ver |
+| Auditoría | Ver |
+| Reportes | Generar y exportar |
+| Indicadores | Ver, descargar |
+
+---
+
+# 6. SUBMÓDULO A08 — AUDITORÍA
+
+## 6.1 Definición
+
+La **Auditoría** es un submódulo del **Panel de Administración**. No es un módulo aparte. Registra todas las acciones del sistema para trazabilidad y control.
+
+## 6.2 Campos del registro de auditoría
+
+| Campo | Descripción |
+|---|---|
+| **id** | Identificador único |
+| **fecha_hora** | Timestamp |
+| **usuario_id** | Usuario que realizó la acción |
+| **rol** | Rol con el que actuó |
+| **accion** | Crear, editar, ver, aprobar, rechazar, descargar, transferir, configurar |
+| **entidad** | Proyecto, informe, usuario, configuración |
+| **entidad_id** | ID del objeto afectado |
+| **valor_anterior** | Estado anterior (JSON) |
+| **valor_nuevo** | Estado nuevo (JSON) |
+| **ip** | Dirección IP |
+| **user_agent** | Navegador y sistema |
+| **resultado** | Éxito, error |
+
+## 6.3 Eventos auditables
+
+| Evento | Se registra |
+|---|---|
+| Inicio de sesión | Sí |
+| Cierre de sesión | Sí |
+| Creación de proyecto | Sí |
+| Edición de proyecto | Sí |
+| Cambio de estado | Sí |
+| Aprobación | Sí |
+| Rechazo | Sí |
+| Descarga | Sí |
+| Transferencia | Sí |
+| Configuración | Sí |
+| Asignación de rol | Sí |
+| Revocación de rol | Sí |
+| Creación de usuario | Sí |
+| Eliminación de usuario | Sí |
+| Modificación de parámetros | Sí |
+
+## 6.4 Acceso a la auditoría
+
+| Rol | Ver | Exportar | Filtrar |
+|---|---|---|---|
+| Administrador | Sí | Sí | Sí |
+| Decano | Sí (solo su Facultad) | Sí | Sí |
+| Comité de Calidad | Sí | Sí | Sí |
+
+---
+
+# 7. SUBMÓDULO A07 — NOTIFICACIONES
+
+## 7.1 Tipos de notificación
+
+| Tipo | Canal | Cuándo |
+|---|---|---|
+| **En plataforma** | Campana | Cambio de estado |
+| **Correo** | Correo institucional | Cambio de estado, plazos próximos, aprobaciones |
+| **Push** | App móvil (si aplica) | Cambio de estado |
+
+## 7.2 Matriz de notificaciones por acción
+
+| Acción | Notifica a | Mensaje |
+|---|---|---|
+| Proyecto creado | Director de Escuela | Nuevo proyecto pendiente de revisión |
+| Proyecto enviado a revisión | Director de Escuela | Proyecto pendiente de revisión |
+| Proyecto aprobado por Director | Decano | Proyecto aprobado pendiente de tu revisión |
+| Proyecto aprobado por Director | Creador del proyecto | Tu proyecto fue aprobado por el Director |
+| Proyecto rechazado por Director | Creador del proyecto | Tu proyecto fue rechazado: [motivo] |
+| Proyecto aprobado por Decano | Creador del proyecto | Tu proyecto fue aprobado por el Decano |
+| Proyecto aprobado por Decano | DRSU | Proyecto aprobado listo para transferencia |
+| Proyecto rechazado por Decano | Creador del proyecto | Tu proyecto fue rechazado: [motivo] |
+| Proyecto rechazado por Decano | Director de Escuela | Proyecto rechazado por el Decano |
+| Proyecto transferido | DRSU | Proyecto transferido |
+| Proyecto transferido | Creador del proyecto | Tu proyecto fue transferido a la DRSU |
+| Informe de avance subido | Director de Escuela | Nuevo informe de avance |
+| Informe final subido | Director de Escuela | Nuevo informe final |
+| Proyecto en abandono | Creador del proyecto | Tu proyecto ha sido declarado en abandono |
+| Proyecto en abandono | Director de Escuela | Proyecto en abandono |
+| Constancia emitida | Creador del proyecto | Tu constancia está disponible |
+| Plazo próximo a vencer | Responsable del proyecto | El plazo vence en X días |
+| Supervisión inopinada | Creador del proyecto | Supervisión programada para el [fecha] |
+| Proyecto no ejecutado | Creador del proyecto | Tu proyecto fue declarado no ejecutado |
+| Cambio de entidad aprobado | Creador del proyecto | Cambio de entidad aprobado |
+| Cambio de docente asesor | Creador del proyecto | Cambio de docente asesor aprobado |
+| Desistimiento aprobado | Creador del proyecto | Desistimiento aprobado |
+| Ampliación de integrantes | Creador del proyecto | Ampliación de integrantes aprobada |
+
+## 7.3 Configuración de notificaciones
+
+| Parámetro | Configurable por |
+|---|---|
+| Canales activos | Administrador |
+| Plantillas de mensajes | Administrador |
+| Frecuencia de recordatorios | Administrador |
+| Plazos de anticipación | Administrador |
+| Correo de notificaciones | Administrador |
+
+---
+
+# 8. SUBMÓDULO A10 — MANTENIMIENTO
+
+## 8.1 Configuración
+
+| Parámetro | Descripción | Configurable por |
+|---|---|---|
+| **Modo mantenimiento** | Activa/desactiva la plataforma | Administrador |
+| **Mensaje de mantenimiento** | Texto mostrado a usuarios | Administrador |
+| **Respaldo automático** | Frecuencia y destino | Administrador |
+| **Logs del sistema** | Nivel de detalle | Administrador |
+| **Versión de la plataforma** | Número de versión | Administrador |
+| **Actualizaciones** | Programadas | Administrador |
+
+---
+
+# 9. ESTRUCTURA DE NAVEGACIÓN
+
+## 9.1 Menú principal por rol
+
+| Rol | Menú |
+|---|---|
+| **Estudiante** | Mis Proyectos · Mis Avances · Mis Notificaciones |
+| **Egresado** | Mis Proyectos · Mis Notificaciones |
+| **Docente Asesor** | Mis Asesorías · Avances · Notificaciones |
+| **Docente Responsable** | Mis Proyectos · Avances · Notificaciones |
+| **Presidente Comité RSU** | Proyectos de la Escuela · Comité RSU · Presupuesto · Notificaciones |
+| **Miembro Comité RSU** | Proyectos de la Escuela · Avances · Notificaciones |
+| **Director de Escuela** | Proyectos por Aprobar · Proyectos Aprobados · Indicadores · Presupuesto · Notificaciones |
+| **Decano** | Panel de Control · Proyectos · Indicadores · Presupuesto · Exportación · Panel de Administración · Notificaciones |
+| **Comité de Calidad** | Indicadores · Reportes · Panel de Administración (solo consulta) · Notificaciones |
+| **Administrador** | Panel de Administración completo · Notificaciones |
+
+## 9.2 Panel de Administración — Submenú
+
+| Submódulo | Ruta |
+|---|---|
+| Usuarios | /admin/usuarios |
+| Roles | /admin/roles |
+| Permisos | /admin/permisos |
+| Parámetros | /admin/parametros |
+| Catálogos | /admin/catalogos |
+| Presupuesto | /admin/presupuesto |
+| Notificaciones | /admin/notificaciones |
+| Auditoría | /admin/auditoria |
+| Reportes | /admin/reportes |
+| Mantenimiento | /admin/mantenimiento |
+
+---
+
+# 10. REGLAS DE NEGOCIO ACTUALIZADAS
+
+| Código | Regla | Base legal |
+|---|---|---|
+| R01 | El estudiante propone al docente asesor | Art. 21.A |
+| R02 | El docente asesor debe dar conformidad | Art. 21.A |
+| R03 | El proyecto SSU se ejecuta entre el V y X ciclo | Art. 21.B |
+| R04 | El proyecto SSU requiere mínimo 60 horas | Art. 21.D |
+| R05 | El proyecto SSU requiere entre 2 y 5 estudiantes | Art. 21.C |
+| R06 | El docente asesor puede asesorar máximo 2 proyectos SSU por semestre | Art. 21.13 |
+| R07 | El PEP financiado se presenta 15 días antes del inicio de clases | Art. 23 |
+| R08 | El PEP financiado accede al 2% del presupuesto asignado a RSU, administrado por la DRSU y ejecutado en coordinación con la Escuela Profesional | Art. 23 |
+| R09 | El PEP autofinanciado se presenta durante el semestre | Art. 23.1 |
+| R10 | El PEP autofinanciado no requiere financiamiento institucional | Art. 23.1 |
+| R11 | El voluntariado se convoca 2 veces al año | Art. 32 |
+| R12 | El voluntariado requiere mínimo 60 horas para constancia | Art. 33 |
+| R13 | La publicación científica requiere revista indexada | Art. 39 |
+| R14 | La publicación científica requiere afiliación UNDC | Art. 39 |
+| R15 | La publicación científica requiere tema vinculado a Cañete | Art. 39 |
+| R16 | La publicación científica requiere identificar el ODS | Art. 39 |
+| R17 | La publicación científica es autofinanciada | Art. 39 |
+| R18 | Máximo 2 estudiantes por artículo científico | Art. 40 |
+| R19 | Solo Presidente del Comité RSU y Docente Asesor pueden crear proyectos | Art. 23, 25 |
+| R20 | El Director de Escuela debe aprobar antes de que el Decano derive | Art. 22 |
+| R21 | El Decano solo puede descargar proyectos aprobados por el Director de Escuela | Art. 23 |
+| R22 | El Decano es el único que puede transferir a la plataforma de universidad | Art. 23 |
+| R23 | Los docentes deben cumplir 3 horas semanales de RSU como carga no lectiva | Art. 18 |
+| R24 | Los informes de avance se presentan a mitad del semestre o al finalizar el periodo | Art. 24 |
+| R25 | El informe final del docente asesor se presenta en un plazo máximo de 10 días hábiles | Art. 21.10 |
+| R26 | El estudiante debe subir encuesta a beneficiarios al finalizar el proyecto | Art. 21.8.A |
+| R27 | El estudiante debe subir encuesta al docente asesor al finalizar el proyecto | Requiere validación normativa |
+| R28 | El docente asesor debe subir informe final en 10 días hábiles | Art. 21.10 |
+| R29 | Los documentos externos se envían a la DRSU vía plataforma, correo o Mesa de Partes | Art. 41 |
+| R30 | Los modelos descargables están disponibles en la plataforma | — |
+| R31 | Los rechazos rebotan al emisor para modificaciones | — |
+| R32 | Los proyectos rechazados pueden reenviarse | — |
+| R33 | Si el Director de Escuela no revisa en el plazo, escala al Decano | — |
+| R34 | Si el Decano no revisa en el plazo, se aprueba por silencio administrativo positivo | — |
+| R35 | El Consejo Universitario aprueba los PEP financiados | Ley 30220 Art. 59.1 |
+
+---
+
+**Documento actualizado: todo es web, auditoría en el Panel de Administración, módulos por rol, roles por defecto y configuración por rol.**
+# PLATAFORMA DE RSU — NIVEL FACULTAD
+## Documento de Diseño Funcional — V1.3 (MVP Web)
+
+---
+
+**Código:** R-M03-RSU-001-PF
+**Versión:** V.1.3
+**Fecha:** Octubre 2026
+**Tipo:** Aplicación Web MVP
+**Base normativa:** Reglamento RSU UNDC (R-M03-RSU-001, Versión 04, 14/05/2026)
+
+---
+
+# 1. ARQUITECTURA GENERAL
+
+## 1.1 Tipo de aplicación
+
+**Aplicación web MVP** accesible desde cualquier navegador moderno. No requiere instalación. Al ser web es accesible desde móvil mediante el navegador, pero **no hay app móvil nativa** en este MVP.
+
+| Aspecto | Definición |
+|---|---|
+| **Tipo** | Aplicación web |
+| **Alcance** | MVP funcional |
+| **Acceso** | Navegador moderno (Chrome, Firefox, Edge, Safari) |
+| **Autenticación** | Correo institucional |
+| **Sesión** | Token con expiración configurable |
+| **Idioma** | Español |
+| **Responsive** | Sí, mediante navegador (no app nativa) |
+| **Respaldo** | **No incluido en MVP** |
+| **App móvil nativa** | **No incluida en MVP** |
+
+---
+
+# 2. PANEL DE ADMINISTRACIÓN
+
+## 2.1 Definición
+
+El **Panel de Administración** es el módulo central donde se configura todo el sistema. **Incluye la auditoría**, la gestión de roles, los parámetros y la configuración general.
+
+## 2.2 Submódulos del Panel de Administración
+
+| Submódulo | Descripción | MVP |
+|---|---|---|
+| **A01 — Usuarios** | Gestión de usuarios del sistema | Sí |
+| **A02 — Roles** | Creación y asignación de roles dinámicos | Sí |
+| **A03 — Permisos** | Matriz de permisos por rol | Sí |
+| **A04 — Parámetros** | Configuración de plazos, límites y valores por defecto | Sí |
+| **A05 — Catálogos** | Líneas de acción, ODS, revistas indexadas, modalidades | Sí |
+| **A06 — Presupuesto** | Configuración del 2% y centros de costo | Sí |
+| **A07 — Notificaciones** | Configuración de canales y plantillas | Sí |
+| **A08 — Auditoría** | Registro de todas las acciones del sistema | Sí |
+| **A09 — Reportes** | Generación y exportación de reportes | Sí |
+| **A10 — Mantenimiento** | Modo mantenimiento y logs | Sí (sin respaldo) |
+
+---
+
+# 3. ROLES POR DEFECTO
+
+## 3.1 Creación inicial
+
+Al instalar la plataforma, se crean por defecto los siguientes roles:
+
+| Código | Rol | Tipo | Alcance |
+|---|---|---|---|
+| **ROL-01** | Estudiante | Funcional | Proyecto específico |
+| **ROL-02** | Egresado | Funcional | Proyecto específico |
+| **ROL-03** | Docente Asesor | Funcional | Proyecto específico |
+| **ROL-04** | Docente Responsable | Funcional | Proyecto específico |
+| **ROL-05** | Presidente Comité RSU | Funcional | Todos los proyectos de la Escuela |
+| **ROL-06** | Miembro Comité RSU | Funcional | Todos los proyectos de la Escuela |
+| **ROL-07** | Director de Escuela | Jerárquico | Todos los proyectos de la Escuela |
+| **ROL-08** | Decano | Jerárquico | Todos los proyectos de la Facultad |
+| **ROL-09** | Comité de Calidad | Funcional | Solo lectura y reportes |
+| **ROL-10** | Administrador | Técnico | Configuración del sistema |
+
+## 3.2 Naturaleza dinámica
+
+- Los roles **no son fijos por usuario**.
+- Un usuario puede tener **uno o más roles** simultáneamente.
+- El **Administrador** asigna o revoca roles.
+- El alcance del rol puede ser **por proyecto, por modalidad o por etapa**.
+
+---
+
+# 4. MÓDULOS POR ROL
+
+## 4.1 Definición de módulos
+
+| Código | Módulo | Descripción |
+|---|---|---|
+| **M01** | Proyectos | Creación y gestión de proyectos |
+| **M02** | Avances | Informes de avance |
+| **M03** | Informe Final | Informe final y encuestas |
+| **M04** | Comité RSU | Integrantes y designación |
+| **M05** | Indicadores | Métricas de desempeño |
+| **M06** | Exportación | Paquete de descarga |
+| **M07** | Notificaciones | Alertas por acción |
+| **M08** | Presupuesto | Control del 2% |
+| **M09** | Panel de Administración | Configuración y auditoría |
+
+## 4.2 Matriz de acceso por rol
+
+| Rol | M01 | M02 | M03 | M04 | M05 | M06 | M07 | M08 | M09 |
+|---|---|---|---|---|---|---|---|---|---|
+| Estudiante | Sí | Sí | Sí | No | No | No | Sí | No | No |
+| Egresado | Sí | Sí | Sí | No | No | No | Sí | No | No |
+| Docente Asesor | Sí | Sí | Sí | No | No | No | Sí | No | No |
+| Docente Responsable | Sí | Sí | Sí | No | No | No | Sí | No | No |
+| Presidente Comité RSU | Sí | Sí | Sí | Sí | Sí | No | Sí | Sí | No |
+| Miembro Comité RSU | No | Sí | Sí | Sí | Sí | No | Sí | No | No |
+| Director de Escuela | Sí | Sí | Sí | Sí | Sí | No | Sí | Sí | No |
+| Decano | Sí | Sí | Sí | Sí | Sí | Sí | Sí | Sí | Sí |
+| Comité de Calidad | No | No | No | No | Sí | Sí | Sí | Sí | Sí |
+| Administrador | No | No | No | No | Sí | Sí | Sí | Sí | Sí |
+
+---
+
+# 5. CONFIGURACIÓN POR ROL
+
+## 5.1 Administrador — Todos los parámetros
+
+| Parámetro | Puede configurar |
+|---|---|
+| Usuarios | Crear, editar, eliminar, asignar roles |
+| Roles | Crear, editar, eliminar, asignar permisos |
+| Permisos | Matriz completa |
+| Plazos | Revisión, subsanación, ampliación |
+| Límites | Estudiantes por SSU, horas SSU, proyectos por docente |
+| Catálogos | Líneas, ODS, revistas, modalidades |
+| Presupuesto | Porcentaje, centros de costo, distribución |
+| Notificaciones | Canales, plantillas, frecuencia |
+| Auditoría | Consulta completa |
+| Reportes | Generación y exportación |
+| Mantenimiento | Modo mantenimiento, logs |
+| Parámetros de Facultad | Todos |
+| Parámetros de Escuela | Todos |
+
+## 5.2 Decano — Solo parámetros de su Facultad
+
+| Parámetro | Puede configurar |
+|---|---|
+| Usuarios de su Facultad | Ver, asignar roles |
+| Roles de su Facultad | Ver, asignar |
+| Permisos de su Facultad | Ver |
+| Plazos de su Facultad | Editar |
+| Límites de su Facultad | Editar |
+| Catálogos | Ver |
+| Presupuesto de su Facultad | Ver, editar, aprobar |
+| Notificaciones de su Facultad | Ver |
+| Auditoría de su Facultad | Ver |
+| Reportes de su Facultad | Generar y exportar |
+
+## 5.3 Comité de Calidad — Solo consulta
+
+| Parámetro | Puede configurar |
+|---|---|
+| Usuarios | Ver |
+| Roles | Ver |
+| Permisos | Ver |
+| Plazos | Ver |
+| Límites | Ver |
+| Catálogos | Ver |
+| Presupuesto | Ver |
+| Notificaciones | Ver |
+| Auditoría | Ver |
+| Reportes | Generar y exportar |
+| Indicadores | Ver, descargar |
+
+---
+
+# 6. SUBMÓDULO A08 — AUDITORÍA
+
+## 6.1 Definición
+
+La **Auditoría** es un submódulo del **Panel de Administración**. Registra todas las acciones del sistema para trazabilidad y control.
+
+## 6.2 Campos del registro de auditoría
+
+| Campo | Descripción |
+|---|---|
+| **id** | Identificador único |
+| **fecha_hora** | Timestamp |
+| **usuario_id** | Usuario que realizó la acción |
+| **rol** | Rol con el que actuó |
+| **accion** | Crear, editar, ver, aprobar, rechazar, descargar, transferir, configurar |
+| **entidad** | Proyecto, informe, usuario, configuración |
+| **entidad_id** | ID del objeto afectado |
+| **valor_anterior** | Estado anterior (JSON) |
+| **valor_nuevo** | Estado nuevo (JSON) |
+| **ip** | Dirección IP |
+| **user_agent** | Navegador y sistema |
+| **resultado** | Éxito, error |
+
+## 6.3 Eventos auditables
+
+| Evento | Se registra |
+|---|---|
+| Inicio de sesión | Sí |
+| Cierre de sesión | Sí |
+| Creación de proyecto | Sí |
+| Edición de proyecto | Sí |
+| Cambio de estado | Sí |
+| Aprobación | Sí |
+| Rechazo | Sí |
+| Descarga | Sí |
+| Transferencia | Sí |
+| Configuración | Sí |
+| Asignación de rol | Sí |
+| Revocación de rol | Sí |
+| Creación de usuario | Sí |
+| Eliminación de usuario | Sí |
+| Modificación de parámetros | Sí |
+
+## 6.4 Acceso a la auditoría
+
+| Rol | Ver | Exportar | Filtrar |
+|---|---|---|---|
+| Administrador | Sí | Sí | Sí |
+| Decano | Sí (solo su Facultad) | Sí | Sí |
+| Comité de Calidad | Sí | Sí | Sí |
+
+---
+
+# 7. SUBMÓDULO A07 — NOTIFICACIONES
+
+## 7.1 Tipos de notificación
+
+| Tipo | Canal | Cuándo |
+|---|---|---|
+| **En plataforma** | Campana | Cambio de estado |
+| **Correo** | Correo institucional | Cambio de estado, plazos próximos, aprobaciones |
+
+**Nota:** No hay notificaciones push ni app móvil en el MVP.
+
+## 7.2 Matriz de notificaciones por acción
+
+| Acción | Notifica a | Mensaje |
+|---|---|---|
+| Proyecto creado | Director de Escuela | Nuevo proyecto pendiente de revisión |
+| Proyecto enviado a revisión | Director de Escuela | Proyecto pendiente de revisión |
+| **Proyecto aprobado por Director** | **Decano** | **Proyecto aprobado pendiente de tu revisión** |
+| **Proyecto aprobado por Director** | **Creador del proyecto** | **Tu proyecto fue aprobado por el Director** |
+| Proyecto rechazado por Director | Creador del proyecto | Tu proyecto fue rechazado: [motivo] |
+| **Proyecto aprobado por Decano** | **Creador del proyecto** | **Tu proyecto fue aprobado por el Decano** |
+| **Proyecto aprobado por Decano** | **DRSU** | **Proyecto aprobado listo para transferencia** |
+| Proyecto rechazado por Decano | Creador del proyecto | Tu proyecto fue rechazado: [motivo] |
+| Proyecto rechazado por Decano | Director de Escuela | Proyecto rechazado por el Decano |
+| **Proyecto transferido a universidad** | **DRSU** | **Proyecto transferido** |
+| **Proyecto transferido a universidad** | **Creador del proyecto** | **Tu proyecto fue transferido a la DRSU** |
+| **Informe de avance aprobado** | **Creador del proyecto** | **Tu informe de avance fue aprobado** |
+| **Informe final aprobado** | **Creador del proyecto** | **Tu informe final fue aprobado** |
+| **Informe de avance rechazado** | **Creador del proyecto** | **Tu informe de avance fue rechazado: [motivo]** |
+| **Informe final rechazado** | **Creador del proyecto** | **Tu informe final fue rechazado: [motivo]** |
+| Proyecto en abandono | Creador del proyecto | Tu proyecto ha sido declarado en abandono |
+| Proyecto en abandono | Director de Escuela | Proyecto en abandono |
+| **Constancia emitida** | **Creador del proyecto** | **Tu constancia está disponible** |
+| Plazo próximo a vencer | Responsable del proyecto | El plazo vence en X días |
+| Supervisión inopinada | Creador del proyecto | Supervisión programada para el [fecha] |
+| Proyecto no ejecutado | Creador del proyecto | Tu proyecto fue declarado no ejecutado |
+| **Cambio de entidad aprobado** | **Creador del proyecto** | **Cambio de entidad aprobado** |
+| **Cambio de docente asesor** | **Creador del proyecto** | **Cambio de docente asesor aprobado** |
+| **Desistimiento aprobado** | **Creador del proyecto** | **Desistimiento aprobado** |
+| **Ampliación de integrantes** | **Creador del proyecto** | **Ampliación de integrantes aprobada** |
+| **Rol asignado** | **Usuario notificado** | **Se te ha asignado el rol [rol] en [proyecto]** |
+| **Rol revocado** | **Usuario notificado** | **Se te ha revocado el rol [rol] en [proyecto]** |
+| **Usuario creado** | **Usuario notificado** | **Tu cuenta ha sido creada** |
+
+## 7.3 Configuración de notificaciones
+
+| Parámetro | Configurable por |
+|---|---|
+| Canales activos | Administrador |
+| Plantillas de mensajes | Administrador |
+| Frecuencia de recordatorios | Administrador |
+| Plazos de anticipación | Administrador |
+| Correo de notificaciones | Administrador |
+
+---
+
+# 8. SUBMÓDULO A10 — MANTENIMIENTO
+
+## 8.1 Configuración
+
+| Parámetro | Descripción | Configurable por |
+|---|---|---|
+| **Modo mantenimiento** | Activa/desactiva la plataforma | Administrador |
+| **Mensaje de mantenimiento** | Texto mostrado a usuarios | Administrador |
+| **Logs del sistema** | Nivel de detalle | Administrador |
+| **Versión de la plataforma** | Número de versión | Administrador |
+| **Actualizaciones** | Programadas | Administrador |
+
+**Nota:** No hay respaldo automático en el MVP.
+
+---
+
+# 9. ESTRUCTURA DE NAVEGACIÓN
+
+## 9.1 Menú principal por rol
+
+| Rol | Menú |
+|---|---|
+| **Estudiante** | Mis Proyectos · Mis Avances · Mis Notificaciones |
+| **Egresado** | Mis Proyectos · Mis Notificaciones |
+| **Docente Asesor** | Mis Asesorías · Avances · Notificaciones |
+| **Docente Responsable** | Mis Proyectos · Avances · Notificaciones |
+| **Presidente Comité RSU** | Proyectos de la Escuela · Comité RSU · Presupuesto · Notificaciones |
+| **Miembro Comité RSU** | Proyectos de la Escuela · Avances · Notificaciones |
+| **Director de Escuela** | Proyectos por Aprobar · Proyectos Aprobados · Indicadores · Presupuesto · Notificaciones |
+| **Decano** | Panel de Control · Proyectos · Indicadores · Presupuesto · Exportación · Panel de Administración · Notificaciones |
+| **Comité de Calidad** | Indicadores · Reportes · Panel de Administración (solo consulta) · Notificaciones |
+| **Administrador** | Panel de Administración completo · Notificaciones |
+
+## 9.2 Panel de Administración — Submenú
+
+| Submódulo | Ruta |
+|---|---|
+| Usuarios | /admin/usuarios |
+| Roles | /admin/roles |
+| Permisos | /admin/permisos |
+| Parámetros | /admin/parametros |
+| Catálogos | /admin/catalogos |
+| Presupuesto | /admin/presupuesto |
+| Notificaciones | /admin/notificaciones |
+| Auditoría | /admin/auditoria |
+| Reportes | /admin/reportes |
+| Mantenimiento | /admin/mantenimiento |
+
+---
+
+# 10. REGLAS DE NEGOCIO
+
+| Código | Regla | Base legal |
+|---|---|---|
+| R01 | El estudiante propone al docente asesor | Art. 21.A |
+| R02 | El docente asesor debe dar conformidad | Art. 21.A |
+| R03 | El proyecto SSU se ejecuta entre el V y X ciclo | Art. 21.B |
+| R04 | El proyecto SSU requiere mínimo 60 horas | Art. 21.D |
+| R05 | El proyecto SSU requiere entre 2 y 5 estudiantes | Art. 21.C |
+| R06 | El docente asesor puede asesorar máximo 2 proyectos SSU por semestre | Art. 21.13 |
+| R07 | El PEP financiado se presenta 15 días antes del inicio de clases | Art. 23 |
+| R08 | El PEP financiado accede al 2% del presupuesto asignado a RSU, administrado por la DRSU y ejecutado en coordinación con la Escuela Profesional | Art. 23 |
+| R09 | El PEP autofinanciado se presenta durante el semestre | Art. 23.1 |
+| R10 | El PEP autofinanciado no requiere financiamiento institucional | Art. 23.1 |
+| R11 | El voluntariado se convoca 2 veces al año | Art. 32 |
+| R12 | El voluntariado requiere mínimo 60 horas para constancia | Art. 33 |
+| R13 | La publicación científica requiere revista indexada | Art. 39 |
+| R14 | La publicación científica requiere afiliación UNDC | Art. 39 |
+| R15 | La publicación científica requiere tema vinculado a Cañete | Art. 39 |
+| R16 | La publicación científica requiere identificar el ODS | Art. 39 |
+| R17 | La publicación científica es autofinanciada | Art. 39 |
+| R18 | Máximo 2 estudiantes por artículo científico | Art. 40 |
+| R19 | Solo Presidente del Comité RSU y Docente Asesor pueden crear proyectos | Art. 23, 25 |
+| R20 | El Director de Escuela debe aprobar antes de que el Decano derive | Art. 22 |
+| R21 | El Decano solo puede descargar proyectos aprobados por el Director de Escuela | Art. 23 |
+| R22 | El Decano es el único que puede transferir a la plataforma de universidad | Art. 23 |
+| R23 | Los docentes deben cumplir 3 horas semanales de RSU como carga no lectiva | Art. 18 |
+| R24 | Los informes de avance se presentan a mitad del semestre o al finalizar el periodo | Art. 24 |
+| R25 | El informe final del docente asesor se presenta en un plazo máximo de 10 días hábiles | Art. 21.10 |
+| R26 | El estudiante debe subir encuesta a beneficiarios al finalizar el proyecto | Art. 21.8.A |
+| R27 | El estudiante debe subir encuesta al docente asesor al finalizar el proyecto | Requiere validación normativa |
+| R28 | El docente asesor debe subir informe final en 10 días hábiles | Art. 21.10 |
+| R29 | Los documentos externos se envían a la DRSU vía plataforma, correo o Mesa de Partes | Art. 41 |
+| R30 | Los modelos descargables están disponibles en la plataforma | — |
+| R31 | Los rechazos rebotan al emisor para modificaciones | — |
+| R32 | Los proyectos rechazados pueden reenviarse | — |
+| R33 | Si el Director de Escuela no revisa en el plazo, escala al Decano | — |
+| R34 | Si el Decano no revisa en el plazo, se aprueba por silencio administrativo positivo | — |
+| R35 | El Consejo Universitario aprueba los PEP financiados | Ley 30220 Art. 59.1 |
+| R36 | **Todo evento de aprobación genera notificación obligatoria** | — |
+| R37 | **Todo evento de rechazo genera notificación obligatoria con motivo** | — |
+
+---
+
+# 11. FLUJOS CON SUPUESTOS NORMALES
+
+## 11.1 SSU
+
+### Supuestos
+- Si el docente asesor no da conformidad, el proyecto queda en Borrador y el estudiante puede proponer otro docente.
+- Si el proyecto es declarado en abandono, el estudiante puede reinscribirlo en el siguiente semestre.
+- Si el estudiante desiste antes del segundo informe, puede reinscribirse en otro proyecto.
+- Si el Director de Escuela no revisa en el plazo, el proyecto escala al Decano.
+- Si el Decano no revisa en el plazo, se aprueba por silencio administrativo positivo.
+- Si la DRSU rechaza el informe inicial, el estudiante tiene 10 días hábiles para subsanar.
+- Si la DRSU rechaza el informe final, el estudiante tiene 10 días hábiles para subsanar.
+- Si el proyecto es rechazado por el Director de Escuela, rebota al emisor para modificaciones.
+- Si el proyecto es rechazado por el Decano, rebota al emisor para modificaciones.
+
+## 11.2 PEP Financiado
+
+### Supuestos
+- Si el Director de Escuela rechaza, rebota al Presidente del Comité RSU.
+- Si el Decano rechaza, rebota al Presidente del Comité RSU.
+- Si la DRSU rechaza la evaluación técnica, rebota al Presidente del Comité RSU.
+- Si el Consejo Universitario rechaza, rebota al Presidente del Comité RSU.
+- Si el presupuesto no alcanza, el proyecto se declara no financiado y puede pasar a autofinanciado.
+- Si el proyecto no se ejecuta, se declara en abandono y se devuelve el presupuesto.
+
+## 11.3 PEP Autofinanciado
+
+### Supuestos
+- Si el Director de Escuela rechaza, rebota al docente responsable.
+- Si el Decano rechaza, rebota al docente responsable.
+- Si la DRSU rechaza, rebota al docente responsable.
+- Si el proyecto no se ejecuta, se declara en abandono.
+
+## 11.4 Voluntariado
+
+### Supuestos
+- Si el voluntario se retira, puede reincorporarse en la siguiente convocatoria.
+- Si el voluntario solicita suspensión temporal, puede reincorporarse con FUT.
+- Si el voluntario no cumple 60 horas, no se emite constancia.
+- Si el proyecto no se ejecuta, se declara en abandono.
+- Si el proyecto es rechazado por la DRSU, rebota al voluntario para modificaciones.
+
+## 11.5 Publicación Científica
+
+### Supuestos
+- Si la revista no está indexada, se rechaza.
+- Si el tema no está vinculado a Cañete, se rechaza.
+- Si la afiliación no es UNDC, se rechaza.
+- Si el artículo no identifica ODS, se rechaza.
+- Si el artículo no está publicado o aceptado, se rechaza.
+- Si el artículo es rechazado por la DRSU, rebota al estudiante.
+
+---
+
+# 12. REEMPLAZO DE COMISIÓN ORGANIZADORA
+
+## 12.1 Contexto
+
+La **Comisión Organizadora** ya no existe en las fechas actuales (octubre 2026). La UNDC ya cuenta con órganos de gobierno constituidos.
+
+## 12.2 Reemplazo en el flujo de PEP Financiado
+
+| Antes | Ahora |
+|---|---|
+| Comisión Organizadora aprueba mediante resolución | **Consejo Universitario** aprueba mediante resolución |
+| Vicerrectorado Académico eleva a Comisión Organizadora | Vicerrectorado Académico eleva a Consejo Universitario |
+
+## 12.3 Base legal
+
+| Norma | Artículo | Contenido |
+|---|---|---|
+| **Ley 30220** | Art. 59.1 | Consejo Universitario aprueba los instrumentos de planeamiento |
+| **Ley 30220** | Art. 59.3 | Consejo Universitario aprueba el presupuesto general |
+| **Estatuto UNDC** | Art. 26 | Atribuciones del Consejo Universitario |
+| **ROF UNDC** | Art. 26 | Funciones del Consejo Universitario |
+
+---
+
+**Documento MVP web actualizado: sin respaldo, sin app nativa móvil, aprobaciones notificadas obligatoriamente, auditoría en Panel de Administración, roles por defecto y configuración por rol.**
+

@@ -1,0 +1,32 @@
+# Secrets / env — .env se versiona intencionalmente
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+.vite/
+npm-debug.log*
+yarn-error.log*
+
+# Go
+backend/bin/
+backend/tmp/
+*.exe
+*.test
+*.out
+
+# Uploads / runtime
+backend/uploads/
+uploads/
+*.log
+logs/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,26 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+* { font-family: Inter, system-ui, -apple-system, sans-serif; }
+html{ -webkit-font-smoothing:antialiased; scroll-behavior:smooth; }
+body{ @apply bg-[#f8fafc] text-slate-800 leading-relaxed; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track{ background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover{ background: #94a3b8; }
+@layer components{
+  .card { @apply bg-white rounded-2xl border border-slate-200/70 shadow-card backdrop-blur-sm; }
+  .card-hover{ @apply border-slate-200/70 transition-all duration-200 hover:border-slate-300; }
+  .card-hover:hover{ box-shadow: 0 8px 32px rgba(0,0,0,0.08); transform: translateY(-2px); }
+  .input { @apply w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-undc-500 focus:ring-4 focus:ring-undc-500/10 placeholder:text-slate-400 transition-all; }
+  .input-error{ @apply border-red-300 focus:border-red-500 focus:ring-red-500/10 bg-red-50/30; }
+  .btn-press{ @apply active:scale-[0.98] transition-transform; }
+  .glass{ @apply bg-white/80 backdrop-blur-xl border border-white/20; }
+  .shimmer{ @apply relative overflow-hidden; }
+  .shimmer::before{ content: ""; position: absolute; inset: 0; transform: translateX(-100%); animation: shimmer 1.5s infinite; background: linear-gradient(to right, transparent, rgba(255,255,255,0.4), transparent); }
+}
+@layer utilities{
+  .text-balance{ text-wrap:balance; }
+  .mono{ font-family: 'JetBrains Mono', monospace; }
+}

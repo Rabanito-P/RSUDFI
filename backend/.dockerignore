@@ -1,0 +1,10 @@
+uploads/
+*.exe
+*.log
+.env
+tmp/
+*.tmp
+.git
+.gitignore
+README.md
+undc_rsu.sql
