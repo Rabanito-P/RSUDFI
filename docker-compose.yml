@@ -1,4 +1,4 @@
-# ==============================================================================
+﻿# ==============================================================================
 # UNDC — Sistema de Gestión RSU · Docker Compose — PostgreSQL 18
 # Ley 30220 Art.124-125 · SUNEDU Ind.29 · SINEACE Est.25 — Cañete, Lima
 # Stack: postgres:18-alpine + Go 1.22 (Gin/GORM) + Node 20 / Nginx 1.27
@@ -24,7 +24,11 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql
-      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./db/01-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./db/seed_demo.sql:/docker-entrypoint-initdb.d/03-seed-demo.sql:ro
+      - ./db/05_usuario_permisos.sql:/docker-entrypoint-initdb.d/05-usuario-permisos.sql:ro
+      - ./db/07_formatos.sql:/docker-entrypoint-initdb.d/07-formatos.sql:ro
+      - ./db/09_sin_creditos.sql:/docker-entrypoint-initdb.d/09-sin-creditos.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-undc} -d ${POSTGRES_DB:-undc_rsu}"]
       interval: 5s
@@ -67,6 +71,8 @@ services:
       - "${BACKEND_PORT:-8080}:8080"
     volumes:
       - backend_uploads:/app/uploads
+      # Plantillas Word/Excel y el lector Python que interpreta la planificación.
+      - ./documentos:/app/documentos:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8080/health || wget -qO- http://localhost:8080/health || exit 1"]
       interval: 10s

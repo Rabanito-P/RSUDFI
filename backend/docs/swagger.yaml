@@ -1,0 +1,2512 @@
+﻿host: localhost:8080
+info:
+  contact:
+    name: UNDC Cañete — RSU
+  description: |-
+    API de Responsabilidad Social Universitaria — UNDC Cañete (Ley 30220 Art.124-125, SUNEDU Ind.29, SINEACE Est.25).
+    Auth real contra tabla RSU_Usuario (bcrypt + JWT). Storage local activo.
+  license:
+    name: Uso institucional UNDC
+  title: UNDC RSU API
+  version: "1.0"
+paths:
+  /api/v1/actividades:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Ejecución
+  /api/v1/actividades/{id}/estado:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID actividad
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Ejecución
+  /api/v1/asignaciones/docente:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Asignaciones
+  /api/v1/asignaciones/estudiante:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Asignaciones
+  /api/v1/auditoria:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Auditoría
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Auth
+  /api/v1/auth/me:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Auth
+  /api/v1/auth/oauth/info:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Auth
+  /api/v1/beneficiarios:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Beneficiarios
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Beneficiarios
+  /api/v1/beneficiarios/{id}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID beneficiario
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Beneficiarios
+  /api/v1/beneficiarios/vincular:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Beneficiarios
+  /api/v1/catalogos/estados:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Catálogos
+  /api/v1/catalogos/lineas-accion:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Catálogos
+  /api/v1/catalogos/preguntas-encuesta:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Catálogos
+  /api/v1/catalogos/roles-actor:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Catálogos
+  /api/v1/catalogos/tipos-documento:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Catálogos
+  /api/v1/catalogos/tipos-proyecto:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Catálogos
+  /api/v1/catalogos/transiciones:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Catálogos
+  /api/v1/ciclos:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Estructura
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Estructura
+  /api/v1/comite-rsu:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Comité RSU
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Comité RSU
+  /api/v1/comite-rsu/{id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID comité
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Comité RSU
+  /api/v1/comite-rsu/escuela/{id}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID escuela
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Comité RSU
+  /api/v1/configuracion:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Configuración
+  /api/v1/configuracion/{clave}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Clave del parámetro
+        in: path
+        name: clave
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Configuración
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Clave del parámetro
+        in: path
+        name: clave
+        required: true
+        type: string
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Configuración
+  /api/v1/configuracion/{id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID config
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Configuración
+  /api/v1/dashboard/kpis:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Seguimiento
+  /api/v1/docentes:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Personas
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Personas
+  /api/v1/docentes/{id}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID docente
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Personas
+  /api/v1/docentes/{id}/proyectos:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID docente
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Proyectos
+  /api/v1/documentos/upload:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Documentos
+  /api/v1/encuestas/beneficiario:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Encuestas
+  /api/v1/entregables:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Seguimiento
+  /api/v1/entregables/{id}:
+    patch:
+      consumes:
+      - application/json
+      - multipart/form-data
+      parameters:
+      - description: ID entregable
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Proyecto cerrado o no miembro
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Entregable ya registrado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Seguimiento
+      - Seguimiento
+  /api/v1/escuelas:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Estructura
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Estructura
+  /api/v1/escuelas/{id}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID escuela
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Estructura
+  /api/v1/estudiantes:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Personas
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Personas
+  /api/v1/estudiantes/{id}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID estudiante
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Personas
+  /api/v1/estudiantes/{id}/proyectos:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID estudiante
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Proyectos
+  /api/v1/facultades:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Estructura
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Estructura
+  /api/v1/facultades/{id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID facultad
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Estructura
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID facultad
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Estructura
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID facultad
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Estructura
+  /api/v1/indicadores:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Seguimiento
+  /api/v1/monitoreos:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Seguimiento
+  /api/v1/notificaciones:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Notificaciones
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Notificaciones
+  /api/v1/notificaciones/{id}/leido:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID notificación
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Notificaciones
+  /api/v1/notificaciones/count:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Notificaciones
+  /api/v1/notificaciones/counts:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Notificaciones
+  /api/v1/notificaciones/health:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Notificaciones
+  /api/v1/notificaciones/marcar-todas-leidas:
+    patch:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Notificaciones
+  /api/v1/presupuesto/movimientos:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Presupuesto
+  /api/v1/proyectos:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Proyectos
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Proyectos
+  /api/v1/proyectos/{id}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Proyectos
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Proyectos
+  /api/v1/proyectos/{id}/actividades:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Ejecución
+  /api/v1/proyectos/{id}/beneficiarios:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Beneficiarios
+  /api/v1/proyectos/{id}/docentes:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Asignaciones
+  /api/v1/proyectos/{id}/documentos:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Documentos
+  /api/v1/proyectos/{id}/encuestas:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Encuestas
+  /api/v1/proyectos/{id}/entregables:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Seguimiento
+  /api/v1/proyectos/{id}/entregables/registrar:
+    post:
+      consumes:
+      - application/json
+      - multipart/form-data
+      parameters:
+      - description: ID entregable
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Proyecto cerrado o no miembro
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Entregable ya registrado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Seguimiento
+      - Seguimiento
+  /api/v1/proyectos/{id}/es-miembro/{estudianteId}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ID estudiante
+        in: path
+        name: estudianteId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Proyectos
+  /api/v1/proyectos/{id}/estudiantes:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Asignaciones
+  /api/v1/proyectos/{id}/estudiantes/{estudianteId}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ID estudiante
+        in: path
+        name: estudianteId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Asignaciones
+  /api/v1/proyectos/{id}/historial:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Proyectos
+  /api/v1/proyectos/{id}/indicadores:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Seguimiento
+  /api/v1/proyectos/{id}/monitoreos:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Seguimiento
+  /api/v1/proyectos/{id}/presupuesto:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Presupuesto
+  /api/v1/proyectos/{id}/roles:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Roles dinámicos
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Roles dinámicos
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Roles dinámicos
+  /api/v1/proyectos/{id}/transicion:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Proyectos
+  /api/v1/proyectos/resumen:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Proyectos
+  /api/v1/usuarios/{tipo}/{id}/roles:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: DOCENTE|ESTUDIANTE|ADMINISTRATIVO
+        in: path
+        name: tipo
+        required: true
+        type: string
+      - description: ID usuario
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Roles dinámicos
+  /health:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Health
+schemes:
+- http
+securityDefinitions:
+  BearerAuth:
+    description: 'JWT: Bearer <token> obtenido de POST /api/v1/auth/login (password seed: undc2026)'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

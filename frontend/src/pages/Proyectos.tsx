@@ -1,61 +1,80 @@
-import { useEffect, useState } from 'react'
-import { api } from '../api/client'
+﻿import { useEffect, useState } from 'react'
+import { api, asArray } from '../api/client'
 import { Proyecto } from '../types/models'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { Input, Select } from '../components/ui/Input'
 import { Card } from '../components/ui/Card'
+import { Alert } from '../components/ui/Alert'
 import { Skeleton, CardSkeleton } from '../components/ui/Skeleton'
 import { EmptySearch } from '../components/ui/Empty'
 import { PageHeader } from '../components/ui/PageHeader'
-import { Search, Plus, Eye, ArrowRight, Filter, FolderKanban, Layers, GraduationCap } from 'lucide-react'
-import { Link, Navigate, useLocation } from 'react-router-dom'
+import { Search, Plus, Eye, ArrowRight, Filter, FolderKanban, Layers, GraduationCap, ChevronLeft, ChevronRight, FileText } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+
+const LIMIT = 10
 
 export default function Proyectos(){
   const {user} = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
   const [items,setItems]=useState<Proyecto[]>([])
   const [search,setSearch]=useState('')
   const [estado,setEstado]=useState('')
+  const [escuela,setEscuela]=useState('')
+  const [escuelas,setEscuelas]=useState<any[]>([])
   const [meta,setMeta]=useState<any>(null)
+  const [page,setPage]=useState(1)
   const [loading,setLoading]=useState(true)
+  const [error,setError]=useState('')
   const isEstudiante = user?.rol==='ESTUDIANTE'
   const isDocente = user?.rol==='DOCENTE'
 
-  // V3: estudiante aislado — /proyectos (todos) redirige a /mis-proyectos
-  if(isEstudiante && (location.pathname==='/proyectos' || location.pathname==='/proyectos/')){
-    return <Navigate to="/mis-proyectos" replace />
-  }
+  useEffect(()=>{
+    if(isEstudiante && (location.pathname==='/proyectos' || location.pathname==='/proyectos/')){
+      navigate('/mis-proyectos', { replace: true })
+    }
+  },[isEstudiante, location.pathname, navigate])
+
+  useEffect(()=>{
+    api.get('/api/v1/escuelas').then((r:any)=> setEscuelas(asArray(r.data))).catch(()=> setEscuelas([]))
+  },[])
 
   const load = async()=>{
-    setLoading(true)
+    setLoading(true); setError('')
     try{
-      if(isEstudiante && user?.id){
-        const r:any = await api.get(`/api/v1/estudiantes/${user.id}/proyectos?search=${encodeURIComponent(search)}&page=1&limit=20`)
-        setItems(r.data||[]); setMeta(r.meta); return
-      }
-      if(isDocente && user?.id){
-        const r:any = await api.get(`/api/v1/docentes/${user.id}/proyectos?search=${encodeURIComponent(search)}&page=1&limit=20`)
-        setItems(r.data||[]); setMeta(r.meta); return
-      }
       const q = new URLSearchParams()
       if(search) q.set('search',search)
+      q.set('page',String(page)); q.set('limit',String(LIMIT))
+      if(isEstudiante && user?.persona_id){
+        const r:any = await api.get(`/api/v1/estudiantes/${user.persona_id}/proyectos?${q.toString()}`)
+        const all = asArray<Proyecto>(r.data)
+        setItems(estado? all.filter(p=> String(p.estado_actual?.id_estado)===estado) : all)
+        setMeta(r.meta); return
+      }
+      if(isDocente && user?.persona_id){
+        const r:any = await api.get(`/api/v1/docentes/${user.persona_id}/proyectos?${q.toString()}`)
+        const all = asArray<Proyecto>(r.data)
+        setItems(estado? all.filter(p=> String(p.estado_actual?.id_estado)===estado) : all)
+        setMeta(r.meta); return
+      }
       if(estado) q.set('estado',estado)
-      q.set('page','1'); q.set('limit','20')
+      if(escuela) q.set('escuela',escuela)
       const r:any = await api.get(`/api/v1/proyectos?${q.toString()}`)
-      setItems(r.data||[]); setMeta(r.meta)
-    }catch(e){ setItems([]) }
+      setItems(asArray(r.data)); setMeta(r.meta)
+    }catch(e:any){
+      setItems([]); setMeta(null)
+      setError(e?.message || 'No se pudieron cargar los proyectos')
+    }
     finally{ setLoading(false) }
   }
-  useEffect(()=>{ load() },[])
+  useEffect(()=>{ load() },[page])
 
-  // demo solo para directivo (no filtrado). Estudiante/docente con 0 proyectos muestra vacío, no demo de otros.
-  const demo:Proyecto[] = items.length ? items : (loading ? [] : (isEstudiante||isDocente ? [] : [
-    {id_proyecto:1,codigo_proyecto:'RSU-2026-001',titulo:'Campaña de salud integral en San Vicente de Cañete',id_escuela:1,id_tipo:1,id_estado_actual:9,estado_actual:{id_estado:9,codigo:'EN_EJECUCION',nombre:'En ejecución',color_ui:'#2196F3',orden_flujo:9},escuela:{id_escuela:1,nombre:'Enfermería',facultad:{nombre:'Ciencias de la Salud'}},presupuesto_aprobado:12000,monto_ejecutado:4500,porcentaje_avance:38,created_at:''},
-    {id_proyecto:2,codigo_proyecto:'RSU-2026-002',titulo:'Alfabetización digital para adultos mayores - Imperial',id_escuela:1,id_tipo:2,id_estado_actual:6,estado_actual:{id_estado:6,codigo:'APROBADO_CON_RESOLUCION',nombre:'Aprobado con Resolución',color_ui:'#4CAF50',orden_flujo:6},escuela:{id_escuela:2,nombre:'Ing. Sistemas'},presupuesto_aprobado:8000,monto_ejecutado:0,porcentaje_avance:0,created_at:''},
-    {id_proyecto:3,codigo_proyecto:'RSU-2026-003',titulo:'Reciclaje comunitario y gestión ambiental - Quilmaná',id_escuela:1,id_tipo:1,id_estado_actual:1,estado_actual:{id_estado:1,codigo:'BORRADOR',nombre:'Borrador',color_ui:'#9E9E9E',orden_flujo:1},escuela:{id_escuela:1,nombre:'Ing. Ambiental'},presupuesto_aprobado:5000,monto_ejecutado:0,porcentaje_avance:0,created_at:''},
-  ] as any))
+  const aplicar = ()=>{ if(page===1){ load() } else { setPage(1) } }
+  const limpiar = ()=>{ setSearch(''); setEstado(''); setEscuela(''); if(page===1){ load() } else { setPage(1) } }
+  const totalPages = Math.max(1, Number(meta?.pages||1))
+  const totalRegistros = Number(meta?.total ?? items.length)
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -64,7 +83,7 @@ export default function Proyectos(){
         title={isEstudiante ? 'Mis proyectos — aislados' : isDocente ? 'Proyectos asesorados' : 'Proyectos — Supervisión'}
         subtitle={isEstudiante ? 'Tu único proyecto activo (grupo con líder y docente asesor)' : isDocente ? 'Proyectos donde eres docente asesor' : 'Tus proyectos vigentes'}
         icon={<FolderKanban size={20}/>}
-        badge={<span className="px-2.5 py-1 bg-slate-900 text-white rounded-full text-xs font-bold">{meta? `${meta.total} proyectos` : `${demo.length} demo`}</span>}
+        badge={<span className="px-2.5 py-1 bg-slate-900 text-white rounded-full text-xs font-bold">{loading? 'Cargando…' : `${totalRegistros} proyectos`}</span>}
         actions={
           <>
             {(isEstudiante || user?.rol==='ADMIN') && <Link to="/proyectos/nuevo" className="inline-flex items-center gap-2 bg-undc-700 hover:bg-undc-800 text-white px-4 py-2.5 rounded-xl font-semibold shadow-sm btn-press"><Plus size={18}/> Proponer proyecto</Link>}
@@ -76,41 +95,51 @@ export default function Proyectos(){
 
       {user && <div className="flex gap-2 text-xs flex-wrap"><span className="px-2.5 py-1 bg-undc-700 text-white rounded-full text-xs font-bold">{user.rol_actor}</span>{isEstudiante && <span className="px-2 py-1 bg-undc-50 border border-undc-200 text-undc-700 rounded-full">Grupo con líder + asesor</span>}{isDocente && <span className="px-2 py-1 bg-undc-50 border border-undc-200 text-undc-700 rounded-full">Solo asesorados</span>}</div>}
 
-      {!isEstudiante && (
-        <Card className="p-4">
-          <div className="flex flex-wrap gap-3 items-center">
-            <div className="relative flex-1 min-w-[240px]">
-              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"/>
-              <Input value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>e.key==='Enter'&&load()} placeholder="Buscar por título, código o escuela..." className="pl-9 bg-slate-50 border-slate-200 focus:bg-white"/>
-            </div>
+      <Card className="p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-3 lg:items-center">
+          <div className="relative flex-1 min-w-0 lg:min-w-[240px]">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"/>
+            <Input value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>e.key==='Enter'&&aplicar()} placeholder="Buscar por título, código o escuela..." className="pl-9 bg-slate-50 border-slate-200 focus:bg-white"/>
+          </div>
+          <div className="flex items-center gap-2">
+            <Filter size={16} className="text-slate-400 shrink-0"/>
+            <Select value={estado} onChange={e=>setEstado(e.target.value)} className="w-full lg:w-auto lg:min-w-[170px] bg-slate-50">
+              <option value="">Todos los estados</option>
+              <option value="1">Borrador</option>
+              <option value="2">En revisión Escuela</option>
+              <option value="6">Aprobado con Resolución</option>
+              <option value="9">En ejecución</option>
+              <option value="10">En monitoreo</option>
+              <option value="13">Cerrado</option>
+            </Select>
+          </div>
+          {escuelas.length>0 && (
             <div className="flex items-center gap-2">
-              <Filter size={16} className="text-slate-400"/>
-              <Select value={estado} onChange={e=>setEstado(e.target.value)} className="min-w-[170px] bg-slate-50">
-                <option value="">Todos los estados</option>
-                <option value="1">Borrador</option>
-                <option value="2">En revisión Escuela</option>
-                <option value="6">Aprobado con Resolución</option>
-                <option value="9">En ejecución</option>
-                <option value="10">En monitoreo</option>
-                <option value="13">Cerrado</option>
+              <Select value={escuela} onChange={e=>setEscuela(e.target.value)} className="w-full lg:w-auto lg:min-w-[180px] bg-slate-50">
+                <option value="">Todas las escuelas</option>
+                {escuelas.map(e=> <option key={e.id_escuela} value={String(e.id_escuela)}>{e.nombre}</option>)}
               </Select>
             </div>
-            <Button onClick={load} variant="secondary" leftIcon={<Search size={14}/>}>Filtrar</Button>
-            <Button onClick={()=>{setSearch(''); setEstado(''); setTimeout(load,0)}} variant="outline">Limpiar</Button>
+          )}
+          <div className="flex gap-2">
+            <Button onClick={aplicar} variant="secondary" leftIcon={<Search size={14}/>} className="flex-1 lg:flex-none">Filtrar</Button>
+            <Button onClick={limpiar} variant="outline" className="flex-1 lg:flex-none">Limpiar</Button>
           </div>
-        </Card>
-      )}
+        </div>
+      </Card>
+
+      {error && <Alert variant="error"><div className="flex items-center justify-between gap-3"><span>{error}</span><Button size="sm" variant="outline" onClick={load}>Reintentar</Button></div></Alert>}
 
       {loading ? (
         <div className="grid gap-4">{[1,2,3].map(i=><CardSkeleton key={i}/>)}</div>
-      ) : demo.length===0 ? (
+      ) : !error && items.length===0 ? (
         <Card><EmptySearch query={search}/></Card>
       ) : (
         <div className="grid gap-4">
-          {demo.map(p=>(
+          {items.map(p=>(
             <Card key={p.id_proyecto} hover className="p-5">
               <div className="flex flex-wrap gap-3 items-start justify-between">
-                <div className="flex-1 min-w-[300px]">
+                <div className="flex-1 min-w-0 sm:min-w-[300px]">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-mono bg-slate-900 text-white px-2 py-1 rounded-lg">{p.codigo_proyecto}</span>
                     <Badge color={p.estado_actual?.color_ui} variant="soft" dot>{p.estado_actual?.nombre}</Badge>
@@ -128,7 +157,7 @@ export default function Proyectos(){
                 </div>
                 <div className="flex gap-2 shrink-0">
                   <Link to={`/proyectos/${p.id_proyecto}`} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 shadow-sm btn-press"><Eye size={16}/> Ver expediente</Link>
-                  <Link to={`/proyectos/${p.id_proyecto}`} className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm font-semibold hover:bg-slate-50 inline-flex items-center gap-1">Flujo <ArrowRight size={14}/></Link>
+                  <Link to={`/proyectos/${p.id_proyecto}?tab=flujo`} className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-sm font-semibold hover:bg-slate-50 inline-flex items-center gap-1">Flujo <ArrowRight size={14}/></Link>
                 </div>
               </div>
             </Card>
@@ -136,10 +165,24 @@ export default function Proyectos(){
         </div>
       )}
 
+      {!loading && totalRegistros>0 && (
+        <Card className="p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="text-xs text-slate-500">
+              Página <b className="text-slate-800">{page}</b> de {totalPages} · {totalRegistros} proyectos
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" disabled={page<=1} onClick={()=>setPage(p=>Math.max(1,p-1))} leftIcon={<ChevronLeft size={14}/>}>Anterior</Button>
+              <Button variant="outline" size="sm" disabled={page>=totalPages} onClick={()=>setPage(p=>Math.min(totalPages,p+1))} rightIcon={<ChevronRight size={14}/>}>Siguiente</Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
       <Card className="bg-slate-900 text-white border-slate-800">
         <div className="p-5 flex flex-wrap items-center justify-between gap-3">
-          <div className="text-sm text-slate-200">Consulta el resumen de tus proyectos</div>
-          <a href="/api/v1/proyectos/resumen" target="_blank" className="px-3 py-2 bg-white text-slate-900 rounded-xl text-sm font-bold hover:bg-slate-100">Ver resumen</a>
+          <div className="text-sm text-slate-200">Consulta el resumen de tus proyectos, indicadores y satisfacción</div>
+          <Link to="/reportes" className="px-3 py-2 bg-white text-slate-900 rounded-xl text-sm font-bold hover:bg-slate-100 inline-flex items-center gap-1.5"><FileText size={14}/> Ver reportes</Link>
         </div>
       </Card>
     </div>

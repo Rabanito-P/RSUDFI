@@ -7,13 +7,13 @@ export default function AutorizacionImagen(){
   const [habilitado,setHabilitado]=useState(false)
   useEffect(()=>{
     if(!user) return
-    api.get(`/api/v1/estudiantes/${user.id}/proyectos`).then((r:any)=>{
+    api.get(`/api/v1/estudiantes/${user.persona_id}/proyectos`).then((r:any)=>{
       const proj=(r.data||[])[0]
       setP(proj)
       const finalizado = proj?.estado_actual?.codigo==='CERRADO' || proj?.estado_actual?.codigo==='REPORTADO_SUNEDU' || proj?.porcentaje_avance>=100
       setHabilitado(!!finalizado)
     }).catch(()=>{})
-  },[user?.id])
+  },[user?.persona_id])
   if(!habilitado) return (
     <div className="space-y-4">
       <h2 className="font-black text-lg">Autorización de imagen</h2>

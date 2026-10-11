@@ -37,6 +37,10 @@ docker compose up --build -d
 ```bash
 # Backend
 cd backend && go vet ./... && go build ./cmd/server
+# Regenerar Swagger tras cambiar handlers:
+# swag init -g cmd/server/main.go -o docs --parseDependency --parseInternal
+# → http://localhost:8080/swagger/index.html (84 ops)
+# Tests: go test ./...
 
 # Frontend
 cd frontend && npm run build  # outputs to dist/
@@ -44,17 +48,33 @@ cd frontend && npm run build  # outputs to dist/
 
 ## Architecture Notes
 
-### Backend (Clean Architecture)
+### Backend (Clean Architecture — un archivo por entidad)
 ```
 cmd/server/main.go          → entrypoint
 internal/config             → env + DSN (PostgreSQL)
-internal/domain/models.go   → 30+ entities (1:1 SQL mapping)
-internal/dto/dto.go         → request/response + binding validations
-internal/repository/        → GORM repos per module
-internal/service/services.go → business rules (ciclo mínimo, carga no lectiva, BPMN, Likert)
-internal/handler/           → Gin controllers
+internal/domain/            → un archivo por entidad: estructura, personas,
+                              catalogos, proyecto, asignacion, documento,
+                              flujo, ejecucion, beneficiario, presupuesto,
+                              impacto, vistas, auditoria, notificacion,
+                              proyecto_rol, comite_rsu, configuracion
+internal/dto/               → un archivo por entidad: estructura, personas,
+                              proyecto, asignacion, beneficiario, actividad,
+                              presupuesto, encuesta, dashboard, auth, common
+internal/repository/        → un repo por entidad (+ base.go, notificacion.go)
+internal/service/           → proyecto, beneficiario, asignacion, encuesta,
+                              dashboard (reglas: ciclo mínimo, carga no
+                              lectiva, BPMN, Likert)
+internal/handler/           → un controller por entidad (facultad, escuela,
+                              ciclo, personas, proyecto, beneficiario,
+                              asignacion, actividad, encuesta, presupuesto,
+                              documento, catalogo, seguimiento, auth, health,
+                              notificacion, proyecto_rol, comite_rsu,
+                              configuracion, auditoria)
+internal/auth/              → mock.go (OAuth presente/desactivado),
+                              mock_provider.go (login rápido demo)
+internal/storage/           → storage.go (local activo + cloud stub)
 internal/router/router.go   → /api/v1 routes (45+ endpoints)
-internal/middleware/        → CORS, Logger
+internal/middleware/        → CORS, Logger, Audit
 pkg/database, pkg/utils
 ```
 
@@ -94,6 +114,7 @@ src/
 ## API Endpoints (Key)
 | Method | Path | Description |
 |--------|------|-------------|
+| GET | `/swagger/index.html` | Swagger UI (swaggo, 84 ops) — también vía nginx/vite proxy `/swagger` |
 | POST | `/api/v1/auth/login` | Mock: `{correo, password}` (123456 / undc2026) |
 | GET | `/api/v1/dashboard/kpis` | SUNEDU/SINEACE KPIs |
 | GET | `/api/v1/catalogos/*` | tipos-proyecto, lineas-accion, estados (16), roles-actor, preguntas |

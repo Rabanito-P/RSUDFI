@@ -1,26 +1,150 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"undc-rsu/backend/internal/domain"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"gorm.io/gorm"
 )
 
-func CORS() gin.HandlerFunc {
+// secretJWT obtiene la clave de firma. En producción es obligatoria: si falta,
+// se rechaza el arranque en lugar de caer en una clave conocida por todo el
+// mundo (ISO 27001 A.10 — controles criptográficos).
+func secretJWT() (string, error) {
+	s := os.Getenv("JWT_SECRET")
+	if s == "" {
+		if os.Getenv("GIN_MODE") == "release" {
+			return "", errors.New("JWT_SECRET es obligatorio en producción (GIN_MODE=release)")
+		}
+		// Valor de desarrollo, claramente inseguro y solo para ese entorno.
+		return "dev-inseguro-solo-para-desarrollo-local", nil
+	}
+	if len(s) < 32 && os.Getenv("GIN_MODE") == "release" {
+		return "", errors.New("JWT_SECRET debe tener al menos 32 caracteres en producción")
+	}
+	return s, nil
+}
+
+// SecretYaLimpio permite que el arranque falle temprano si la configuración no
+// es segura. Lo llama main antes de servir tráfico.
+func ValidarConfigSegura() error {
+	_, err := secretJWT()
+	return err
+}
+
+func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"success": false, "message": "Authorization header requerido"})
+			return
+		}
+		parts := strings.SplitN(authHeader, " ", 2)
+		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"success": false, "message": "Formato de Authorization inválido. Use: Bearer <token>"})
+			return
+		}
+		tokenString := parts[1]
+		secret, err := secretJWT()
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"success": false, "message": "Configuración de seguridad incompleta en el servidor"})
+			return
+		}
+		// El algoritmo se fija explícitamente: evita el ataque "alg: none" y la
+		// confusión HMAC/RSA. Se validan también emisor y audiencia.
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, jwt.ErrSignatureInvalid
+			}
+			return []byte(secret), nil
+		}, jwt.WithValidMethods([]string{"HS256"}),
+			jwt.WithIssuer("undc-rsu"),
+			jwt.WithAudience("undc-rsu-api"))
+		if err != nil || !token.Valid {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"success": false, "message": "Token inválido o expirado"})
+			return
+		}
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"success": false, "message": "Claims inválidos"})
+			return
+		}
+		if uid, ok := claims["user_id"].(float64); ok {
+			c.Set("user_id", uint(uid))
+			c.Set("usuario_id", uint(uid))
+		}
+		if rol, ok := claims["rol_actor"].(string); ok {
+			c.Set("rol_actor", rol)
+		}
+		if correo, ok := claims["correo"].(string); ok {
+			c.Set("correo", correo)
+		}
+		c.Next()
+	}
+}
+
+// CORS configura los orígenes permitidos. Sin configuración se aceptan todos
+// (entorno de desarrollo); con CORS_ORIGINS se restringe a esa lista.
+// OWASP A05: no usar comodín cuando la API maneja credenciales.
+func CORS() gin.HandlerFunc {
+	permitidos := map[string]bool{}
+	origenes := os.Getenv("CORS_ORIGINS")
+	for _, o := range strings.Split(origenes, ",") {
+		o = strings.TrimSpace(o)
+		if o != "" {
+			permitidos[o] = true
+		}
+	}
+	return func(c *gin.Context) {
+		origin := c.GetHeader("Origin")
+		if len(permitidos) == 0 {
+			// Desarrollo: se permite cualquier origen.
+			c.Header("Access-Control-Allow-Origin", "*")
+		} else if origin != "" && permitidos[origin] {
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Vary", "Origin")
+			c.Header("Access-Control-Allow-Credentials", "true")
+		}
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, X-Requested-With")
+		c.Header("Access-Control-Max-Age", "600")
 		if c.Request.Method == http.MethodOptions {
 			c.AbortWithStatus(204)
 			return
 		}
+		c.Next()
+	}
+}
+
+// Seguridad añade cabeceras de protección en todas las respuestas.
+// Cubre OWASP A05 (configuración incorrecta de seguridad) y el endurecimiento
+// básico que pide ISO 27001 A.13 (comunicaciones seguras).
+func Seguridad() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Evita que la API se incruste en iframes de otros sitios (clickjacking).
+		c.Header("X-Frame-Options", "DENY")
+		// Fuerza HTTPS si el despliegue va detrás de TLS.
+		c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		// Impide que el navegador adivine el tipo de contenido.
+		c.Header("X-Content-Type-Options", "nosniff")
+		// No filtra la URL del servidor a sitios de terceros.
+		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
+		// Restringe las funciones del navegador que la API no necesita.
+		c.Header("Permissions-Policy", "geolocation=(self), microphone=(), camera=(self), payment=()")
+		// CSP mínima: la API responde JSON, nunca HTML.
+		c.Header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'")
+		// No guardar respuestas con datos de proyectos en caché del navegador.
+		c.Header("Cache-Control", "no-store")
+		c.Header("X-Permitted-Cross-Domain-Policies", "none")
 		c.Next()
 	}
 }
@@ -65,11 +189,12 @@ func AuditMiddleware(db *gorm.DB) gin.HandlerFunc {
 
 		// registrar auditoría (no bloquear la respuesta si falla)
 		accion := accionDe(method, c)
+		entidad := entidadDe(path)
 		log := &domain.RSUAuditoriaLog{
 			IDUsuario:  usuarioID,
 			IDProyecto: idProyecto,
 			Accion:     accion,
-			TablaAfectada: entidadDe(path),
+			TablaAfectada: &entidad,
 			IPOrigen:   &ip,
 		}
 		_ = db.Create(log).Error
@@ -103,8 +228,88 @@ func entidadDe(path string) string {
 	return path
 }
 
+// ── Limitación de intentos (OWASP A07: identificación y autenticación) ──
+//
+// contraladorDeIntentos cuenta solicitudes por clave (normalmente la IP) y
+// bloquea cuando se supera el máximo en la ventana de tiempo. Protege de fuerza
+// bruta contra /auth/login sin necesidad de infraestructura externa.
+
+type intentos struct {
+	mu       sync.Mutex
+	porClave map[string]*contador
+	max      int
+	ventana  time.Duration
+}
+
+type contador struct {
+	golpes   int
+	reinicio time.Time
+}
+
+func nuevoControlIntentos(max int, ventana time.Duration) *intentos {
+	return &intentos{
+		porClave: make(map[string]*contador),
+		max:      max,
+		ventana:  ventana,
+	}
+}
+
+// Permitido informa si la clave puede continuar y registra el intento.
+func (t *intentos) Permitido(clave string) bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	ahora := time.Now()
+	c, ok := t.porClave[clave]
+	if !ok || ahora.After(c.reinicio) {
+		t.porClave[clave] = &contador{golpes: 1, reinicio: ahora.Add(t.ventana)}
+		// Limpieza oportunista para no crecer sin límite.
+		if len(t.porClave) > 5000 {
+			for k, v := range t.porClave {
+				if ahora.After(v.reinicio) {
+					delete(t.porClave, k)
+				}
+			}
+		}
+		return true
+	}
+	c.golpes++
+	return c.golpes <= t.max
+}
+
+// RateLimit limita las peticiones por IP. Se usa en el login: 10 intentos por
+// minuto por dirección es suficiente para un usuario legítimo.
+func RateLimit(max int, ventana time.Duration) gin.HandlerFunc {
+	ctrl := nuevoControlIntentos(max, ventana)
+	return func(c *gin.Context) {
+		ip := c.ClientIP()
+		if !ctrl.Permitido(ip) {
+			c.Header("Retry-After", "60")
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
+				"success": false,
+				"message": "Demasiados intentos. Espera un minuto antes de volver a probar.",
+			})
+			return
+		}
+		c.Next()
+	}
+}
+
+// TamañoDeCuerpo limita el cuerpo de las peticiones (mitiga DoS por payload).
+func TamañoDeCuerpo(maxBytes int64) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.Request.ContentLength > maxBytes {
+			c.AbortWithStatusJSON(http.StatusRequestEntityTooLarge, gin.H{
+				"success": false,
+				"message": "Cuerpo de la petición demasiado grande",
+			})
+			return
+		}
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxBytes)
+		c.Next()
+	}
+}
+
 // extractProyectoID intenta leer :id de la ruta cuando la entidad es proyecto-scoped.
-// Lee el parámetro de ruta "id" y, si la ruta contiene "proyecto", lo trata como id_proyecto.
 func extractProyectoID(c *gin.Context) *uint {
 	// solo cuando la ruta está dentro de /proyectos/... (o entidad proyecto-scoped)
 	if !strings.Contains(c.Request.URL.Path, "/proyecto") &&

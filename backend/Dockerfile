@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
-# ── UNDC RSU Backend — Go 1.22 + Gin + GORM + PostgreSQL 18 ──
-FROM golang:1.22-alpine AS builder
+# ── UNDC RSU Backend — Go 1.23 + Gin + GORM + PostgreSQL 18 ──
+FROM golang:1.23-alpine AS builder
 WORKDIR /src
 RUN apk add --no-cache git ca-certificates tzdata
 COPY go.mod go.sum ./
@@ -18,7 +18,13 @@ RUN apk add --no-cache ca-certificates tzdata curl && \
     mkdir -p /app/uploads && chown -R appuser:appgroup /app
 WORKDIR /app
 COPY --from=builder /out/server ./server
+COPY --from=builder /src/docs ./docs
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+# Plantillas y lector de Excel: se montan por volumen desde docker-compose.yml
+# (carpeta documentos/ al nivel del backend) en /app/documentos.
+# Python solo para interpretar el Excel de planificación de actividades.
+# openpyxl se instala desde los repositorios de Alpine (py3-pip no es necesario).
+RUN apk add --no-cache python3 py3-openpyxl
 ENV TZ=America/Lima \
     GIN_MODE=release \
     PORT=8080 \

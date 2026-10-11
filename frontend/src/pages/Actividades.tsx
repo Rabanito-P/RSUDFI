@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
-import { api } from '../api/client'
+﻿import { useEffect, useState } from 'react'
+import { useAuth } from '../context/AuthContext'
+import { api, asArray } from '../api/client'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -7,29 +8,122 @@ import { Input, Label, Textarea, Select } from '../components/ui/Input'
 import { Badge } from '../components/ui/Badge'
 import { Skeleton } from '../components/ui/Skeleton'
 import { Alert } from '../components/ui/Alert'
+import { Empty } from '../components/ui/Empty'
+import { Modal } from '../components/ui/Modal'
 import { ClipboardList, Calendar, MapPin, Clock, Plus, Camera, Users, CheckCircle2 } from 'lucide-react'
 
+type Msg = {type:'ok'|'err', text:string} | null
+
 export default function Actividades(){
+  const { user } = useAuth()
   const [activs,setActivs]=useState<any[]>([])
   const [loading,setLoading]=useState(true)
-  const [form,setForm]=useState({proyecto:'1', nombre:'', lugar:'', fecha:'', desc:''})
+  const [error,setError]=useState('')
+  const [proyectos,setProyectos]=useState<any[]>([])
+  const [proyectoId,setProyectoId]=useState<string>('')
+  const [form,setForm]=useState({nombre:'', lugar:'', fecha:'', desc:''})
+  const [saving,setSaving]=useState(false)
+  const [formMsg,setFormMsg]=useState<Msg>(null)
+  const [busyId,setBusyId]=useState<number|null>(null)
+  const [listMsg,setListMsg]=useState<Msg>(null)
+
+  const [modal,setModal]=useState<'fotos'|'asistencia'|null>(null)
+  const [actSel,setActSel]=useState<any>(null)
+  const [fotos,setFotos]=useState<any[]>([])
+  const [fotosLoading,setFotosLoading]=useState(false)
+  const [fotosError,setFotosError]=useState('')
+  const [fichaFile,setFichaFile]=useState<File|null>(null)
+  const [fichaMsg,setFichaMsg]=useState<Msg>(null)
+  const [fichaBusy,setFichaBusy]=useState(false)
+  const [benef,setBenef]=useState<any[]>([])
+  const [benError,setBenError]=useState('')
+  const [benLoading,setBenLoading]=useState(false)
+
+  useEffect(()=>{
+    if(!user) return
+    const endpoint = user.rol === 'ESTUDIANTE'
+      ? `/api/v1/estudiantes/${user.persona_id}/proyectos?limit=50`
+      : user.rol === 'DOCENTE'
+        ? `/api/v1/docentes/${user.persona_id}/proyectos?limit=50`
+        : '/api/v1/proyectos?limit=50'
+    api.get(endpoint).then((r:any)=>{
+      const list = asArray(r.data)
+      setProyectos(list)
+      setProyectoId(prev=> prev || (list[0]? String(list[0].id_proyecto):''))
+    }).catch(()=>{ setProyectos([]); setError('No se pudieron cargar tus proyectos') })
+  },[user?.persona_id, user?.rol])
 
   const load = ()=>{
-    setLoading(true)
-    api.get('/api/v1/proyectos/1/actividades').then((r:any)=> setActivs(r.data||[])).catch(()=> setActivs([
-      {id_actividad:1, nombre:'Jornada salud integral — San Vicente', descripcion:'Tamizaje anemia y charla preventiva', fecha_programada:'2026-05-12', lugar:'Posta San Vicente', estado:'PROGRAMADA', nro_beneficiarios:45, minutos:240},
-      {id_actividad:2, nombre:'Taller emprendimiento juvenil', descripcion:'Plan de negocio canvas', fecha_programada:'2026-05-18', lugar:'I.E. Imperial', estado:'EJECUTADA', nro_beneficiarios:30},
-      {id_actividad:3, nombre:'Campaña reciclaje — Quilmaná', lugar:'Plaza Quilmaná', fecha_programada:'2026-05-20', estado:'PROGRAMADA'},
-    ])).finally(()=> setLoading(false))
+    if (!proyectoId){ setActivs([]); setLoading(false); return }
+    setLoading(true); setError('')
+    api.get(`/api/v1/proyectos/${proyectoId}/actividades`)
+      .then((r:any)=> setActivs(asArray(r.data)))
+      .catch((e:any)=>{ setActivs([]); setError(e?.message||'No se pudieron cargar las actividades') })
+      .finally(()=> setLoading(false))
   }
-  useEffect(()=>{ load()},[])
+  useEffect(()=>{ load() },[proyectoId])
 
   const submit = async(e:React.FormEvent)=>{
     e.preventDefault()
+    setFormMsg(null)
+    if(!proyectoId){ setFormMsg({type:'err', text:'Selecciona un proyecto'}); return }
+    if(!form.nombre){ setFormMsg({type:'err', text:'El nombre es obligatorio'}); return }
+    setSaving(true)
     try{
-      await api.post('/api/v1/actividades', {id_proyecto:Number(form.proyecto), nombre: form.nombre, descripcion: form.desc, fecha_programada: form.fecha||null, lugar: form.lugar})
-      setForm({...form, nombre:'', lugar:'', fecha:'', desc:''}); load()
-    }catch{}
+      await api.post('/api/v1/actividades', {id_proyecto:Number(proyectoId), nombre: form.nombre, descripcion: form.desc || undefined, fecha_programada: form.fecha||null, lugar: form.lugar||undefined})
+      setForm({nombre:'', lugar:'', fecha:'', desc:''})
+      setFormMsg({type:'ok', text:'Actividad programada'})
+      load()
+    }catch(ex:any){ setFormMsg({type:'err', text: ex?.message||'No se pudo programar la actividad'}) }
+    finally{ setSaving(false) }
+  }
+
+  const marcarEjecutada = async(a:any)=>{
+    setListMsg(null); setBusyId(a.id_actividad)
+    try{
+      if(a.estado==='PROGRAMADA'){
+        await api.patch(`/api/v1/actividades/${a.id_actividad}/estado`, {estado:'EN_EJECUCION'})
+      }
+      await api.patch(`/api/v1/actividades/${a.id_actividad}/estado`, {estado:'EJECUTADA'})
+      setListMsg({type:'ok', text:`"${a.nombre}" marcada como EJECUTADA`})
+      load()
+    }catch(ex:any){ setListMsg({type:'err', text: ex?.message||'No se pudo actualizar el estado'}) }
+    finally{ setBusyId(null) }
+  }
+
+  const verFotos = async(a:any)=>{
+    setActSel(a); setModal('fotos'); setFotos([]); setFotosError(''); setFichaFile(null); setFichaMsg(null); setFotosLoading(true)
+    try{
+      const r:any = await api.get(`/api/v1/actividades/${a.id_actividad}/fotos`)
+      setFotos(asArray(r.data))
+    }catch(ex:any){ setFotos([]); setFotosError(ex?.message||'No se pudieron cargar las fotos') }
+    finally{ setFotosLoading(false) }
+  }
+
+  const verAsistencia = async(a:any)=>{
+    setActSel(a); setModal('asistencia'); setBenef([]); setBenError(''); setFichaFile(null); setFichaMsg(null); setBenLoading(true)
+    const pid = a.id_proyecto || proyectoId
+    try{
+      const r:any = await api.get(`/api/v1/proyectos/${pid}/beneficiarios`)
+      setBenef(asArray(r.data))
+    }catch(ex:any){ setBenef([]); setBenError(ex?.message||'No se pudieron cargar los beneficiarios') }
+    finally{ setBenLoading(false) }
+  }
+
+  const subirFicha = async ()=>{
+    if(!fichaFile || !actSel) return
+    setFichaBusy(true); setFichaMsg(null)
+    try{
+      const fd = new FormData()
+      fd.append('id_actividad', String(actSel.id_actividad))
+      fd.append('archivo', fichaFile)
+      await api.upload('/api/v1/actividades/fotos', fd)
+      setFichaMsg({type:'ok', text:'Ficha subida ✓'})
+      setFichaFile(null)
+      const r:any = await api.get(`/api/v1/actividades/${actSel.id_actividad}/fotos`)
+      setFotos(asArray(r.data))
+    }catch(ex:any){ setFichaMsg({type:'err', text: ex?.message||'No se pudo subir la ficha'}) }
+    finally{ setFichaBusy(false) }
   }
 
   return (
@@ -49,14 +143,21 @@ export default function Actividades(){
           </CardHeader>
           <CardContent>
             <form onSubmit={submit} className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>ID Proyecto</Label><Input value={form.proyecto} onChange={e=>setForm({...form, proyecto:e.target.value})}/></div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <Label required>Proyecto</Label>
+                  <Select value={proyectoId} onChange={e=>setProyectoId(e.target.value)}>
+                    <option value="">-- seleccionar --</option>
+                    {proyectos.map(p=> <option key={p.id_proyecto} value={String(p.id_proyecto)}>{p.codigo_proyecto} — {p.titulo}</option>)}
+                  </Select>
+                </div>
                 <div><Label>Fecha programada</Label><Input type="date" value={form.fecha} onChange={e=>setForm({...form, fecha:e.target.value})}/></div>
               </div>
               <div><Label required>Nombre</Label><Input value={form.nombre} onChange={e=>setForm({...form, nombre:e.target.value})} placeholder="Jornada salud — San Vicente" required/></div>
               <div><Label>Lugar</Label><Input value={form.lugar} onChange={e=>setForm({...form, lugar:e.target.value})} placeholder="Posta, I.E., comunidad..."/></div>
               <div><Label>Descripción</Label><Textarea rows={3} value={form.desc} onChange={e=>setForm({...form, desc:e.target.value})} placeholder="Objetivo, metodología, beneficiarios esperados..."/></div>
-              <Button type="submit" className="w-full bg-undc-700 hover:bg-undc-800">Programar actividad</Button>
+              <Button type="submit" className="w-full bg-undc-700 hover:bg-undc-800" loading={saving}>Programar actividad</Button>
+              {formMsg && <Alert variant={formMsg.type==='ok'?'success':'error'} className="text-xs">{formMsg.text}</Alert>}
               <Alert variant="info" className="text-xs">Cualquier miembro del equipo (líder o participante ACTIVO) puede registrar — validado por <code>canStudentRegisterActivity</code> en EN_EJECUCION / EN_MONITOREO.</Alert>
             </form>
           </CardContent>
@@ -65,29 +166,32 @@ export default function Actividades(){
         <Card hover>
           <CardHeader>
             <CardTitle><Calendar size={16}/> Próximas actividades</CardTitle>
-            <p className="text-xs text-slate-500">Click para ver detalle, fotos y asistencia con firma_url</p>
+            <p className="text-xs text-slate-500">Ver fotos, asistencia de beneficiarios y avance de ejecución</p>
           </CardHeader>
           <CardContent>
+            {listMsg && <Alert variant={listMsg.type==='ok'?'success':'error'} className="text-xs mb-3">{listMsg.text}</Alert>}
             {loading ? <div className="space-y-2"><Skeleton className="h-20"/><Skeleton className="h-20"/></div> :
+              error ? <Alert variant="error" className="text-xs"><div className="flex items-center justify-between gap-3"><span>{error}</span><Button size="sm" variant="outline" onClick={load}>Reintentar</Button></div></Alert> :
+              activs.length===0 ? <Empty title="Sin actividades" description={proyectoId? 'Programa la primera actividad de campo para este proyecto.':'Selecciona un proyecto para ver sus actividades.'}/> :
               <div className="space-y-3">
                 {activs.map(a=>(
                   <div key={a.id_actividad} className="border border-slate-200 rounded-2xl p-4 hover:shadow-sm transition-shadow">
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-bold text-white ${a.estado==='EJECUTADA'?'bg-emerald-600': a.estado==='PROGRAMADA'?'bg-amber-500':'bg-slate-400'}`}>{a.estado}</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold text-white ${a.estado==='EJECUTADA'?'bg-emerald-600': a.estado==='PROGRAMADA'?'bg-amber-500': a.estado==='EN_EJECUCION'?'bg-sky-600':'bg-slate-400'}`}>{a.estado}</span>
                       <span className="text-xs text-slate-500 flex items-center gap-1"><Calendar size={12}/>{a.fecha_programada?.slice(0,10) || '—'}</span>
                       <span className="text-xs text-slate-500 flex items-center gap-1"><MapPin size={12}/>{a.lugar || '—'}</span>
                     </div>
                     <div className="font-semibold text-slate-900 mt-2">{a.nombre}</div>
                     <div className="text-xs text-slate-500 mt-1">{a.descripcion}</div>
-                    <div className="flex gap-2 mt-3 text-xs">
+                    <div className="flex gap-2 mt-3 text-xs flex-wrap">
                       <span className="px-2 py-1 bg-slate-50 border rounded-full flex items-center gap-1"><Users size={12}/>{a.nro_beneficiarios||0} benef.</span>
                       {a.minutos ? <span className="px-2 py-1 bg-slate-50 border rounded-full flex items-center gap-1"><Clock size={12}/>{a.minutos} min</span> : null}
-                      <span className="px-2 py-1 bg-slate-900 text-white rounded-full flex items-center gap-1"><Camera size={12}/> Fotos</span>
+                      {a.fotos ? <span className="px-2 py-1 bg-slate-50 border rounded-full flex items-center gap-1"><Camera size={12}/>{a.fotos.length} fotos</span> : null}
                     </div>
-                    <div className="mt-2 flex gap-2">
-                      <Button size="sm" variant="outline">Ver fotos</Button>
-                      <Button size="sm" variant="soft">Asistencia</Button>
-                      {a.estado==='PROGRAMADA' && <Button size="sm" className="bg-undc-700 hover:bg-undc-800">Marcar ejecutada</Button>}
+                    <div className="mt-2 flex gap-2 flex-wrap">
+                      <Button size="sm" variant="outline" onClick={()=>verFotos(a)} leftIcon={<Camera size={12}/>}>Ver fotos</Button>
+                      <Button size="sm" variant="soft" onClick={()=>verAsistencia(a)} leftIcon={<Users size={12}/>}>Asistencia</Button>
+                      {(a.estado==='PROGRAMADA' || a.estado==='EN_EJECUCION') && <Button size="sm" className="bg-undc-700 hover:bg-undc-800" loading={busyId===a.id_actividad} onClick={()=>marcarEjecutada(a)} leftIcon={<CheckCircle2 size={12}/>}>Marcar ejecutada</Button>}
                     </div>
                   </div>
                 ))}
@@ -107,6 +211,55 @@ export default function Actividades(){
           <div className="border rounded-xl p-3 bg-emerald-50 border-emerald-200"><b>3. VERIFICADA</b><div className="text-xs text-slate-600 mt-1">Docente verifica + fotos RSU_Actividad_Foto</div></div>
         </CardContent>
       </Card>
+
+      <Modal open={modal==='fotos'} onClose={()=>setModal(null)} title={actSel? `Fotos — ${actSel.nombre}` : 'Fotos'} desc="GET /api/v1/actividades/:id/fotos" width="max-w-2xl"
+        footer={<>
+          <Button variant="outline" onClick={()=>setModal(null)}>Cerrar</Button>
+          <Button onClick={subirFicha} loading={fichaBusy} disabled={!fichaFile}>Subir ficha / foto</Button>
+        </>}>
+        {fotosLoading ? <Skeleton className="h-40 w-full"/> :
+          fotosError ? <Alert variant="error" className="text-xs">{fotosError}</Alert> :
+          fotos.length===0 ? <Empty title="Sin fotos" description="Esta actividad aún no tiene evidencia fotográfica."/> :
+          (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {fotos.map(f=>(
+                <a key={f.id_foto} href={api.fileUrl(f.url_foto)} target="_blank" rel="noopener noreferrer" className="block group">
+                  <img src={api.fileUrl(f.url_foto)} alt={f.descripcion||'Evidencia'} className="w-full h-32 object-cover rounded-xl border border-slate-200 group-hover:opacity-90"/>
+                  <div className="text-[11px] text-slate-500 mt-1 truncate">{f.descripcion || (f.fecha_subida? new Date(f.fecha_subida).toLocaleDateString('es-PE'):'Foto')}</div>
+                </a>
+              ))}
+            </div>
+          )
+        }
+        <div className="mt-4 border-2 border-dashed border-slate-200 rounded-xl p-3 text-center">
+          <div className="text-xs text-slate-500">Ficha de asistencia firmada o foto (JPG/PNG, máx 20MB)</div>
+          <input type="file" accept=".jpg,.jpeg,.png" onChange={e=>setFichaFile(e.target.files?.[0]||null)} className="mt-2 text-xs w-full"/>
+          {fichaFile && <div className="text-[11px] text-slate-500 mt-1">{fichaFile.name}</div>}
+        </div>
+        {fichaMsg && <Alert variant={fichaMsg.type==='ok'?'success':'error'} className="text-xs mt-3">{fichaMsg.text}</Alert>}
+      </Modal>
+
+      <Modal open={modal==='asistencia'} onClose={()=>setModal(null)} title={actSel? `Asistencia — ${actSel.nombre}` : 'Asistencia'} desc="Beneficiarios vinculados al proyecto (GET /api/v1/proyectos/:id/beneficiarios)" width="max-w-xl"
+        footer={<Button variant="outline" onClick={()=>setModal(null)}>Cerrar</Button>}>
+        {benLoading ? <Skeleton className="h-32 w-full"/> :
+          benError ? <Alert variant="error" className="text-xs">{benError}</Alert> :
+          benef.length===0 ? <Empty title="Sin beneficiarios" description="Vincula beneficiarios al proyecto para registrar su asistencia."/> :
+          (
+            <div className="space-y-2 max-h-[260px] sm:max-h-[360px] overflow-y-auto pr-1">
+              {benef.map(b=>(
+                <div key={b.id_beneficiario} className="border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-3 text-sm">
+                  <div className="min-w-0">
+                    <div className="font-semibold truncate">{b.razon_social || `${b.apellidos||''}, ${b.nombres||''}`}</div>
+                    <div className="text-xs text-slate-500">{b.dni||b.ruc||'S/D'} · {b.distrito||'—'}</div>
+                  </div>
+                  <Badge color="#0ea5e9" variant="soft" size="sm">{b.tipo_beneficiario}</Badge>
+                </div>
+              ))}
+            </div>
+          )
+        }
+        <Alert variant="info" className="text-xs mt-3">Sube la ficha firmada desde el modal “Ver fotos”: queda como evidencia de asistencia en RSU_Actividad_Foto.</Alert>
+      </Modal>
     </div>
   )
 }

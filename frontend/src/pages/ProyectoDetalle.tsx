@@ -1,107 +1,362 @@
-import { useParams, Link } from 'react-router-dom'
-import { useEffect, useState } from 'react'
-import { api } from '../api/client'
+﻿import { useParams, Link, useSearchParams } from 'react-router-dom'
+import { useCallback, useEffect, useState } from 'react'
+import { api, asArray } from '../api/client'
 import { Badge } from '../components/ui/Badge'
+import { Alert } from '../components/ui/Alert'
+import { Button } from '../components/ui/Button'
+import { Input, Label, Select, Textarea } from '../components/ui/Input'
+import { Modal } from '../components/ui/Modal'
+import { Empty } from '../components/ui/Empty'
+import { Skeleton } from '../components/ui/Skeleton'
 import { useAuth } from '../context/AuthContext'
-import { ESTADOS, canStudentEdit, canStudentUploadDocs, canStudentRegisterActivity } from '../utils/permissions'
+import { canStudentEdit, canStudentUploadDocs, canStudentRegisterActivity } from '../lib/permisos'
+import { useCatalogoBpmn } from '../hooks/useCatalogoBpmn'
+import { Download, FileText, Camera, Link2, Pencil, ClipboardCheck, Gavel, Upload } from 'lucide-react'
+
+const RESULTADOS = ['APROBADO','OBSERVADO','RECHAZADO','DEVUELTO']
+const ORDENES = [1,2,3,4,5]
+const normEstadoEnt = (e:string)=>{
+  if(e==='PENDIENTE') return 'POR_ENVIAR'
+  if(e==='REGISTRADO'||e==='SUBIDO') return 'ENVIADO'
+  if(e==='CORRECTO') return 'APROBADO'
+  return e
+}
+
+type Msg = {type:'ok'|'err', text:string} | null
 
 export default function ProyectoDetalle(){
   const {id}=useParams()
   const {user} = useAuth()
+const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatalogoBpmn(user?.rol_actor_id)
+  const [params,setParams]=useSearchParams()
   const [p,setP]=useState<any>(null)
-  const [tab,setTab]=useState('general')
+  const [loading,setLoading]=useState(true)
+  const [loadError,setLoadError]=useState('')
   const [historial,setHistorial]=useState<any[]>([])
+  const [historialError,setHistorialError]=useState('')
   const [entregables,setEntregables]=useState<any[]>([])
+  const [entregablesError,setEntregablesError]=useState('')
   const [actividades,setActividades]=useState<any[]>([])
-  const [esMiembro,setEsMiembro]=useState<boolean>(false)
+  const [actividadesError,setActividadesError]=useState('')
+  const [beneficiarios,setBeneficiarios]=useState<any[]>([])
+  const [beneficiariosError,setBeneficiariosError]=useState('')
+  const [esMiembro,setEsMiembro]=useState(false)
+  const [membresiaCargada,setMembresiaCargada]=useState(false)
   const [miembrosIds,setMiembrosIds]=useState<number[]>([])
-  // form actividad (Image3)
-  const [formAct,setFormAct]=useState({fecha: new Date().toISOString().slice(0,10), nombre:'', horas:0, minutos:0, horaFin:'', descripcion:''})
+  const [formAct,setFormAct]=useState({fecha: new Date().toISOString().slice(0,10), nombre:'', horas:0, minutos:0, horaInicio:'09:00', horaFin:'', descripcion:''})
   const [submitting,setSubmitting]=useState(false)
+  const [actMsg,setActMsg]=useState<Msg>(null)
 
-  useEffect(()=>{
-    let cancelled = false
-    async function load(){
-      try{
-        const r:any = await api.get(`/api/v1/proyectos/${id}`)
-        if(cancelled) return
-        let ids: number[] = miembrosIds
-        if(user?.rol==='ESTUDIANTE'){
-          try{
-            const m:any = await api.get(`/api/v1/proyectos/${id}/estudiantes`)
-            ids = (m.data||[]).map((x:any)=> x.id_estudiante || x.idEstudiante || x.id_estudiante_lider).filter(Boolean)
-            if(!cancelled) setMiembrosIds(ids)
-          }catch{}
-          try{
-            const e:any = await api.get(`/api/v1/proyectos/${id}/es-miembro/${user.id}`)
-            if(!cancelled) setEsMiembro(!!e.data?.es_miembro)
-          }catch{ if(!cancelled) setEsMiembro(true) }
-        }
-        if(!cancelled) setP({...r.data, _miembros_ids: ids})
-      }catch{
-        if(!cancelled) setP({
-          id_proyecto:id, codigo_proyecto:`RSU-2026-${id}`, titulo:'Campaña de salud integral en San Vicente', estado_actual:{id_estado:9,codigo:'EN_EJECUCION', nombre:'En ejecución',color_ui:'#2196F3', orden_flujo:9},
-          escuela:{nombre:'Enfermería',facultad:{nombre:'Ciencias de la Salud'}}, tipo:{nombre:'Proyección Social'}, presupuesto_aprobado:12000, monto_ejecutado:4500, porcentaje_avance:38,
-          objetivo_general:'Mejorar indicadores de salud preventiva', lugar_intervencion:'San Vicente', poblacion_beneficiaria:'Familias vulnerables', id_estudiante_lider:101, _miembros_ids: miembrosIds
-        })
-      }
-      try{
-        const h:any = await api.get(`/api/v1/proyectos/${id}/historial`)
-        if(!cancelled) setHistorial(h.data||[])
-      }catch{
-        if(!cancelled) setHistorial([
-          {id_flujo:1, estado_origen:{nombre:'Borrador'}, estado_destino:{nombre:'En revisión Escuela'}, rol_actor:{nombre:'Docente Responsable'}, resultado:'APROBADO', fecha_transicion:'2026-03-10'},
-          {id_flujo:2, estado_origen:{nombre:'En revisión Escuela'}, estado_destino:{nombre:'Con V°B° Escuela'}, rol_actor:{nombre:'Director de Escuela'}, resultado:'APROBADO', fecha_transicion:'2026-03-15'},
-        ])
-      }
-      try{
-        const e:any = await api.get(`/api/v1/proyectos/${id}/entregables`)
-        if(!cancelled) setEntregables(e.data||[])
-      }catch{}
-      try{
-        const a:any = await api.get(`/api/v1/proyectos/${id}/actividades`)
-        if(!cancelled) setActividades(a.data||[])
-      }catch{}
-    }
-    load()
-    return ()=> { cancelled = true }
-  },[id, user?.id])
+  const [modal,setModal]=useState<''|'edit'|'monitoreo'|'transicion'|'entregable'|'vincular'|'fotos'>('')
+  const [modalMsg,setModalMsg]=useState<Msg>(null)
+  const [modalBusy,setModalBusy]=useState(false)
 
-  if(!p) return <div className="p-8 text-sm">Cargando expediente...</div>
+  const [editForm,setEditForm]=useState({titulo:'', objetivo_general:'', descripcion:'', lugar_intervencion:'', presupuesto_aprobado:''})
+  const [monForm,setMonForm]=useState({fecha_monitoreo:'', porcentaje_avance:'', resultado:'', observaciones:''})
+  const [transLoading,setTransLoading]=useState(false)
+  const [transOptions,setTransOptions]=useState<any[]>([])
+  const [estadosCat,setEstadosCat]=useState<any[]>([])
+  const [transForm,setTransForm]=useState({estado_destino:'', id_rol_actor:'', resultado:'APROBADO', comentarios:''})
+  const [entForm,setEntForm]=useState({orden:'1', horas:'', id_tipo_doc:'', archivo:null as File|null})
+  const [tiposDoc,setTiposDoc]=useState<any[]>([])
+  const [benList,setBenList]=useState<any[]>([])
+  const [benSearch,setBenSearch]=useState('')
+  const [benSel,setBenSel]=useState('')
+  const [fotosForm,setFotosForm]=useState({id_actividad:'', archivos:[] as File[]})
 
-  const codigo = p.estado_actual?.codigo || 'BORRADOR'
-  const esMiembroEquipo = esMiembro || p.id_estudiante_lider===user?.id || user?.rol==='ADMIN' || user?.rol==='DOCENTE' || user?.rol==='DIRECTIVO'
-  const esEstudiante = user?.rol==='ESTUDIANTE'
-  // para estudiante, solo miembro real puede ver contenido; para otros roles, acceso completo
-  const bloqueadoEstudianteNoMiembro = esEstudiante && !esMiembro && p.id_estudiante_lider!==user?.id
+  const tabParam = params.get('tab') || 'general'
+  const setTab=(k:string)=>{ const n=new URLSearchParams(params); n.set('tab',k); setParams(n,{replace:true}) }
 
-  const editableByStudent = canStudentEdit(codigo) && esEstudiante && esMiembro
-  const puedeSubirDocs = canStudentUploadDocs(codigo, user, p, esMiembro) || (!esEstudiante)
-  const puedeRegistrarActividad = canStudentRegisterActivity(codigo, esMiembro) || (!esEstudiante && codigo==='EN_EJECUCION')
-  const isDocente = user?.rol==='DOCENTE'
-  const isDirectivo = user?.rol==='DIRECTIVO' || user?.rol==='ADMIN'
-  const estadoInfo = ESTADOS.find(e=>e.codigo===codigo)
-
-  const handleCrearActividad = async(e:any)=>{
-    e.preventDefault()
-    if(!formAct.nombre || !formAct.descripcion || !formAct.fecha) return
-    setSubmitting(true)
+  const load = useCallback(async ()=>{
+    if(!id) return
+    setLoading(true); setLoadError('')
+    let proj:any = null
     try{
-      await api.post('/api/v1/actividades', {id_proyecto: Number(id), nombre: formAct.nombre, descripcion: formAct.descripcion, fecha_programada: formAct.fecha, lugar: p.lugar_intervencion })
-      // refresca
-      const a:any = await api.get(`/api/v1/proyectos/${id}/actividades`)
-      setActividades(a.data||[])
-      setFormAct({fecha: new Date().toISOString().slice(0,10), nombre:'', horas:0, minutos:0, horaFin:'', descripcion:''})
-    }catch(err){ alert((err as any).message) } finally { setSubmitting(false)}
+      const r:any = await api.get(`/api/v1/proyectos/${id}`)
+      proj = r.data
+      setP(proj)
+    }catch(ex:any){
+      setP(null); setLoadError(ex?.message || 'No se pudo cargar el proyecto'); setLoading(false); return
+    }
+    const jobs: Promise<void>[] = [
+      (async()=>{
+        try{ const h:any = await api.get(`/api/v1/proyectos/${id}/historial`); setHistorial(asArray(h.data)); setHistorialError('') }
+        catch(ex:any){ setHistorial([]); setHistorialError(ex?.message || 'No se pudo cargar el historial') }
+      })(),
+      (async()=>{
+        try{ const e:any = await api.get(`/api/v1/proyectos/${id}/entregables`); setEntregables(asArray(e.data)); setEntregablesError('') }
+        catch(ex:any){ setEntregables([]); setEntregablesError(ex?.message || 'No se pudieron cargar los entregables') }
+      })(),
+      (async()=>{
+        try{ const a:any = await api.get(`/api/v1/proyectos/${id}/actividades`); setActividades(asArray(a.data)); setActividadesError('') }
+        catch(ex:any){ setActividades([]); setActividadesError(ex?.message || 'No se pudieron cargar las actividades') }
+      })(),
+      (async()=>{
+        try{ const b:any = await api.get(`/api/v1/proyectos/${id}/beneficiarios`); setBeneficiarios(asArray(b.data)); setBeneficiariosError('') }
+        catch(ex:any){ setBeneficiarios([]); setBeneficiariosError(ex?.message || 'No se pudieron cargar los beneficiarios') }
+      })()
+    ]
+    if(user?.rol==='ESTUDIANTE'){
+      jobs.push((async()=>{
+        try{
+          const m:any = await api.get(`/api/v1/proyectos/${id}/estudiantes`)
+          setMiembrosIds(asArray<any>(m.data).map((x:any)=> x.id_estudiante).filter(Boolean))
+        }catch{ setMiembrosIds([]) }
+        try{
+          const e:any = await api.get(`/api/v1/proyectos/${id}/es-miembro/${user.persona_id}`)
+          setEsMiembro(!!e.data?.es_miembro)
+        }catch{ setEsMiembro(false) }
+        setMembresiaCargada(true)
+      })())
+    }
+    await Promise.all(jobs)
+    setLoading(false)
+  },[id, user?.persona_id, user?.rol])
+
+  useEffect(()=>{ load() },[load])
+
+  if(loading){
+    return <div className="space-y-4"><Skeleton className="h-40 w-full"/><Skeleton className="h-64 w-full"/></div>
+  }
+  if(loadError || !p){
+    return (
+      <div className="max-w-2xl mx-auto mt-8">
+        <Alert variant="error">
+          <div className="font-semibold">No se pudo cargar el expediente</div>
+          <div className="text-sm mt-1">{loadError || 'Error desconocido'}</div>
+          <Button size="sm" className="mt-3" onClick={load}>Reintentar</Button>
+        </Alert>
+        <div className="mt-4 text-center"><Link to="/proyectos" className="text-sm text-undc-700 font-semibold">Volver a proyectos</Link></div>
+      </div>
+    )
   }
 
-  const demoEntregables = entregables.length ? entregables : [
-    {id_entregable:1, nombre:'PRIMER ENTREGABLE', orden:1, fecha_limite:'2026-07-05', horas_asignadas:22, estado:'APROBADO'},
-    {id_entregable:2, nombre:'SEGUNDO ENTREGABLE', orden:2, fecha_limite:'2026-08-02', horas_asignadas:16, estado:'APROBADO'},
-    {id_entregable:3, nombre:'TERCER ENTREGABLE', orden:3, fecha_limite:'2026-09-06', horas_asignadas:22, estado:'APROBADO'},
-    {id_entregable:4, nombre:'ENCUESTA', orden:4, fecha_limite:null, horas_asignadas:null, estado:'APROBADO'},
-    {id_entregable:5, nombre:'INFORME FINAL', orden:5, fecha_limite:null, horas_asignadas:null, estado:'APROBADO'},
-  ]
+  const codigo = p.estado_actual?.codigo || 'BORRADOR'
+  const esMiembroEquipo = esMiembro || p.id_estudiante_lider===user?.persona_id || user?.rol==='ADMIN' || user?.rol==='DOCENTE' || user?.rol==='DIRECTIVO'
+  const esEstudiante = user?.rol==='ESTUDIANTE'
+  const bloqueadoEstudianteNoMiembro = esEstudiante && membresiaCargada && !esMiembro && p.id_estudiante_lider!==user?.persona_id
+
+  const editableByStudent = canStudentEdit(codigo) && esEstudiante && esMiembroEquipo
+  const puedeSubirDocs = (esEstudiante ? canStudentUploadDocs(codigo, esMiembroEquipo) : true)
+  const puedeRegistrarActividad = esMiembroEquipo && canStudentRegisterActivity(codigo, esMiembroEquipo)
+  const isDocente = user?.rol==='DOCENTE'
+  const isDirectivo = user?.rol==='DIRECTIVO' || user?.rol==='ADMIN'
+  const estadoInfo = estadosBpmn.find((e: any) => e.codigo === codigo)
+
+  const totalEnt = entregables.length
+  const entregados = entregables.filter(e=> ['ENVIADO','APROBADO'].includes(normEstadoEnt(e.estado||''))).length
+  const pctEnt = totalEnt>0 ? Math.round((entregados/totalEnt)*100) : 0
+
+  const reloadEntregables = async ()=>{
+    try{ const e:any = await api.get(`/api/v1/proyectos/${id}/entregables`); setEntregables(asArray(e.data)); setEntregablesError('') }
+    catch(ex:any){ setEntregablesError(ex?.message||'No se pudieron cargar los entregables') }
+  }
+  const reloadHistorial = async ()=>{
+    try{ const h:any = await api.get(`/api/v1/proyectos/${id}/historial`); setHistorial(asArray(h.data)); setHistorialError('') }
+    catch(ex:any){ setHistorialError(ex?.message||'No se pudo cargar el historial') }
+  }
+  const reloadBeneficiarios = async ()=>{
+    try{ const b:any = await api.get(`/api/v1/proyectos/${id}/beneficiarios`); setBeneficiarios(asArray(b.data)); setBeneficiariosError('') }
+    catch(ex:any){ setBeneficiariosError(ex?.message||'No se pudieron cargar los beneficiarios') }
+  }
+
+  const openModal = async (m:typeof modal)=>{
+    setModal(m); setModalMsg(null); setModalBusy(false)
+    if(m==='edit'){
+      setEditForm({
+        titulo: p.titulo||'',
+        objetivo_general: p.objetivo_general||'',
+        descripcion: p.descripcion||'',
+        lugar_intervencion: p.lugar_intervencion||'',
+        presupuesto_aprobado: p.presupuesto_aprobado!=null? String(p.presupuesto_aprobado):''
+      })
+    }
+    if(m==='monitoreo'){
+      setMonForm({fecha_monitoreo: new Date().toISOString().slice(0,10), porcentaje_avance: String(p.porcentaje_avance ?? ''), resultado:'', observaciones:''})
+    }
+    if(m==='transicion'){
+      setTransLoading(true); setTransOptions([]); setEstadosCat([]); setTransForm({estado_destino:'', id_rol_actor:'', resultado:'APROBADO', comentarios:''})
+      try{
+        const [t,e] = await Promise.all([
+          api.get('/api/v1/catalogos/transiciones'),
+          api.get('/api/v1/catalogos/estados')
+        ])
+        const estados = asArray<any>((e as any).data)
+        setEstadosCat(estados)
+        const byId = new Map<number,string>(estados.map((x:any)=>[Number(x.id_estado), x.codigo]))
+        const ts = asArray<any>((t as any).data)
+        const mios = ts.filter(x=> Number(x.estado_origen)===Number(p.id_estado_actual))
+        const propios = user?.rol_actor_id ? mios.filter(x=> Number(x.id_rol_actor)===Number(user.rol_actor_id)) : []
+        const elegibles = propios.length? propios : mios
+        setTransOptions(elegibles)
+        if(elegibles.length){
+          const cod = byId.get(Number(elegibles[0].estado_destino)) || ''
+          setTransForm({estado_destino:cod, id_rol_actor:String(elegibles[0].id_rol_actor), resultado:'APROBADO', comentarios:''})
+        }else{
+          setModalMsg({type:'err', text:'No hay transiciones BPMN disponibles para tu rol desde el estado actual.'})
+        }
+      }catch(ex:any){
+        setModalMsg({type:'err', text: ex?.message || 'No se pudo cargar el catálogo de transiciones'})
+      }finally{ setTransLoading(false) }
+    }
+    if(m==='entregable'){
+      setEntForm({orden:'1', horas:'', id_tipo_doc:'', archivo:null})
+      try{ const d:any = await api.get('/api/v1/catalogos/tipos-documento'); setTiposDoc(asArray(d.data)) }
+      catch(ex:any){ setTiposDoc([]); setModalMsg({type:'err', text: ex?.message||'No se pudo cargar los tipos de documento'}) }
+    }
+    if(m==='vincular'){
+      setBenSel(''); setBenSearch(''); setBenList([])
+      try{ const b:any = await api.get('/api/v1/beneficiarios'); setBenList(asArray(b.data)) }
+      catch(ex:any){ setModalMsg({type:'err', text: ex?.message||'No se pudo cargar el padrón de beneficiarios'}) }
+    }
+    if(m==='fotos'){
+      setFotosForm({id_actividad: actividades[0]?.id_actividad ? String(actividades[0].id_actividad):'', archivos:[]})
+    }
+  }
+
+  const buscarBeneficiarios = async ()=>{
+    setModalBusy(true); setModalMsg(null)
+    try{
+      const b:any = await api.get(`/api/v1/beneficiarios?search=${encodeURIComponent(benSearch)}`)
+      setBenList(asArray(b.data))
+      if(!asArray(b.data).length) setModalMsg({type:'err', text:'Sin coincidencias en el padrón'})
+    }catch(ex:any){ setBenList([]); setModalMsg({type:'err', text: ex?.message||'Error al buscar'}) }
+    finally{ setModalBusy(false) }
+  }
+
+  const guardarEdicion = async ()=>{
+    setModalBusy(true); setModalMsg(null)
+    try{
+      await api.put(`/api/v1/proyectos/${id}`, {
+        titulo: editForm.titulo,
+        objetivo_general: editForm.objetivo_general,
+        descripcion: editForm.descripcion,
+        lugar_intervencion: editForm.lugar_intervencion,
+        presupuesto_aprobado: editForm.presupuesto_aprobado===''? undefined : Number(editForm.presupuesto_aprobado)
+      })
+      setModalMsg({type:'ok', text:'Proyecto actualizado'})
+      await load()
+      setTimeout(()=> setModal(''), 600)
+    }catch(ex:any){ setModalMsg({type:'err', text: ex?.message||'No se pudo actualizar'}) }
+    finally{ setModalBusy(false) }
+  }
+
+  const guardarMonitoreo = async ()=>{
+    setModalBusy(true); setModalMsg(null)
+    if(!monForm.fecha_monitoreo || !monForm.resultado){ setModalMsg({type:'err', text:'Fecha y resultado son obligatorios'}); setModalBusy(false); return }
+    try{
+      await api.post('/api/v1/monitoreos', {
+        id_proyecto: Number(id),
+        id_monitor: Number(user?.persona_id),
+        fecha_monitoreo: monForm.fecha_monitoreo,
+        porcentaje_avance: monForm.porcentaje_avance===''? undefined : Number(monForm.porcentaje_avance),
+        resultado: monForm.resultado,
+        observaciones: monForm.observaciones || undefined
+      })
+      setModalMsg({type:'ok', text:'Monitoreo registrado'})
+      await load()
+      setTimeout(()=> setModal(''), 600)
+    }catch(ex:any){ setModalMsg({type:'err', text: ex?.message||'No se pudo registrar el monitoreo'}) }
+    finally{ setModalBusy(false) }
+  }
+
+  const guardarTransicion = async ()=>{
+    setModalBusy(true); setModalMsg(null)
+    if(!transForm.estado_destino || !transForm.id_rol_actor){ setModalMsg({type:'err', text:'Selecciona la transición'}); setModalBusy(false); return }
+    try{
+      await api.post(`/api/v1/proyectos/${id}/transicion`, {
+        estado_destino: String(transForm.estado_destino),
+        id_rol_actor: Number(transForm.id_rol_actor),
+        id_usuario: Number(user?.id),
+        resultado: transForm.resultado,
+        comentarios: transForm.comentarios || undefined
+      })
+      setModalMsg({type:'ok', text:'Transición registrada'})
+      await Promise.all([load(), reloadHistorial()])
+      setTimeout(()=> setModal(''), 600)
+    }catch(ex:any){ setModalMsg({type:'err', text: ex?.message?.replace(/^HTTP \d+: /,'') || 'Transición rechazada por el flujo BPMN'}) }
+    finally{ setModalBusy(false) }
+  }
+
+  const guardarEntregable = async ()=>{
+    setModalMsg(null)
+    if(!entForm.archivo){ setModalMsg({type:'err', text:'Selecciona el archivo PDF'}); return }
+    if(!entForm.horas || Number(entForm.horas)<=0){ setModalMsg({type:'err', text:'Indica las horas del entregable'}); return }
+    if(!entForm.id_tipo_doc){ setModalMsg({type:'err', text:'Selecciona el tipo de documento'}); return }
+    setModalBusy(true)
+    try{
+      const fd = new FormData()
+      fd.append('orden', entForm.orden)
+      fd.append('horas_asignadas', entForm.horas)
+      fd.append('id_tipo_doc', entForm.id_tipo_doc)
+      fd.append('id_usuario_subida', String(user?.persona_id))
+      fd.append('archivo', entForm.archivo)
+      await api.upload(`/api/v1/proyectos/${id}/entregables/registrar`, fd)
+      setModalMsg({type:'ok', text:'Entregable enviado'})
+      await reloadEntregables()
+      setTimeout(()=> setModal(''), 600)
+    }catch(ex:any){ setModalMsg({type:'err', text: ex?.message||'No se pudo registrar el entregable'}) }
+    finally{ setModalBusy(false) }
+  }
+
+  const vincularBeneficiario = async ()=>{
+    setModalBusy(true); setModalMsg(null)
+    if(!benSel){ setModalMsg({type:'err', text:'Selecciona un beneficiario'}); setModalBusy(false); return }
+    try{
+      await api.post('/api/v1/beneficiarios/vincular', {id_proyecto: Number(id), id_beneficiario: Number(benSel)})
+      setModalMsg({type:'ok', text:'Beneficiario vinculado'})
+      await reloadBeneficiarios()
+      setTimeout(()=> setModal(''), 600)
+    }catch(ex:any){ setModalMsg({type:'err', text: ex?.message||'No se pudo vincular'}) }
+    finally{ setModalBusy(false) }
+  }
+
+  const subirFotos = async ()=>{
+    setModalMsg(null)
+    if(!fotosForm.id_actividad){ setModalMsg({type:'err', text:'Selecciona la actividad'}); return }
+    if(!fotosForm.archivos.length){ setModalMsg({type:'err', text:'Selecciona al menos una foto (JPG/PNG)'}); return }
+    setModalBusy(true)
+    try{
+      for(const f of fotosForm.archivos){
+        const fd = new FormData()
+        fd.append('id_actividad', fotosForm.id_actividad)
+        fd.append('archivo', f)
+        await api.upload('/api/v1/actividades/fotos', fd)
+      }
+      setModalMsg({type:'ok', text:`${fotosForm.archivos.length} foto(s) subida(s)`})
+      setFotosForm({id_actividad:fotosForm.id_actividad, archivos:[]})
+      await load()
+    }catch(ex:any){ setModalMsg({type:'err', text: ex?.message||'No se pudieron subir las fotos'}) }
+    finally{ setModalBusy(false) }
+  }
+
+  const handleCrearActividad = async(e:React.FormEvent)=>{
+    e.preventDefault()
+    if(!formAct.nombre || !formAct.descripcion || !formAct.fecha) return
+    // HU-011: hora fin > inicio y duración válida antes de enviar al backend
+    const totalMin = (formAct.horas||0)*60 + (formAct.minutos||0)
+    if(totalMin<=0){ setActMsg({type:'err', text:'Indica la duración (horas/minutos mayor a 0)'}); return }
+    if(formAct.horaFin && formAct.horaFin <= formAct.horaInicio){
+      setActMsg({type:'err', text:'La hora de finalización debe ser posterior a la de inicio'}); return
+    }
+    setSubmitting(true); setActMsg(null)
+    try{
+      await api.post('/api/v1/actividades', {
+        id_proyecto: Number(id),
+        nombre: formAct.nombre,
+        descripcion: formAct.descripcion,
+        fecha_programada: formAct.fecha,
+        lugar: p.lugar_intervencion,
+        hora_inicio: formAct.fecha + 'T' + formAct.horaInicio + ':00',
+        hora_fin: formAct.horaFin ? formAct.fecha + 'T' + formAct.horaFin + ':00' : null,
+        minutos: totalMin,
+      })
+      const a:any = await api.get(`/api/v1/proyectos/${id}/actividades`)
+      setActividades(asArray(a.data))
+      setFormAct({fecha: new Date().toISOString().slice(0,10), nombre:'', horas:0, minutos:0, horaInicio:'09:00', horaFin:'', descripcion:''})
+      setActMsg({type:'ok', text:'Actividad registrada'})
+    }catch(err:any){ setActMsg({type:'err', text: err?.message||'No se pudo registrar la actividad'}) } finally { setSubmitting(false)}
+  }
 
   if(bloqueadoEstudianteNoMiembro){
     return (
@@ -117,6 +372,9 @@ export default function ProyectoDetalle(){
   const tabs = esEstudiante
     ? [['general','Resumen'], ['entregables','Entregables'], ['evidencias','Evidencias'], ['beneficiarios','Beneficiarios']]
     : [['general','General'], ['entregables','Entregables'], ['evidencias','Evidencias'], ['flujo','Flujo'], ['beneficiarios','Beneficiarios']]
+  const tab = tabs.some(([k])=> k===tabParam) ? tabParam : 'general'
+  const nombreEstado = (idEstado:any)=> estadosCat.find((e:any)=> Number(e.id_estado)===Number(idEstado))?.nombre || `Estado ${idEstado}`
+  const codigoEstado = (idEstado:any)=> estadosCat.find((e:any)=> Number(e.id_estado)===Number(idEstado))?.codigo || String(idEstado)
 
   return (
     <div className="space-y-5">
@@ -128,10 +386,10 @@ export default function ProyectoDetalle(){
         </div>
         <h1 className="text-xl font-extrabold text-slate-800 mt-2">{p.titulo}</h1>
         <div className="text-sm text-slate-500">{p.escuela?.facultad?.nombre} · {p.escuela?.nombre} · {p.tipo?.nombre}</div>
-        <div className="grid grid-cols-3 gap-4 mt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-4">
           <div className="bg-slate-50 rounded-xl p-3"><div className="text-xs text-slate-500">Avance</div><div className="font-black text-lg">{p.porcentaje_avance}%</div><div className="h-2 bg-slate-200 rounded-full mt-1"><div className="h-full bg-emerald-600 rounded-full" style={{width:`${p.porcentaje_avance}%`}}/></div></div>
           <div className="bg-slate-50 rounded-xl p-3"><div className="text-xs text-slate-500">Presupuesto</div><div className="font-semibold">S/ {p.presupuesto_aprobado?.toLocaleString()} aprobado</div><div className="text-xs text-slate-500">Ejecutado S/ {p.monto_ejecutado?.toLocaleString()}</div></div>
-          <div className="bg-slate-50 rounded-xl p-3"><div className="text-xs text-slate-500">Lugar</div><div className="font-semibold">{p.lugar_intervencion}</div><div className="text-xs text-slate-500">{p.poblacion_beneficiaria}</div></div>
+          <div className="bg-slate-50 rounded-xl p-3"><div className="text-xs text-slate-500">Lugar</div><div className="font-semibold">{p.lugar_intervencion || '—'}</div><div className="text-xs text-slate-500">{p.poblacion_beneficiaria || '—'}</div></div>
         </div>
         {esEstudiante && (
           <div className="mt-3 text-xs rounded-xl p-3 border bg-sky-50 border-sky-200 text-sky-800">
@@ -151,34 +409,35 @@ export default function ProyectoDetalle(){
       {tab==='general' && (
         <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-3">
           <h3 className="font-bold">Objetivo general</h3>
-          <p className="text-sm text-slate-600">{p.objetivo_general || 'Mejorar indicadores del proyecto en la comunidad.'}</p>
+          <p className="text-sm text-slate-600">{p.objetivo_general || 'Sin objetivo registrado.'}</p>
           <div className="grid md:grid-cols-2 gap-4 text-sm">
-            <div><span className="text-slate-500">Población:</span> {p.poblacion_beneficiaria}</div>
-            <div><span className="text-slate-500">Lugar:</span> {p.lugar_intervencion}</div>
+            <div><span className="text-slate-500">Población:</span> {p.poblacion_beneficiaria || '—'}</div>
+            <div><span className="text-slate-500">Lugar:</span> {p.lugar_intervencion || '—'}</div>
           </div>
           <div className="pt-3 flex gap-2 flex-wrap">
-            {editableByStudent && <button className="px-4 py-2 bg-sky-600 text-white rounded-xl text-sm font-semibold">Editar proyecto</button>}
-            {editableByStudent && <button className="px-4 py-2 bg-slate-900 text-white rounded-xl text-sm font-semibold">Solicitar revisión</button>}
-            {isDocente && codigo==='EN_EJECUCION' && <button className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold">Registrar monitoreo</button>}
-            {isDirectivo && estadoInfo?.actor===user?.rol_actor && <button className="px-4 py-2 bg-amber-600 text-white rounded-xl text-sm font-semibold">Revisar y dictaminar</button>}
+            {editableByStudent && <Button onClick={()=>openModal('edit')} leftIcon={<Pencil size={14}/>} variant="secondary">Editar proyecto</Button>}
+            {editableByStudent && <Button onClick={()=>openModal('transicion')} leftIcon={<ClipboardCheck size={14}/>}>Solicitar revisión</Button>}
+            {isDocente && codigo==='EN_EJECUCION' && <Button onClick={()=>openModal('monitoreo')} className="bg-emerald-600 hover:bg-emerald-700" leftIcon={<ClipboardCheck size={14}/>}>Registrar monitoreo</Button>}
+            {isDirectivo && tieneLane(codigo) && <Button onClick={()=>openModal('transicion')} className="bg-amber-600 hover:bg-amber-700" leftIcon={<Gavel size={14}/>}>Revisar y dictaminar</Button>}
           </div>
         </div>
       )}
 
       {tab==='entregables' && (
         <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
-            <div className="flex justify-between items-center">
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6">
+            <div className="flex justify-between items-center gap-2">
               <h3 className="font-bold text-sm">Progreso del proyecto</h3>
-              <span className="text-xs text-slate-500">5 / 5 completados</span>
+              <span className="text-xs text-slate-500">{entregados} / {totalEnt} completados{totalEnt>0 && ` · ${pctEnt}%`}</span>
             </div>
-            <div className="w-full h-2 bg-slate-100 rounded-full mt-2 overflow-hidden"><div className="h-full bg-slate-800 rounded-full" style={{width: '100%'}}/></div>
-            <div className="mt-6 overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
+            <div className="w-full h-2 bg-slate-100 rounded-full mt-2 overflow-hidden"><div className="h-full bg-slate-800 rounded-full" style={{width:`${pctEnt}%`}}/></div>
+            {entregablesError && <Alert variant="error" className="mt-3 text-xs">{entregablesError} <button className="underline font-semibold" onClick={reloadEntregables}>Reintentar</button></Alert>}
+            <div className="mt-6 overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+              <table className="w-full text-sm border-collapse min-w-[820px]">
                 <thead>
                   <tr className="bg-[#0f2b24] text-white text-xs">
                     <th className="px-3 py-3 text-left font-semibold border border-[#0f2b24]">ENTREGA</th>
-                    <th className="px-3 py-3 text-center font-semibold border border-[#0f2b24]">EJEMPLARES - GUIAS</th>
+                    <th className="px-3 py-3 text-center font-semibold border border-[#0f2b24]">ORDEN</th>
                     <th className="px-3 py-3 text-center font-semibold border border-[#0f2b24]">FECHA LIMITE DE PRESENTACIÓN</th>
                     <th className="px-3 py-3 text-center font-semibold border border-[#0f2b24]">ARCHIVO</th>
                     <th className="px-3 py-3 text-center font-semibold border border-[#0f2b24]">HORAS</th>
@@ -187,26 +446,33 @@ export default function ProyectoDetalle(){
                   </tr>
                 </thead>
                 <tbody>
-                  {demoEntregables.map((e:any)=>(
-                    <tr key={e.orden} className="border-b border-slate-200">
-                      <td className="px-3 py-3 font-medium text-slate-700">{e.nombre}</td>
-                      <td className="px-3 py-3 text-center"><span className="inline-flex w-6 h-6 bg-sky-600 text-white rounded items-center justify-center text-[10px]">W</span></td>
-                      <td className="px-3 py-3 text-center text-xs">{e.fecha_limite ? new Date(e.fecha_limite).toLocaleDateString('es-PE') : <span className="text-slate-400">No aplica</span>}{e.fecha_limite && <span className="ml-1 px-1.5 py-0.5 bg-emerald-50 text-emerald-700 rounded-full text-[10px]">Presentada</span>}</td>
-                      <td className="px-3 py-3 text-center"><span className="inline-flex w-6 h-6 bg-red-600 text-white rounded items-center justify-center text-[10px]">PDF</span></td>
-                      <td className="px-3 py-3 text-center"><span className="px-2 py-1 bg-slate-100 rounded-full text-xs">{e.horas_asignadas ? `${e.horas_asignadas} horas` : 'No Aplica'}</span></td>
-                      <td className="px-3 py-3 text-center"><span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">{e.estado}</span></td>
-                      <td className="px-3 py-3 text-center text-xs text-slate-400">—</td>
-                    </tr>
-                  ))}
+                  {totalEnt===0 && (
+                    <tr><td colSpan={7} className="px-3 py-8 text-center text-xs text-slate-500">Sin entregables registrados para este proyecto.</td></tr>
+                  )}
+                  {entregables.map((e:any)=>{
+                    const est = normEstadoEnt(e.estado||'')
+                    const enviado = est==='ENVIADO' || est==='APROBADO'
+                    const url = e.documento?.url_archivo ? api.fileUrl(e.documento.url_archivo) : ''
+                    return (
+                      <tr key={e.id_entregable ?? e.orden} className="border-b border-slate-200">
+                        <td className="px-3 py-3 font-medium text-slate-700">{e.nombre}</td>
+                        <td className="px-3 py-3 text-center"><span className="inline-flex min-w-6 h-6 px-1 bg-sky-600 text-white rounded items-center justify-center text-[10px]">{e.orden}</span></td>
+                        <td className="px-3 py-3 text-center text-xs">{e.fecha_limite ? new Date(e.fecha_limite).toLocaleDateString('es-PE') : <span className="text-slate-400">No aplica</span>}{enviado && <span className="ml-1 px-1.5 py-0.5 bg-emerald-50 text-emerald-700 rounded-full text-[10px]">Presentada</span>}</td>
+                        <td className="px-3 py-3 text-center text-xs">{e.documento ? <span className="inline-flex items-center gap-1 text-slate-700"><FileText size={12}/>{e.documento.nombre_archivo}</span> : <span className="text-slate-400">Sin archivo</span>}</td>
+                        <td className="px-3 py-3 text-center"><span className="px-2 py-1 bg-slate-100 rounded-full text-xs">{e.horas_asignadas ? `${e.horas_asignadas} horas` : 'No Aplica'}</span></td>
+                        <td className="px-3 py-3 text-center"><span className={`px-2 py-1 rounded-full text-xs font-semibold ${enviado?'bg-emerald-100 text-emerald-700':'bg-slate-100 text-slate-600'}`}>{est}</span></td>
+                        <td className="px-3 py-3 text-center text-xs">
+                          {url ? (
+                            <button onClick={()=>window.open(url,'_blank','noopener')} className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"><Download size={12}/> Descargar</button>
+                          ) : <span className="text-slate-400">—</span>}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
-            <div className="mt-6">
-              <h4 className="font-bold text-sm">PROCESO DE FINALIZACIÓN DEL PROYECTO</h4>
-              <div className="flex justify-between text-xs text-slate-500 mt-1"><span>Progreso del proceso</span><span>3 de 3 completados · 100%</span></div>
-              <div className="w-full h-2 bg-slate-100 rounded-full mt-1 overflow-hidden"><div className="h-full bg-emerald-700 rounded-full" style={{width:'100%'}}/></div>
-            </div>
-            {puedeSubirDocs && <button className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold">Subir entregable</button>}
+            {puedeSubirDocs && <Button onClick={()=>openModal('entregable')} className="mt-4 bg-emerald-600 hover:bg-emerald-700" leftIcon={<Upload size={14}/>}>Subir entregable</Button>}
             {!puedeSubirDocs && esEstudiante && <div className="mt-4 text-xs bg-slate-50 border border-slate-200 rounded-xl p-3">Solo el equipo de este proyecto puede subir entregables.</div>}
           </div>
         </div>
@@ -232,7 +498,7 @@ export default function ProyectoDetalle(){
                 <label className="text-xs font-medium text-slate-700">Nombre de la Actividad</label>
                 <input placeholder="Ingresa el nombre de la actividad" value={formAct.nombre} onChange={e=> setFormAct({...formAct, nombre:e.target.value})} className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"/>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-slate-700">Horas</label>
                   <input type="number" min={0} max={23} value={formAct.horas} onChange={e=> setFormAct({...formAct, horas: Number(e.target.value)})} className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"/>
@@ -242,14 +508,21 @@ export default function ProyectoDetalle(){
                   <input type="number" min={0} max={59} value={formAct.minutos} onChange={e=> setFormAct({...formAct, minutos: Number(e.target.value)})} className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"/>
                 </div>
               </div>
-              <div>
-                <label className="text-xs font-medium text-slate-700">Hora de finalización</label>
-                <input type="time" value={formAct.horaFin} onChange={e=> setFormAct({...formAct, horaFin:e.target.value})} className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"/>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-slate-700">Hora de inicio</label>
+                  <input type="time" value={formAct.horaInicio} onChange={e=> setFormAct({...formAct, horaInicio:e.target.value})} className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"/>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-700">Hora de finalización</label>
+                  <input type="time" value={formAct.horaFin} onChange={e=> setFormAct({...formAct, horaFin:e.target.value})} className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 text-sm"/>
+                </div>
               </div>
               <div>
                 <label className="text-xs font-medium text-slate-700">Descripción</label>
                 <textarea placeholder="Describe la actividad..." value={formAct.descripcion} onChange={e=> setFormAct({...formAct, descripcion:e.target.value})} rows={3} className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"/>
               </div>
+              {actMsg && <Alert variant={actMsg.type==='ok'?'success':'error'} className="text-xs">{actMsg.text}</Alert>}
               {puedeRegistrarActividad ? (
                 <button disabled={submitting} type="submit" className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold disabled:opacity-60">{submitting? 'Guardando...':'Registrar Actividad'}</button>
               ) : (
@@ -262,13 +535,15 @@ export default function ProyectoDetalle(){
             <h3 className="font-bold text-sm">Capturar Evidencia</h3>
             <p className="text-xs text-slate-500 mt-1">Sube hasta 5 fotos JPG/PNG por actividad (máx 5MB c/u). Las evidencias quedan visibles para el docente y directores.</p>
             <div className="mt-3 border-2 border-dashed border-slate-200 rounded-xl p-6 text-center">
-              <div className="text-sm text-slate-500">Arrastra fotos o haz clic para seleccionar</div>
-              <button className="mt-2 px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold">Seleccionar fotos</button>
+              <div className="text-sm text-slate-500">Adjunta las fotos de cada actividad registrada</div>
+              <Button size="sm" variant="outline" className="mt-2" onClick={()=>openModal('fotos')} disabled={actividades.length===0} leftIcon={<Camera size={14}/>}>Seleccionar fotos</Button>
+              {actividades.length===0 && <div className="text-xs text-slate-400 mt-2">Primero registra una actividad para poder subir evidencias.</div>}
             </div>
+            {actividadesError && <Alert variant="error" className="mt-3 text-xs">{actividadesError}</Alert>}
             {actividades.length>0 && (
               <div className="mt-4 space-y-2">
                 {actividades.map((a:any)=>(
-                  <div key={a.id_actividad} className="border border-slate-200 rounded-xl p-3 flex justify-between text-sm"><div><b>{a.nombre}</b><div className="text-xs text-slate-500">{a.fecha_programada?.slice(0,10)} · {a.estado}</div></div><span className="px-2 py-1 bg-slate-100 rounded-full text-xs">{a.estado}</span></div>
+                  <div key={a.id_actividad} className="border border-slate-200 rounded-xl p-3 flex flex-wrap gap-2 justify-between text-sm"><div><b>{a.nombre}</b><div className="text-xs text-slate-500">{a.fecha_programada?.slice(0,10)} · {a.lugar || '—'}</div></div><span className="px-2 py-1 bg-slate-100 rounded-full text-xs">{a.estado}</span></div>
                 ))}
               </div>
             )}
@@ -277,45 +552,223 @@ export default function ProyectoDetalle(){
           <div className="bg-white rounded-2xl border border-slate-200 p-6">
             <h3 className="font-bold text-sm">Asistencia de beneficiarios</h3>
             <p className="text-xs text-slate-500">Marca quién asistió y sube la ficha firmada.</p>
-            <div className="mt-3 text-xs bg-slate-50 border border-slate-200 rounded-xl p-3">Se muestran los beneficiarios vinculados al proyecto. Si no ves a alguien, vincúlalo en Beneficiarios.</div>
+            <div className="mt-3 text-xs bg-slate-50 border border-slate-200 rounded-xl p-3">
+              {beneficiariosError && <div className="text-red-600 mb-2">{beneficiariosError}</div>}
+              {beneficiarios.length===0 ? 'Sin beneficiarios vinculados. Vincúlalos en la pestaña Beneficiarios.' :
+                `${beneficiarios.length} beneficiario(s) vinculado(s) a este proyecto: ${beneficiarios.map((b:any)=> b.razon_social || [b.apellidos,b.nombres].filter(Boolean).join(', ')).join(' · ')}`}
+            </div>
           </div>
         </div>
       )}
 
       {tab==='flujo' && (
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
-          <h3 className="font-bold">Historial</h3>
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="font-bold">Historial</h3>
+            <Button size="sm" variant="outline" onClick={reloadHistorial}>Actualizar</Button>
+          </div>
+          {historialError && <Alert variant="error" className="mt-3 text-xs">{historialError}</Alert>}
           <div className="mt-4 space-y-3">
+            {historial.length===0 && !historialError && <Empty title="Sin transiciones registradas" description="El flujo de aprobación aparecerá aquí cuando el proyecto cambie de estado."/>}
             {historial.map(h=>(
               <div key={h.id_flujo} className="flex gap-3 items-center border border-slate-200 rounded-xl p-3">
                 <div className={`w-2 h-10 rounded-full ${h.resultado==='APROBADO'?'bg-emerald-500':'bg-amber-500'}`}/>
                 <div className="flex-1">
-                  <div className="text-sm font-semibold">{h.estado_origen?.nombre} → {h.estado_destino?.nombre}</div>
-                  <div className="text-xs text-slate-500">{h.rol_actor?.nombre} · {h.resultado} · {h.fecha_transicion?.slice(0,10)}</div>
+                  <div className="text-sm font-semibold">{h.estado_origen?.nombre || '—'} → {h.estado_destino?.nombre || '—'}</div>
+                  <div className="text-xs text-slate-500">{h.rol_actor?.nombre || '—'} · {h.resultado} · {h.fecha_transicion?.slice(0,10)}</div>
+                  {h.comentarios && <div className="text-xs text-slate-500 mt-1">{h.comentarios}</div>}
                 </div>
                 <span className="text-xs bg-slate-100 px-2 py-1 rounded-lg">{h.resultado}</span>
               </div>
             ))}
           </div>
           <div className="mt-4 flex flex-wrap gap-1.5">
-            {ESTADOS.map(e=>(
-              <span key={e.codigo} className={`px-2 py-1 rounded-full text-xs font-semibold border ${e.codigo===codigo?'bg-slate-900 text-white': e.actor===user?.rol_actor?'bg-amber-100 border-amber-300':'bg-slate-100 border-slate-200'}`}>{e.orden}. {e.label}</span>
-            ))}
+            {flujo.map((e, i) => {
+              const esMio = tieneLane(e.codigo)
+              return (
+                <span
+                  key={e.codigo}
+                  title={e.nombre}
+                  className={`px-2 py-1 rounded-full text-xs font-semibold border ${
+                    e.codigo === codigo
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : esMio
+                        ? 'bg-amber-100 border-amber-300 text-amber-900'
+                        : 'bg-slate-100 border-slate-200 text-slate-600'
+                  }`}
+                >
+                  {i + 1}. {e.codigo}
+                </span>
+              )
+            })}
           </div>
         </div>
       )}
 
       {tab==='beneficiarios' && (
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
-          <h3 className="font-bold">Beneficiarios vinculados</h3>
-          <p className="text-xs text-slate-500">Solo los de este proyecto. Estudiantes y docentes pueden vincular.</p>
-          <div className="mt-4 grid md:grid-cols-2 gap-3 text-sm">
-            <div className="border border-slate-200 rounded-xl p-3"><b>María Quispe</b> · 44551234 · San Vicente <span className="ml-2 px-2 py-0.5 bg-sky-100 rounded-full text-xs">PERSONA</span></div>
-            <div className="border border-slate-200 rounded-xl p-3"><b>I.E. José Olaya</b> · RUC 20123456789 · San Luis <span className="ml-2 px-2 py-0.5 bg-violet-100 rounded-full text-xs">INSTITUCION</span></div>
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="font-bold">Beneficiarios vinculados</h3>
+            <Button size="sm" variant="outline" onClick={reloadBeneficiarios}>Actualizar</Button>
           </div>
-          {(puedeSubirDocs || editableByStudent || isDocente) && <button className="mt-3 px-4 py-2 bg-slate-900 text-white rounded-xl text-sm font-semibold">+ Vincular beneficiario</button>}
+          <p className="text-xs text-slate-500">Solo los de este proyecto. Estudiantes y docentes pueden vincular.</p>
+          {beneficiariosError && <Alert variant="error" className="mt-3 text-xs">{beneficiariosError}</Alert>}
+          <div className="mt-4 grid md:grid-cols-2 gap-3 text-sm">
+            {beneficiarios.length === 0 ? (
+              <div className="text-sm text-slate-400 text-center py-4 col-span-2">No hay beneficiarios vinculados</div>
+            ) : beneficiarios.map((b: any) => (
+              <div key={b.id_beneficiario} className="border border-slate-200 rounded-xl p-3">
+                <b>{b.nombres ? `${b.apellidos}, ${b.nombres}` : b.razon_social}</b> · {b.dni || b.ruc || '—'} · {b.distrito || '—'}
+                <span className="ml-2 px-2 py-0.5 bg-sky-100 rounded-full text-xs">{b.tipo_beneficiario}</span>
+              </div>
+            ))}
+          </div>
+          {(puedeSubirDocs || editableByStudent || isDocente) && <Button className="mt-3" onClick={()=>openModal('vincular')} leftIcon={<Link2 size={14}/>}>Vincular beneficiario</Button>}
         </div>
       )}
+
+      <Modal open={modal==='edit'} busy={modalBusy} onClose={()=>setModal('')} title="Editar proyecto" desc="PATCH/PUT a /api/v1/proyectos/:id — solo campos editables por el equipo"
+        footer={<>
+          <Button variant="outline" onClick={()=>setModal('')} disabled={modalBusy}>Cancelar</Button>
+          <Button onClick={guardarEdicion} loading={modalBusy}>Guardar cambios</Button>
+        </>}>
+        <div className="space-y-3">
+          <div><Label required>Título</Label><Input value={editForm.titulo} onChange={e=>setEditForm({...editForm, titulo:e.target.value})}/></div>
+          <div><Label>Objetivo general</Label><Textarea rows={2} value={editForm.objetivo_general} onChange={e=>setEditForm({...editForm, objetivo_general:e.target.value})}/></div>
+          <div><Label>Descripción</Label><Textarea rows={3} value={editForm.descripcion} onChange={e=>setEditForm({...editForm, descripcion:e.target.value})}/></div>
+          <div><Label>Lugar de intervención</Label><Input value={editForm.lugar_intervencion} onChange={e=>setEditForm({...editForm, lugar_intervencion:e.target.value})}/></div>
+          <div><Label>Presupuesto aprobado (S/)</Label><Input type="number" min="0" step="0.01" value={editForm.presupuesto_aprobado} onChange={e=>setEditForm({...editForm, presupuesto_aprobado:e.target.value})}/></div>
+          {modalMsg && <Alert variant={modalMsg.type==='ok'?'success':'error'} className="text-xs">{modalMsg.text}</Alert>}
+        </div>
+      </Modal>
+
+      <Modal open={modal==='monitoreo'} busy={modalBusy} onClose={()=>setModal('')} title="Registrar monitoreo" desc="POST /api/v1/monitoreos"
+        footer={<>
+          <Button variant="outline" onClick={()=>setModal('')} disabled={modalBusy}>Cancelar</Button>
+          <Button onClick={guardarMonitoreo} loading={modalBusy}>Registrar</Button>
+        </>}>
+        <div className="space-y-3">
+          <div><Label required>Fecha de monitoreo</Label><Input type="date" value={monForm.fecha_monitoreo} onChange={e=>setMonForm({...monForm, fecha_monitoreo:e.target.value})}/></div>
+          <div><Label>Porcentaje de avance (%)</Label><Input type="number" min="0" max="100" value={monForm.porcentaje_avance} onChange={e=>setMonForm({...monForm, porcentaje_avance:e.target.value})}/></div>
+          <div><Label required>Resultado</Label><Input value={monForm.resultado} onChange={e=>setMonForm({...monForm, resultado:e.target.value})} placeholder="Ej. Cumple con lo planificado"/></div>
+          <div><Label>Observaciones</Label><Textarea rows={3} value={monForm.observaciones} onChange={e=>setMonForm({...monForm, observaciones:e.target.value})}/></div>
+          {modalMsg && <Alert variant={modalMsg.type==='ok'?'success':'error'} className="text-xs">{modalMsg.text}</Alert>}
+        </div>
+      </Modal>
+
+      <Modal open={modal==='transicion'} busy={modalBusy} onClose={()=>setModal('')} title="Transición de flujo BPMN" desc="POST /api/v1/proyectos/:id/transicion — validado contra RSU_Transicion_Estado"
+        footer={<>
+          <Button variant="outline" onClick={()=>setModal('')} disabled={modalBusy||transLoading}>Cancelar</Button>
+          <Button onClick={guardarTransicion} loading={modalBusy} disabled={transLoading||transOptions.length===0}>Confirmar transición</Button>
+        </>}>
+        <div className="space-y-3">
+          {transLoading ? <Skeleton className="h-24 w-full"/> : (
+            transOptions.length===0 && !modalMsg ? <Alert variant="warning" className="text-xs">No hay transiciones disponibles para tu rol desde {p.estado_actual?.nombre}.</Alert> :
+            <>
+              <div>
+                <Label required>Transición permitida</Label>
+                <Select value={transForm.estado_destino} onChange={e=>{
+                  const t = transOptions.find(x=> (codigoEstado(x.estado_destino)===e.target.value))
+                  setTransForm({...transForm, estado_destino:e.target.value, id_rol_actor: t? String(t.id_rol_actor): transForm.id_rol_actor})
+                }}>
+                  {transOptions.map((t:any)=>(
+                    <option key={`${t.estado_origen}-${t.estado_destino}-${t.id_rol_actor}`} value={codigoEstado(t.estado_destino)}>
+                      → {nombreEstado(t.estado_destino)} {t.rol_actor?.nombre? `(${t.rol_actor.nombre})`:''}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <Label required>Resultado</Label>
+                <Select value={transForm.resultado} onChange={e=>setTransForm({...transForm, resultado:e.target.value})}>
+                  {RESULTADOS.map(r=><option key={r} value={r}>{r}</option>)}
+                </Select>
+              </div>
+              <div><Label>Comentarios</Label><Textarea rows={2} value={transForm.comentarios} onChange={e=>setTransForm({...transForm, comentarios:e.target.value})} placeholder="Observaciones del revisor"/></div>
+              <div className="text-xs text-slate-500">Estado actual: <b>{p.estado_actual?.nombre}</b> ({p.estado_actual?.codigo})</div>
+            </>
+          )}
+          {modalMsg && <Alert variant={modalMsg.type==='ok'?'success':'error'} className="text-xs">{modalMsg.text}</Alert>}
+        </div>
+      </Modal>
+
+      <Modal open={modal==='entregable'} busy={modalBusy} onClose={()=>setModal('')} title="Subir entregable" desc="POST /api/v1/proyectos/:id/entregables/registrar (multipart)"
+        footer={<>
+          <Button variant="outline" onClick={()=>setModal('')} disabled={modalBusy}>Cancelar</Button>
+          <Button onClick={guardarEntregable} loading={modalBusy}>Enviar entregable</Button>
+        </>}>
+        <div className="space-y-3">
+          <div>
+            <Label required>Orden (1-5)</Label>
+            <Select value={entForm.orden} onChange={e=>setEntForm({...entForm, orden:e.target.value})}>
+              {ORDENES.map(o=><option key={o} value={String(o)}>{o} — {o<=3?'Entregable': o===4?'Encuesta':'Informe final'}</option>)}
+            </Select>
+          </div>
+          <div><Label required>Horas asignadas</Label><Input type="number" min="0.5" step="0.5" value={entForm.horas} onChange={e=>setEntForm({...entForm, horas:e.target.value})} placeholder="4"/></div>
+          <div>
+            <Label required>Tipo de documento</Label>
+            <Select value={entForm.id_tipo_doc} onChange={e=>setEntForm({...entForm, id_tipo_doc:e.target.value})}>
+              <option value="">-- seleccionar --</option>
+              {tiposDoc.map((t:any)=><option key={t.id_tipo_doc} value={String(t.id_tipo_doc)}>{t.nombre} · {t.etapa}</option>)}
+            </Select>
+          </div>
+          <div>
+            <Label required>Archivo PDF</Label>
+            <input type="file" accept=".pdf,application/pdf" onChange={e=>setEntForm({...entForm, archivo: e.target.files?.[0]||null})} className="w-full text-xs"/>
+            {entForm.archivo && <div className="text-xs text-slate-500 mt-1">{entForm.archivo.name} · {(entForm.archivo.size/1024).toFixed(1)} KB</div>}
+          </div>
+          {modalMsg && <Alert variant={modalMsg.type==='ok'?'success':'error'} className="text-xs">{modalMsg.text}</Alert>}
+        </div>
+      </Modal>
+
+      <Modal open={modal==='vincular'} busy={modalBusy} onClose={()=>setModal('')} title="Vincular beneficiario" desc="POST /api/v1/beneficiarios/vincular"
+        footer={<>
+          <Button variant="outline" onClick={()=>setModal('')} disabled={modalBusy}>Cerrar</Button>
+          <Button onClick={vincularBeneficiario} loading={modalBusy}>Vincular</Button>
+        </>}>
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <Input value={benSearch} onChange={e=>setBenSearch(e.target.value)} placeholder="Buscar por DNI, nombre o razón social..." onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); buscarBeneficiarios() } }}/>
+            <Button variant="secondary" onClick={buscarBeneficiarios} loading={modalBusy}>Buscar</Button>
+          </div>
+          <div>
+            <Label required>Beneficiario</Label>
+            <Select value={benSel} onChange={e=>setBenSel(e.target.value)}>
+              <option value="">-- seleccionar --</option>
+              {benList.map((b:any)=>(
+                <option key={b.id_beneficiario} value={String(b.id_beneficiario)}>
+                  {b.razon_social || `${b.apellidos||''}, ${b.nombres||''}`} — {b.dni||b.ruc||'S/D'} · {b.distrito||'—'}
+                </option>
+              ))}
+            </Select>
+          </div>
+          {benList.length===0 && <div className="text-xs text-slate-500 text-center py-2">Sin beneficiarios cargados. Realiza una búsqueda.</div>}
+          {modalMsg && <Alert variant={modalMsg.type==='ok'?'success':'error'} className="text-xs">{modalMsg.text}</Alert>}
+        </div>
+      </Modal>
+
+      <Modal open={modal==='fotos'} busy={modalBusy} onClose={()=>setModal('')} title="Seleccionar fotos" desc="POST /api/v1/actividades/fotos (multipart)"
+        footer={<>
+          <Button variant="outline" onClick={()=>setModal('')} disabled={modalBusy}>Cerrar</Button>
+          <Button onClick={subirFotos} loading={modalBusy}>Subir fotos</Button>
+        </>}>
+        <div className="space-y-3">
+          <div>
+            <Label required>Actividad</Label>
+            <Select value={fotosForm.id_actividad} onChange={e=>setFotosForm({...fotosForm, id_actividad:e.target.value})}>
+              <option value="">-- seleccionar actividad --</option>
+              {actividades.map((a:any)=><option key={a.id_actividad} value={String(a.id_actividad)}>{a.nombre} · {a.fecha_programada?.slice(0,10)||''}</option>)}
+            </Select>
+          </div>
+          <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center">
+            <Camera className="mx-auto text-slate-400" size={22}/>
+            <div className="text-sm font-semibold mt-1">JPG / PNG (máx 20MB c/u)</div>
+            <input type="file" accept=".jpg,.jpeg,.png" multiple onChange={e=>setFotosForm({...fotosForm, archivos: Array.from(e.target.files||[])})} className="mt-2 text-xs w-full"/>
+            {fotosForm.archivos.length>0 && <div className="text-xs text-slate-500 mt-1">{fotosForm.archivos.length} archivo(s): {fotosForm.archivos.map(f=>f.name).join(', ')}</div>}
+          </div>
+          {modalMsg && <Alert variant={modalMsg.type==='ok'?'success':'error'} className="text-xs">{modalMsg.text}</Alert>}
+        </div>
+      </Modal>
     </div>
   )
 }

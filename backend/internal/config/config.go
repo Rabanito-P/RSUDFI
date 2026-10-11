@@ -29,10 +29,17 @@ func Load() *Config {
 		DBUser:      env("DB_USER", "undc"),
 		DBPass:      env("DB_PASS", "undc2026"),
 		DBName:      env("DB_NAME", "undc_rsu"),
-		JWTSecret:   env("JWT_SECRET", "undc-rsu-super-secret-2026"),
+		JWTSecret:   os.Getenv("JWT_SECRET"),
 		GinMode:     env("GIN_MODE", "release"),
 		UploadDir:   env("UPLOAD_DIR", "./uploads"),
 		MaxUploadMB: 20,
+	}
+	if cfg.JWTSecret == "" {
+		if cfg.GinMode == "release" {
+			log.Fatalf("[config] JWT_SECRET es obligatorio en producción (GIN_MODE=release)")
+		}
+		cfg.JWTSecret = "dev-secret-change-me"
+		log.Printf("[config] ADVERTENCIA: JWT_SECRET no definido, usando solo-desarrollo")
 	}
 	if cfg.GinMode == "debug" {
 		log.Println("[config] Loaded env debug mode")
@@ -47,13 +54,6 @@ func env(k, fallback string) string {
 	return fallback
 }
 
-// DSN PostgreSQL 18 (GORM postgres)
 func DSN(c *Config) string {
-	// host=postgres user=undc password=undc2026 dbname=undc_rsu port=5432 sslmode=disable TimeZone=America/Lima
 	return "host=" + c.DBHost + " user=" + c.DBUser + " password=" + c.DBPass + " dbname=" + c.DBName + " port=" + c.DBPort + " sslmode=disable TimeZone=America/Lima"
-}
-
-// DSNMySQL kept for local dev without docker (fallback)
-func DSNMySQL(c *Config) string {
-	return c.DBUser + ":" + c.DBPass + "@tcp(" + c.DBHost + ":" + c.DBPort + ")/" + c.DBName + "?charset=utf8mb4&parseTime=True&loc=Local"
 }

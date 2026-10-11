@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { api } from '../api/client'
+﻿import { useEffect, useState } from 'react'
+import { api, asArray } from '../api/client'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -7,6 +7,7 @@ import { Input, Label } from '../components/ui/Input'
 import { Badge } from '../components/ui/Badge'
 import { Skeleton } from '../components/ui/Skeleton'
 import { Alert } from '../components/ui/Alert'
+import { Modal } from '../components/ui/Modal'
 import { Building2, GraduationCap, Calendar, Plus, Layers, MapPin, Check, Clock } from 'lucide-react'
 
 export default function Estructura(){
@@ -14,29 +15,58 @@ export default function Estructura(){
   const [esc,setEsc]=useState<any[]>([])
   const [ciclos,setCiclos]=useState<any[]>([])
   const [loading,setLoading]=useState(true)
+  const [loadError,setLoadError]=useState('')
   const [showFac,setShowFac]=useState(false)
   const [facForm,setFacForm]=useState({codigo:'', nombre:''})
+  const [facMsg,setFacMsg]=useState('')
+  const [showCiclo,setShowCiclo]=useState(false)
+  const [cicloForm,setCicloForm]=useState({nombre:'', fecha_inicio:'', fecha_fin:'', activo:false})
+  const [cicloMsg,setCicloMsg]=useState<{type:'ok'|'err', text:string}|null>(null)
+  const [cicloBusy,setCicloBusy]=useState(false)
 
-  useEffect(()=>{
-    Promise.allSettled([
-      api.get('/api/v1/facultades').then((r:any)=> setFac(r.data||[])),
-      api.get('/api/v1/escuelas').then((r:any)=> setEsc(r.data||[])),
-      api.get('/api/v1/ciclos').then((r:any)=> setCiclos(r.data||[])),
-    ]).catch(()=>{}).finally(()=> setLoading(false))
-    // fallback demo if empty after
-    setTimeout(()=>{
-      setFac(prev=> prev.length? prev : [{id_facultad:1,codigo:'FCS',nombre:'Ciencias de la Salud', activo:true},{id_facultad:2,codigo:'FIA',nombre:'Ingeniería y Arquitectura', activo:true},{id_facultad:3,codigo:'FCA',nombre:'Ciencias Administrativas', activo:true}])
-      setEsc(prev=> prev.length? prev : [{id_escuela:1,nombre:'Enfermería',codigo:'ENF', id_facultad:1, facultad:{nombre:'Ciencias de la Salud'}},{id_escuela:2,nombre:'Medicina',codigo:'MED', id_facultad:1},{id_escuela:3,nombre:'Ing. Sistemas',codigo:'IS', id_facultad:2},{id_escuela:4,nombre:'Ing. Civil',codigo:'IC', id_facultad:2},{id_escuela:5,nombre:'Administración',codigo:'ADM', id_facultad:3}])
-      setCiclos(prev=> prev.length? prev : [{id_ciclo:1,nombre:'2026-I', fecha_inicio:'2026-03-01', fecha_fin:'2026-07-31', activo:true},{id_ciclo:2,nombre:'2026-II', fecha_inicio:'2026-08-01', fecha_fin:'2026-12-15', activo:false}])
-    }, 600)
-  },[])
+  const load = ()=>{
+    setLoading(true); setLoadError('')
+    Promise.all([
+      api.get('/api/v1/facultades').then((r:any)=> setFac(asArray(r.data))),
+      api.get('/api/v1/escuelas').then((r:any)=> setEsc(asArray(r.data))),
+      api.get('/api/v1/ciclos').then((r:any)=> setCiclos(asArray(r.data))),
+    ]).catch((e:any)=> setLoadError(e?.message||'No se pudo cargar la estructura')).finally(()=> setLoading(false))
+  }
+  useEffect(()=>{ load() },[])
 
   const createFac = async(e:React.FormEvent)=>{
     e.preventDefault()
-    try{ await api.post('/api/v1/facultades', {codigo: facForm.codigo, nombre: facForm.nombre}); setFacForm({codigo:'',nombre:''}); setShowFac(false); const r:any=await api.get('/api/v1/facultades'); setFac(r.data||[]) }catch{}
+    setFacMsg('')
+    try{
+      await api.post('/api/v1/facultades', {codigo: facForm.codigo, nombre: facForm.nombre})
+      setFacForm({codigo:'',nombre:''}); setShowFac(false); load()
+    }catch(ex:any){ setFacMsg(ex?.message||'No se pudo crear la facultad') }
+  }
+
+  const createCiclo = async()=>{
+    setCicloMsg(null)
+    if(!cicloForm.nombre || !cicloForm.fecha_inicio || !cicloForm.fecha_fin){
+      setCicloMsg({type:'err', text:'Nombre, fecha de inicio y fecha de fin son obligatorios'}); return
+    }
+    setCicloBusy(true)
+    try{
+      await api.post('/api/v1/ciclos', {
+        nombre: cicloForm.nombre,
+        fecha_inicio: cicloForm.fecha_inicio,
+        fecha_fin: cicloForm.fecha_fin,
+        activo: cicloForm.activo
+      })
+      setCicloMsg({type:'ok', text:'Ciclo creado'})
+      setCicloForm({nombre:'', fecha_inicio:'', fecha_fin:'', activo:false})
+      load()
+      setTimeout(()=> setShowCiclo(false), 700)
+    }catch(ex:any){ setCicloMsg({type:'err', text: ex?.message||'No se pudo crear el ciclo'}) }
+    finally{ setCicloBusy(false) }
   }
 
   if(loading) return <div className="space-y-4"><Skeleton className="h-20 w-full"/><div className="grid md:grid-cols-2 gap-6"><Skeleton className="h-64"/><Skeleton className="h-64"/></div></div>
+
+  if(loadError) return <Alert variant="error"><div className="flex items-center justify-between gap-3"><span>{loadError}</span><Button size="sm" variant="outline" onClick={load}>Reintentar</Button></div></Alert>
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -58,10 +88,11 @@ export default function Estructura(){
           </CardHeader>
           <CardContent className="space-y-3">
             {showFac && (
-              <form onSubmit={createFac} className="p-3 bg-slate-50 border border-slate-200 rounded-xl grid grid-cols-2 gap-3">
+              <form onSubmit={createFac} className="p-3 bg-slate-50 border border-slate-200 rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label required>Código (10)</Label><Input value={facForm.codigo} onChange={e=>setFacForm({...facForm,codigo:e.target.value})} placeholder="FIA" maxLength={10}/></div>
                 <div><Label required>Nombre</Label><Input value={facForm.nombre} onChange={e=>setFacForm({...facForm,nombre:e.target.value})} placeholder="Facultad de..."/></div>
                 <div className="col-span-2 flex justify-end gap-2"><Button type="submit" size="sm">Guardar</Button><Button type="button" size="sm" variant="outline" onClick={()=>setShowFac(false)}>Cancelar</Button></div>
+                {facMsg && <div className="col-span-2"><Alert variant="error" className="text-xs">{facMsg}</Alert></div>}
               </form>
             )}
             <div className="space-y-2">
@@ -122,7 +153,7 @@ export default function Estructura(){
               </div>
             ))}
             <div className="border-2 border-dashed border-slate-300 rounded-2xl p-4 grid place-items-center text-center">
-              <div><Plus size={20} className="mx-auto text-slate-400"/><div className="text-sm font-semibold mt-1">Nuevo ciclo</div><div className="text-xs text-slate-500">POST /api/v1/ciclos</div><Button size="sm" variant="outline" className="mt-2">Crear ciclo</Button></div>
+              <div><Plus size={20} className="mx-auto text-slate-400"/>                <div className="text-sm font-semibold mt-1">Nuevo ciclo</div><div className="text-xs text-slate-500">POST /api/v1/ciclos</div><Button size="sm" variant="outline" className="mt-2" onClick={()=>{ setCicloMsg(null); setShowCiclo(true) }}>Crear ciclo</Button></div>
             </div>
           </div>
           <div className="mt-4 grid md:grid-cols-2 gap-3 text-xs">
@@ -131,6 +162,31 @@ export default function Estructura(){
           </div>
         </CardContent>
       </Card>
+
+      <Modal
+        open={showCiclo}
+        busy={cicloBusy}
+        onClose={()=> setShowCiclo(false)}
+        title="Crear ciclo académico"
+        desc="POST /api/v1/ciclos"
+        footer={<>
+          <Button variant="outline" onClick={()=> setShowCiclo(false)} disabled={cicloBusy}>Cancelar</Button>
+          <Button onClick={createCiclo} loading={cicloBusy}>Crear ciclo</Button>
+        </>}
+      >
+        <div className="space-y-3">
+          <div><Label required>Nombre</Label><Input value={cicloForm.nombre} onChange={e=>setCicloForm({...cicloForm, nombre:e.target.value})} placeholder="2026-II"/></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div><Label required>Fecha inicio</Label><Input type="date" value={cicloForm.fecha_inicio} onChange={e=>setCicloForm({...cicloForm, fecha_inicio:e.target.value})}/></div>
+            <div><Label required>Fecha fin</Label><Input type="date" value={cicloForm.fecha_fin} onChange={e=>setCicloForm({...cicloForm, fecha_fin:e.target.value})}/></div>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" checked={cicloForm.activo} onChange={e=>setCicloForm({...cicloForm, activo:e.target.checked})}/>
+            Ciclo activo
+          </label>
+          {cicloMsg && <Alert variant={cicloMsg.type==='ok'?'success':'error'} className="text-xs">{cicloMsg.text}</Alert>}
+        </div>
+      </Modal>
     </div>
   )
 }

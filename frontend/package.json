@@ -7,25 +7,27 @@
     "dev": "vite --host 0.0.0.0 --port 5173",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test:ui": "node ../scripts/auditar-ui.mjs"
   },
   "dependencies": {
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.400.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.23.0",
     "recharts": "^2.12.4",
-    "lucide-react": "^0.400.0",
-    "clsx": "^2.1.1",
     "tailwind-merge": "^2.3.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
-    "typescript": "^5.5.2",
-    "vite": "^5.3.1",
-    "tailwindcss": "^3.4.4",
+    "autoprefixer": "^10.4.19",
+    "playwright": "^1.64.0",
     "postcss": "^8.4.38",
-    "autoprefixer": "^10.4.19"
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.5.2",
+    "vite": "^5.3.1"
   }
 }

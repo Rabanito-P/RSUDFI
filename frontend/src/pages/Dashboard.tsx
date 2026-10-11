@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import { KPI } from '../types/models'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid, Legend } from 'recharts'
@@ -8,18 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { Skeleton } from '../components/ui/Skeleton'
 import { Alert } from '../components/ui/Alert'
 
-const FALLBACK: KPI = {
-  total_proyectos: 24, proyectos_en_ejecucion: 8, total_beneficiarios: 1240, total_docentes: 45, total_estudiantes: 320,
-  presupuesto_aprobado: 185000, presupuesto_ejecutado: 112000, promedio_satisfaccion: 4.2,
-  proyectos_por_estado: [
-    {estado:'Borrador',total:4,color:'#9E9E9E'},{estado:'En revisión',total:3,color:'#FFC107'},{estado:'Con V°B°',total:2,color:'#FF9800'},
-    {estado:'Aprobado',total:5,color:'#4CAF50'},{estado:'En ejecución',total:8,color:'#2196F3'},{estado:'En monitoreo',total:2,color:'#03A9F4'}
-  ],
-  proyectos_por_facultad: [{facultad:'Ing. Sistemas',total:10},{facultad:'Administración',total:7},{facultad:'Agronomía',total:7}]
-}
-
 function normalizeKPI(d:any):KPI{
-  if(!d) return FALLBACK
+  if(!d) return null as any
   return {
     total_proyectos: d.total_proyectos ?? 0,
     proyectos_en_ejecucion: d.proyectos_en_ejecucion ?? 0,
@@ -42,25 +32,43 @@ export default function Dashboard(){
   useEffect(()=>{
     api.get<KPI>('/api/v1/dashboard/kpis').then(r=>{
       const raw:any = (r as any).data ?? r
-      // API wrapper returns {success,data,...} but client unwraps; handle both
       const d = (raw && raw.total_proyectos!==undefined) ? raw : (r as any).data
       setKpi(normalizeKPI(d))
     }).catch(e=>{
-      setErr(e.message?.slice(0,180) || 'API no disponible — mostrando datos demo')
-      setKpi(FALLBACK as any)
+      setErr(e.message?.slice(0,180) || 'Error al cargar datos')
     }).finally(()=>setLoading(false))
   },[])
 
   if(loading) return (
     <div className="space-y-6 animate-fade-in">
       <Skeleton className="h-20 w-full"/>
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">{Array.from({length:6}).map((_,i)=><Skeleton key={i} className="h-24"/>)} </div>
-      <div className="grid lg:grid-cols-2 gap-6"><Skeleton className="h-[340px]"/><Skeleton className="h-[340px]"/></div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">{Array.from({length:6}).map((_,i)=><Skeleton key={i} className="h-24"/>)} </div>
+      <div className="grid lg:grid-cols-2 gap-6"><Skeleton className="h-[240px] sm:h-[340px]"/><Skeleton className="h-[240px] sm:h-[340px]"/></div>
     </div>
   )
-  if(!kpi) return <div className="p-8 text-center text-slate-500">Sin datos</div>
 
-  // defensiva total: nunca null
+  if(err) return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Panel — Universidad Nacional de Cañete"
+        subtitle="Resumen general de tus proyectos y beneficiarios"
+        icon={<ShieldCheck size={20}/>}
+      />
+      <Alert variant="error">{err}</Alert>
+    </div>
+  )
+
+  if(!kpi) return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Panel — Universidad Nacional de Cañete"
+        subtitle="Resumen general de tus proyectos y beneficiarios"
+        icon={<ShieldCheck size={20}/>}
+      />
+      <Alert variant="info">No hay datos disponibles</Alert>
+    </div>
+  )
+
   const porEstado = Array.isArray((kpi as any).proyectos_por_estado) ? (kpi as any).proyectos_por_estado : []
   const porFacultad = Array.isArray((kpi as any).proyectos_por_facultad) ? (kpi as any).proyectos_por_facultad : []
   const hasEstado = porEstado.length > 0
@@ -84,9 +92,8 @@ export default function Dashboard(){
         badge={<span className="px-2.5 py-1 bg-undc-50 border border-undc-200 text-undc-700 rounded-full text-xs font-bold">Actualizado</span>}
         actions={<a href="/proyectos" className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900 text-white rounded-xl text-sm font-semibold hover:bg-slate-800">Ver proyectos <ArrowUpRight size={14}/></a>}
       />
-      {err && <Alert variant="warning" className="text-xs">{err}</Alert>}
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
         {cards.map(c=>(
           <div key={c.label} className="bg-white rounded-2xl p-4 border border-slate-200/70 shadow-sm flex items-center gap-3 hover:shadow-medium hover:-translate-y-0.5 transition-all">
             <div className={`w-11 h-11 rounded-xl grid place-items-center text-white shadow-sm ${c.color}`}><c.icon size={20}/></div>
@@ -106,7 +113,7 @@ export default function Dashboard(){
             <p className="text-xs text-slate-500">Distribución por estado actual</p>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
+            <div className="h-[240px] sm:h-[300px]">
               {hasEstado ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={porEstado} barCategoryGap="18%">
@@ -144,7 +151,7 @@ export default function Dashboard(){
             <p className="text-xs text-slate-500">Distribución de proyectos por unidad académica</p>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
+            <div className="h-[240px] sm:h-[300px]">
               {hasFacultad ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -200,15 +207,14 @@ export default function Dashboard(){
             <div className="flex items-baseline gap-2">
               <span className="text-4xl font-black tracking-tight text-undc-700">{kpi.total_beneficiarios.toLocaleString()}</span><span className="text-sm text-slate-500">beneficiarios</span>
             </div>
-            <div className="mt-2 grid grid-cols-3 gap-2 text-center text-xs">
+            <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2 text-center text-xs">
               <div className="bg-slate-50 rounded-xl p-2 border"><div className="font-black text-slate-900">{kpi.total_docentes}</div><div className="text-slate-500">Docentes</div></div>
               <div className="bg-slate-50 rounded-xl p-2 border"><div className="font-black text-slate-900">{kpi.total_estudiantes}</div><div className="text-slate-500">Estudiantes</div></div>
               <div className="bg-undc-50 rounded-xl p-2 border border-undc-200"><div className="font-black text-undc-700">{kpi.total_proyectos}</div><div className="text-slate-500">Proyectos</div></div>
             </div>
-            <div className="mt-3 flex gap-1.5 flex-wrap">
-              {['Cañete','Imperial','San Vicente','San Luis','Quilmaná'].map(d=><span key={d} className="px-2 py-1 bg-slate-100 border border-slate-200 rounded-full text-xs">{d}</span>)}
+            <div className="mt-3 text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-600">
+              Cobertura geográfica por distrito: consulta <code>GET /api/v1/beneficiarios?agrupar=distrito</code> para el desglose real.
             </div>
-            <div className="mt-3 text-xs bg-amber-50 border border-amber-200 rounded-xl p-2.5">Cobertura por periodo disponible.</div>
           </CardContent>
         </Card>
 
@@ -227,7 +233,7 @@ export default function Dashboard(){
             <div className="flex gap-1 mt-3">
               {[1,2,3,4,5].map(i=><div key={i} className={`h-2.5 flex-1 rounded-full transition-all ${i <= Math.round(kpi.promedio_satisfaccion||0) ? 'bg-violet-600 shadow-sm':'bg-slate-200'}`}/>)}
             </div>
-            <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
               <div className="text-center p-2 bg-slate-50 rounded-xl border"><div className="font-bold">P01-P02</div><div className="text-slate-500">Utilidad/Calidad</div></div>
               <div className="text-center p-2 bg-slate-50 rounded-xl border"><div className="font-bold">P03-P04</div><div className="text-slate-500">Trato/Pertinencia</div></div>
               <div className="text-center p-2 bg-violet-50 rounded-xl border border-violet-200"><div className="font-bold text-violet-700">P05-P06</div><div className="text-slate-500">Impacto</div></div>
@@ -240,7 +246,7 @@ export default function Dashboard(){
       <Card className="border-dashed">
         <CardContent className="py-4 flex flex-wrap items-center justify-between gap-3 text-sm">
           <span className="text-slate-600">¿Necesitas ver el historial completo? Revisa el historial.</span>
-          <a href="/api/v1/proyectos/resumen" target="_blank" className="px-3 py-2 bg-undc-700 text-white rounded-xl text-xs font-bold hover:bg-undc-800">Ver resumen</a>
+          <a href="/api/v1/proyectos/resumen" target="_blank" rel="noopener noreferrer" className="px-3 py-2 bg-undc-700 text-white rounded-xl text-xs font-bold hover:bg-undc-800">Ver resumen</a>
         </CardContent>
       </Card>
     </div>

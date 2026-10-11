@@ -78,7 +78,6 @@ CREATE TABLE "Estudiante_Ciclo" (
   "id_estudiante" INT NOT NULL REFERENCES "Estudiante"("id_estudiante") ON DELETE CASCADE,
   "id_ciclo" INT NOT NULL REFERENCES "Ciclo_Academico"("id_ciclo"),
   "ciclo_numerico" INT NOT NULL,
-  "creditos_matriculados" INT DEFAULT 0,
   "estado" VARCHAR(20) DEFAULT 'MATRICULADO' CHECK ("estado" IN ('MATRICULADO','APROBADO','RETIRADO')),
   PRIMARY KEY ("id_estudiante","id_ciclo")
 );
@@ -167,7 +166,7 @@ CREATE TABLE "RSU_Comite_RSU" (
   "es_presidente" BOOLEAN DEFAULT FALSE,
   "periodo_inicio" DATE NOT NULL,
   "periodo_fin" DATE NOT NULL,
-  "id_resolucion_designacion" INT NULL REFERENCES "RSU_Resolucion"("id_resolucion"),
+  "id_resolucion_designacion" INT NULL,
   "estado" VARCHAR(20) DEFAULT 'ACTIVO' CHECK ("estado" IN ('ACTIVO','INACTIVO')),
   "fecha_designacion" TIMESTAMPTZ DEFAULT NOW(),
   "designado_por" INT NULL REFERENCES "Docente"("id_docente")
@@ -191,8 +190,8 @@ CREATE UNIQUE INDEX uk_config_clave_ambito ON "RSU_Configuracion"("clave","ambit
 CREATE TABLE "RSU_Entregable" (
   "id_entregable" SERIAL PRIMARY KEY, "id_proyecto" INT NOT NULL REFERENCES "RSU_Proyecto"("id_proyecto") ON DELETE CASCADE,
   "nombre" VARCHAR(100) NOT NULL, "orden" INT NOT NULL, "fecha_limite" DATE,
-  "horas_asignadas" NUMERIC(5,2) DEFAULT 0, "estado" VARCHAR(20) DEFAULT 'PENDIENTE' CHECK ("estado" IN ('PENDIENTE','SUBIDO','APROBADO','RECHAZADO','OBSERVADO')),
-  "id_verificador" INT NULL, "fecha_verificacion" TIMESTAMPTZ, "observaciones" TEXT
+  "horas_asignadas" NUMERIC(5,2) DEFAULT 0, "estado" VARCHAR(20) DEFAULT 'POR_ENVIAR' CHECK ("estado" IN ('POR_ENVIAR','PENDIENTE','ENVIADO','SUBIDO','APROBADO','OBSERVADO','RECHAZADO','CORRECTO','REGISTRADO')),
+  "id_verificador" INT NULL, "fecha_verificacion" TIMESTAMPTZ, "observaciones" TEXT, "id_documento" INT NULL
 );
 
 -- MÓDULO 5: Asignaciones
@@ -207,7 +206,7 @@ CREATE TABLE "RSU_Asignacion_Docente" (
 CREATE TABLE "RSU_Participante_Estudiante" (
   "id_participante" SERIAL PRIMARY KEY, "id_proyecto" INT NOT NULL REFERENCES "RSU_Proyecto"("id_proyecto") ON DELETE CASCADE,
   "id_estudiante" INT NOT NULL REFERENCES "Estudiante"("id_estudiante"), "id_rol_proyecto" INT NOT NULL REFERENCES "RSU_Rol_Proyecto"("id_rol_proyecto"),
-  "horas_acumuladas" NUMERIC(5,2) DEFAULT 0, "creditos_otorgados" NUMERIC(4,2) DEFAULT 0,
+  "horas_acumuladas" NUMERIC(5,2) DEFAULT 0,
   "fecha_inscripcion" DATE NOT NULL, "estado_participacion" VARCHAR(20) DEFAULT 'INSCRITO' CHECK ("estado_participacion" IN ('INSCRITO','ACTIVO','RETIRADO','FINALIZADO')),
   "validacion_ciclo" BOOLEAN DEFAULT FALSE
 );
@@ -268,6 +267,20 @@ CREATE TABLE "RSU_Indicador_Impacto" ("id_indicador" SERIAL PRIMARY KEY, "id_pro
 CREATE TABLE "RSU_Leccion_Aprendida" ("id_leccion" SERIAL PRIMARY KEY, "id_proyecto" INT NOT NULL REFERENCES "RSU_Proyecto"("id_proyecto") ON DELETE CASCADE, "descripcion" TEXT NOT NULL, "recomendacion_curricular" TEXT, "fecha_registro" DATE, "id_responsable" INT NULL);
 CREATE TABLE "RSU_Reporte_Anual" ("id_reporte" SERIAL PRIMARY KEY, "anio" INT NOT NULL, "id_facultad" INT NULL REFERENCES "Facultad"("id_facultad"), "total_proyectos" INT DEFAULT 0, "total_docentes" INT DEFAULT 0, "total_estudiantes" INT DEFAULT 0, "total_beneficiarios" INT DEFAULT 0, "monto_invertido" NUMERIC(12,2) DEFAULT 0, "porcentaje_presupuesto" NUMERIC(5,2) DEFAULT 0, "id_documento_memoria" INT NULL REFERENCES "RSU_Documento"("id_documento"), "fecha_generacion" TIMESTAMPTZ DEFAULT NOW());
 CREATE TABLE "RSU_Solicitud_Constancia" ("id_solicitud" SERIAL PRIMARY KEY, "id_proyecto" INT NOT NULL REFERENCES "RSU_Proyecto"("id_proyecto") ON DELETE CASCADE, "id_estudiante" INT NOT NULL REFERENCES "Estudiante"("id_estudiante"), "tipo_constancia" VARCHAR(20) NOT NULL, "fecha_solicitud" TIMESTAMPTZ DEFAULT NOW(), "estado" VARCHAR(20) DEFAULT 'PENDIENTE', "id_documento_emitido" INT NULL REFERENCES "RSU_Documento"("id_documento"), "id_aprobador" INT NULL, "fecha_emision" DATE);
+-- Usuarios del sistema (login con bcrypt, rol actor BPMN V3)
+CREATE TABLE "RSU_Usuario" (
+  "id_usuario" SERIAL PRIMARY KEY,
+  "correo" VARCHAR(150) UNIQUE NOT NULL,
+  "nombre" VARCHAR(150),
+  "password_hash" VARCHAR(255) NOT NULL,
+  "rol" VARCHAR(30) NOT NULL,
+  "tipo_usuario" VARCHAR(20) NOT NULL CHECK ("tipo_usuario" IN ('DOCENTE','ESTUDIANTE','ADMINISTRATIVO')),
+  "id_persona" INT NULL,
+  "activo" BOOLEAN DEFAULT TRUE,
+  "ultimo_login" TIMESTAMPTZ NULL,
+  "created_at" TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_usuario_correo ON "RSU_Usuario"("correo");
 CREATE TABLE "RSU_Auditoria_Log" ("id_log" SERIAL PRIMARY KEY, "id_usuario" INT NOT NULL, "id_proyecto" INT NULL, "accion" VARCHAR(100) NOT NULL, "tabla_afectada" VARCHAR(100), "id_registro_afectado" INT, "valor_anterior" JSONB, "valor_nuevo" JSONB, "ip_origen" VARCHAR(45), "fecha_hora" TIMESTAMPTZ DEFAULT NOW());
 CREATE INDEX idx_audit_proyecto ON "RSU_Auditoria_Log"("id_proyecto");
 
@@ -313,38 +326,39 @@ JOIN "RSU_Proyecto_Beneficiario" pb ON b."id_beneficiario" = pb."id_beneficiario
 JOIN "RSU_Proyecto" p ON pb."id_proyecto" = p."id_proyecto"
 GROUP BY EXTRACT(YEAR FROM p."fecha_inicio_plan");
 
--- SEED — Estados unificados (V1.1 §10) para las 5 modalidades + ejecución.
--- Flujo: BORRADOR → (aprobación Escuela/Decano/DRSU/Consejo) → EJECUCIÓN → CIERRE
+-- SEED — 16 estados BPMN V3 (alineados a frontend utils/permissions.ts)
+-- Flujo: BORRADOR → EN_REVISION_ESCUELA → CON_VB_ESCUELA → EN_PRIORIZACION_FACULTAD →
+--        EN_DICTAMEN_CONSEJO → APROBADO_CON_RESOLUCION → EN_ASIGNACION_CARGA →
+--        REGISTRADO_OFICIAL → EN_EJECUCION → EN_MONITOREO → INFORME_FINAL_PRESENTADO →
+--        CON_CONFORMIDAD_ESCUELA → CERRADO → EN_EVALUACION_IMPACTO → EVALUACION_VALIDADA →
+--        REPORTADO_SUNEDU
 INSERT INTO "RSU_Estado_Proyecto" ("codigo","nombre","orden_flujo","es_final","color_ui") VALUES
 ('BORRADOR','Informe Inicial (Borrador)',1,false,'#1b5e20'),
 ('EN_REVISION_ESCUELA','En revisión por Director de Escuela',2,false,'#FFC107'),
-('APROBADO_ESCUELA','Aprobado por Director de Escuela',3,false,'#4CAF50'),
-('EN_REVISION_DECANO','En revisión por Decano',4,false,'#FF9800'),
-('APROBADO_DECANO','Aprobado por Decano',5,false,'#8BC34A'),
-('EN_EVALUACION_DRSU','En revisión por DRSU (Universidad)',6,false,'#3F51B5'),
-('APROBADO_DRSU','Aprobado por DRSU',7,false,'#2196F3'),
-('APROBADO_CONSEJO_UNIV','Aprobado por Consejo Universitario (PEP Financiado)',8,false,'#00BCD4'),
-('LISTO_DESCARGA','Listo para descarga',9,false,'#009688'),
-('DESCARGADO_TRANSFERIDO','Descargado y transferido a Universidad',10,false,'#607D8B'),
-('EN_EJECUCION','En ejecución',11,false,'#FF5722'),
-('EN_MONITOREO','En monitoreo',12,false,'#FFC107'),
-('INFORME_FINAL_PRESENTADO','Informe final presentado',13,false,'#CDDC39'),
-('CERRADO','Cerrado',14,true,'#212121'),
-('DERIVADO_VP_INVESTIGACION','Derivado a Vicepresidencia de Investigación',15,false,'#9C27B0'),
-('REGISTRADO_REPOSITORIO','Registrado en Repositorio Institucional',16,true,'#673AB7'),
+('CON_VB_ESCUELA','Con V°B° de Escuela',3,false,'#4CAF50'),
+('EN_PRIORIZACION_FACULTAD','En priorización Facultad',4,false,'#FF9800'),
+('EN_DICTAMEN_CONSEJO','En dictamen de Consejo de Facultad',5,false,'#8BC34A'),
+('APROBADO_CON_RESOLUCION','Aprobado con Resolución',6,false,'#3F51B5'),
+('EN_ASIGNACION_CARGA','En asignación de carga no lectiva',7,false,'#2196F3'),
+('REGISTRADO_OFICIAL','Registrado oficialmente',8,false,'#00BCD4'),
+('EN_EJECUCION','En ejecución',9,false,'#FF5722'),
+('EN_MONITOREO','En monitoreo',10,false,'#FFC107'),
+('INFORME_FINAL_PRESENTADO','Informe final presentado',11,false,'#CDDC39'),
+('CON_CONFORMIDAD_ESCUELA','Con conformidad de Escuela',12,false,'#009688'),
+('CERRADO','Cerrado',13,true,'#212121'),
+('EN_EVALUACION_IMPACTO','En evaluación de impacto',14,false,'#9C27B0'),
+('EVALUACION_VALIDADA','Evaluación validada',15,false,'#673AB7'),
+('REPORTADO_SUNEDU','Reportado a SUNEDU',16,true,'#607D8B'),
 ('RECHAZADO','Rechazado (rebota al emisor)',99,false,'#F44336');
--- SEED — 10 roles oficiales (info/objetivo.txt V1.1 §1.2). Reemplaza los 12 lanes BPMN anteriores.
+-- SEED — 12 roles actor BPMN V3 (alineados a frontend utils/permissions.ts)
 INSERT INTO "RSU_Rol_Actor" ("codigo","nombre","tipo") VALUES
-('ESTUDIANTE','Estudiante','ESTUDIANTE'),
-('EGRESADO','Egresado','ESTUDIANTE'),
-('DOCENTE_ASESOR','Docente Asesor','DOCENTE'),
-('DOCENTE_RESPONSABLE','Docente Responsable','DOCENTE'),
-('PRESIDENTE_COMITE_RSU','Presidente Comité RSU','COMITE'),
-('MIEMBRO_COMITE_RSU','Miembro Comité RSU','COMITE'),
-('DIRECTOR_ESCUELA','Director de Escuela','AUTORIDAD'),
-('DECANO','Decano','AUTORIDAD'),
-('COMITE_CALIDAD','Comité de Calidad','COMITE'),
-('ADMINISTRADOR','Administrador','ADMINISTRATIVO');
+('DOCENTE_RESP','Docente Responsable','DOCENTE'),
+('ESTUDIANTE_PROP','Estudiante Proponente','ESTUDIANTE'),
+('ESTUDIANTE_EJEC','Estudiante Ejecutor','ESTUDIANTE'),
+('DIR_ESCUELA','Director de Escuela Profesional','AUTORIDAD'),
+('DIR_RS_FACULTAD','Director RS Facultad','AUTORIDAD'),
+('CONSEJO_FACULTAD','Consejo de Facultad','AUTORIDAD'),
+('ADMIN','Administrador','ADMINISTRATIVO');
 
 -- Tipos de proyecto = 5 modalidades (V1.1 §7). `modalidad` en RSU_Proyecto es la clasificación autoritativa.
 INSERT INTO "RSU_Tipo_Proyecto" ("nombre","descripcion","ciclo_minimo_estudiante","horas_docente_max","requiere_presupuesto") VALUES
@@ -361,85 +375,53 @@ INSERT INTO "RSU_Pregunta_Encuesta" ("codigo","texto_pregunta","dimension","orde
 INSERT INTO "RSU_Linea_Accion" ("nombre","descripcion","alineacion_ods") VALUES ('Salud y Bienestar Comunitario','Campañas de salud, prevención','ODS 3'),('Educación y Cultura','Reforzamiento, alfabetización','ODS 4'),('Desarrollo Económico Local','Emprendimiento, formalización','ODS 8'),('Gestión Ambiental','Reciclaje, conservación','ODS 13'),('Gobernanza y Ciudadanía','Fortalecimiento institucional','ODS 16'),('Tecnología e Innovación Social','Soluciones digitales comunitarias','ODS 9');
 INSERT INTO "RSU_Tipo_Documento" ("nombre","etapa","obligatorio") VALUES ('Informe Inicial','FORMULACION',true),('Informe Técnico de Viabilidad','FORMULACION',true),('Resolución de Aprobación','FORMULACION',true),('Plan de Carga Horaria','FORMULACION',true),('Acta de Compromiso','EJECUCION',true),('Pecosa / Rendición','EJECUCION',true),('Ficha de Asistencia','EJECUCION',true),('Informe de Monitoreo Intermedio','EJECUCION',true),('Informe Final de Ejecución','EJECUCION',true),('Resolución de Cierre','EJECUCION',true),('Encuesta de Satisfacción','EVALUACION',true),('Matriz de Indicadores','EVALUACION',true),('Informe de Evaluación de Impacto','EVALUACION',true),('Memoria Anual RSU','EVALUACION',true),('Voucher de Pago','TRANSVERSAL',true),('Justificación de Falta','TRANSVERSAL',false);
 -- Datos demo estructura
-INSERT INTO "Facultad" ("codigo","nombre") VALUES ('FIA','Facultad de Ingeniería y Arquitectura'),('FCA','Facultad de Ciencias Administrativas');
-INSERT INTO "Escuela" ("id_facultad","codigo","nombre") VALUES (1,'EPIS','Ing. de Sistemas'),(1,'EPIC','Ing. Civil'),(2,'EPA','Administración');
+-- Alcance: Facultad de Ingeniería y Arquitectura (las demás facultades de la
+-- universidad quedan fuera del alcance del sistema).
+INSERT INTO "Facultad" ("codigo","nombre") VALUES ('FIA','Facultad de Ingeniería y Arquitectura');
+INSERT INTO "Escuela" ("id_facultad","codigo","nombre") VALUES (1,'EPIS','Ing. de Sistemas'),(1,'EPIC','Ing. Civil');
 INSERT INTO "Ciclo_Academico" ("nombre","fecha_inicio","fecha_fin","activo") VALUES ('2026-I','2026-03-01','2026-07-31',true),('2026-II','2026-08-01','2026-12-15',false);
 -- Docente/Estudiante demo para login (IDs alineados con demoUsers: 1=Laura/Anas, 2=Pedro/Carlos)
-INSERT INTO "Docente" ("codigo_docente","dni","nombres","apellidos","correo_institucional","id_escuela","tipo_docente","categoria","carga_no_lectiva_max") VALUES ('DOC001','10000001','Laura','Torres','docente@undc.edu.pe',1,'ORDINARIO_TC','PRINCIPAL',8), ('DOC002','10000002','Pedro','Flores','colaborador@undc.edu.pe',1,'CONTRATADO','AUXILIAR',6);
-INSERT INTO "Estudiante" ("codigo_estudiante","dni","nombres","apellidos","correo_institucional","id_escuela") VALUES ('EST001','20000001','Ana','Quispe','estudiante@undc.edu.pe',1), ('EST002','20000002','Carlos','Ramos','ejecutor@undc.edu.pe',1);
-INSERT INTO "Estudiante_Ciclo" ("id_estudiante","id_ciclo","ciclo_numerico") VALUES (1,1,5), (2,1,5);
--- Notificaciones seed por rol (bandeja + campana) — solo 10 roles V1.1
+-- Personas, proyectos y datos de demostración → db/seed_demo.sql
+-- Notificaciones seed por rol (bandeja + campana) — 12 roles V3
 INSERT INTO "RSU_Notificacion" ("rol_destino","tipo","titulo","mensaje","leido") VALUES
-('DIRECTOR_ESCUELA','TRANSICION','Nuevo proyecto en revisión','RSU-2026-011 Campaña anemia requiere tu V°B° como Director de Escuela',false),
-('DECANO','TRANSICION','Aprobación pendiente','RSU-2026-014 Reciclaje Quilmaná aprobado por Director de Escuela, pendiente tu revisión',false),
-('DOCENTE_RESPONSABLE','ASIGNACION','Horas asignadas','Se te asignaron 4h NO_LECTIVA en RSU-2026-007 (Taller emprendimiento)',false),
-('ESTUDIANTE','PROYECTO_CREADO','Proyecto creado','Tu proyecto RSU-2026-011 quedó en BORRADOR. Equipo ya puede subir docs',false),
-('DOCENTE_ASESOR','INVITACION','Invitación a equipo','Has sido invitado como Asesor en RSU-2026-007 por Ana Quispe',false),
-('PRESIDENTE_COMITE_RSU','PROYECTO_CREADO','Nuevo PEP Financiado','RSU-2026-012 PEP Financiado creado en tu Escuela, pendiente de revisión',false),
-('COMITE_CALIDAD','EVALUACION','Evaluación impacto','RSU-2026-003 listo para Evaluación impacto — COMITE_CALIDAD',false),
-('ADMINISTRADOR','CONFIG','Mantenimiento','Configuración del sistema actualizada por el Administrador',false);
+('DIR_ESCUELA','TRANSICION','Nuevo proyecto en revisión','Un proyecto requiere tu V°B° como Director de Escuela',false),
+('CONSEJO_FACULTAD','TRANSICION','Aprobación pendiente','Proyecto aprobado por Director de Escuela, pendiente tu dictamen',false),
+('DIR_RS_FACULTAD','TRANSICION','Priorización pendiente','Proyecto en priorización de banco de Facultad',false),
+('DOCENTE_RESP','ASIGNACION','Horas asignadas','Se te asignaron horas NO_LECTIVA',false),
+('ESTUDIANTE_PROP','PROYECTO_CREADO','Proyecto creado','Tu proyecto quedó en BORRADOR. El equipo ya puede subir documentos',false),
+('ESTUDIANTE_EJEC','INVITACION','Invitación a equipo','Has sido invitado como Ejecutor en un proyecto',false),
+('ADMIN','CONFIG','Mantenimiento','Configuración del sistema actualizada por el Administrador',false);
 
 -- ============================================================================
 -- SEED: Transiciones BPMN por modalidad (V1.1 §10) — solo entre los 10 roles
 -- Nota: estado_origen/destino e id_rol_actor se resuelven por código (subconsulta).
 -- ============================================================================
 
--- ── SSU: ESTUDIANTE crea → DIRECTOR_ESCUELA → DECANO → DRSU → ejecución ──
+-- ── Flujo V3 completo: 16 estados × 12 roles (una transición solo es válida si existe la tupla) ──
 INSERT INTO "RSU_Transicion_Estado" ("estado_origen","estado_destino","id_rol_actor","requiere_documento") VALUES
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='BORRADOR'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_REVISION_ESCUELA'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='ESTUDIANTE'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_REVISION_ESCUELA'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='APROBADO_ESCUELA'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIRECTOR_ESCUELA'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_REVISION_ESCUELA'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='RECHAZADO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIRECTOR_ESCUELA'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='APROBADO_ESCUELA'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_REVISION_DECANO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIRECTOR_ESCUELA'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_REVISION_DECANO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='APROBADO_DECANO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DECANO'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_REVISION_DECANO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='RECHAZADO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DECANO'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='APROBADO_DECANO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='LISTO_DESCARGA'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DECANO'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='LISTO_DESCARGA'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='DESCARGADO_TRANSFERIDO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DECANO'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='DESCARGADO_TRANSFERIDO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EVALUACION_DRSU'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DECANO'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EVALUACION_DRSU'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='APROBADO_DRSU'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DECANO'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='APROBADO_DRSU'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EJECUCION'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DOCENTE_RESPONSABLE'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EJECUCION'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_MONITOREO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DOCENTE_ASESOR'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_MONITOREO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='INFORME_FINAL_PRESENTADO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='ESTUDIANTE'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='INFORME_FINAL_PRESENTADO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='CERRADO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIRECTOR_ESCUELA'),true);
-
--- ── PEP_FINANCIADO: PRESIDENTE_COMITE_RSU → DIR_ESCUELA → DECANO → DRSU → CONSEJO_UNIV ──
-INSERT INTO "RSU_Transicion_Estado" ("estado_origen","estado_destino","id_rol_actor","requiere_documento") VALUES
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='BORRADOR'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_REVISION_ESCUELA'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='PRESIDENTE_COMITE_RSU'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='APROBADO_DECANO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EVALUACION_DRSU'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DECANO'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='APROBADO_DRSU'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='APROBADO_CONSEJO_UNIV'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DECANO'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='APROBADO_CONSEJO_UNIV'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='LISTO_DESCARGA'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DECANO'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='LISTO_DESCARGA'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='DESCARGADO_TRANSFERIDO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DECANO'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='APROBADO_DRSU'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EJECUCION'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DOCENTE_RESPONSABLE'),true);
-
--- ── PEP_AUTOFINANCIADO: DOCENTE_RESPONSABLE → DIR_ESCUELA → DECANO (rechazos heredados arriba) ──
-INSERT INTO "RSU_Transicion_Estado" ("estado_origen","estado_destino","id_rol_actor","requiere_documento") VALUES
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='BORRADOR'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_REVISION_ESCUELA'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DOCENTE_RESPONSABLE'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='APROBADO_DECANO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='LISTO_DESCARGA'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DECANO'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='APROBADO_DRSU'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EJECUCION'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DOCENTE_RESPONSABLE'),true);
-
--- ── VOLUNTARIADO: ESTUDIANTE/EGRESADO/DOCENTE_RESPONSABLE/ADMIN → DRSU ──
-INSERT INTO "RSU_Transicion_Estado" ("estado_origen","estado_destino","id_rol_actor","requiere_documento") VALUES
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='BORRADOR'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EVALUACION_DRSU'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='ESTUDIANTE'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='BORRADOR'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EVALUACION_DRSU'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='EGRESADO'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='BORRADOR'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EVALUACION_DRSU'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DOCENTE_RESPONSABLE'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='BORRADOR'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EVALUACION_DRSU'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='ADMINISTRADOR'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EVALUACION_DRSU'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='APROBADO_DRSU'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DECANO'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='APROBADO_DRSU'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='LISTO_DESCARGA'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DECANO'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='APROBADO_DRSU'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EJECUCION'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DOCENTE_RESPONSABLE'),true);
-
--- ── PUBLICACION_CIENTIFICA: ESTUDIANTE/EGRESADO → DRSU → VP_INVESTIGACION → REPOSITORIO ──
-INSERT INTO "RSU_Transicion_Estado" ("estado_origen","estado_destino","id_rol_actor","requiere_documento") VALUES
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='BORRADOR'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EVALUACION_DRSU'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='ESTUDIANTE'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='BORRADOR'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EVALUACION_DRSU'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='EGRESADO'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='APROBADO_DRSU'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='DERIVADO_VP_INVESTIGACION'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DECANO'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='DERIVADO_VP_INVESTIGACION'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='REGISTRADO_REPOSITORIO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DECANO'),true);
-
--- ── Rechazo rebota al emisor (R31/R32): RECHAZADO → BORRADOR para reenviar ──
-INSERT INTO "RSU_Transicion_Estado" ("estado_origen","estado_destino","id_rol_actor","requiere_documento") VALUES
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='RECHAZADO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='BORRADOR'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='ESTUDIANTE'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='RECHAZADO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='BORRADOR'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DOCENTE_RESPONSABLE'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='RECHAZADO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='BORRADOR'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='PRESIDENTE_COMITE_RSU'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='RECHAZADO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='BORRADOR'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='EGRESADO'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='RECHAZADO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='BORRADOR'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='ADMINISTRADOR'),true);
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='BORRADOR'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_REVISION_ESCUELA'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='ESTUDIANTE_PROP'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='BORRADOR'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_REVISION_ESCUELA'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DOCENTE_RESP'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_REVISION_ESCUELA'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='CON_VB_ESCUELA'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_ESCUELA'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_REVISION_ESCUELA'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='RECHAZADO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_ESCUELA'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='CON_VB_ESCUELA'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_PRIORIZACION_FACULTAD'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_RS_FACULTAD'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='CON_VB_ESCUELA'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='RECHAZADO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_RS_FACULTAD'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_PRIORIZACION_FACULTAD'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_DICTAMEN_CONSEJO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_RS_FACULTAD'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_PRIORIZACION_FACULTAD'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='RECHAZADO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_RS_FACULTAD'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_DICTAMEN_CONSEJO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='APROBADO_CON_RESOLUCION'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='CONSEJO_FACULTAD'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_DICTAMEN_CONSEJO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='RECHAZADO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='CONSEJO_FACULTAD'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='APROBADO_CON_RESOLUCION'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_ASIGNACION_CARGA'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='CONSEJO_FACULTAD'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_ASIGNACION_CARGA'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='REGISTRADO_OFICIAL'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_RS_FACULTAD'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='REGISTRADO_OFICIAL'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EJECUCION'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_RS_FACULTAD'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EJECUCION'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_MONITOREO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DOCENTE_RESP'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_MONITOREO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='INFORME_FINAL_PRESENTADO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_RS_FACULTAD'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='INFORME_FINAL_PRESENTADO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='CON_CONFORMIDAD_ESCUELA'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='ESTUDIANTE_EJEC'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='CON_CONFORMIDAD_ESCUELA'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='CERRADO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_ESCUELA'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='CERRADO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EVALUACION_IMPACTO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='CONSEJO_FACULTAD'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EVALUACION_IMPACTO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EVALUACION_VALIDADA'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_RS_FACULTAD'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EVALUACION_VALIDADA'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='REPORTADO_SUNEDU'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_RS_FACULTAD'),true),
+-- Rechazo rebota al emisor (R31/R32): RECHAZADO → BORRADOR para reenviar
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='RECHAZADO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='BORRADOR'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='ESTUDIANTE_PROP'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='RECHAZADO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='BORRADOR'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DOCENTE_RESP'),true);
 
 -- ============================================================================
 -- SEED: Configuración (M11) — 16 parámetros por defecto (V1.1 §5.1)
@@ -461,3 +443,80 @@ INSERT INTO "RSU_Configuracion" ("clave","valor","descripcion","tipo","ambito") 
 ('correo_notificaciones','responsabilidadsocialu@undc.edu.pe','Correo de notificaciones','STRING','GLOBAL'),
 ('url_plataforma','https://drsu.undc.edu.pe','URL de la plataforma','STRING','GLOBAL'),
 ('modo_mantenimiento','false','Modo mantenimiento (true/false)','BOOL','GLOBAL');
+
+-- ============================================================================
+-- INDICES ADICIONALES (optimizacion de consultas frecuentes)
+-- ============================================================================
+CREATE INDEX IF NOT EXISTS idx_proyecto_escuela ON "RSU_Proyecto"("id_escuela");
+CREATE INDEX IF NOT EXISTS idx_proyecto_tipo ON "RSU_Proyecto"("id_tipo");
+CREATE INDEX IF NOT EXISTS idx_proyecto_ciclo ON "RSU_Proyecto"("id_ciclo_creacion");
+CREATE INDEX IF NOT EXISTS idx_proyecto_lider ON "RSU_Proyecto"("id_estudiante_lider");
+CREATE INDEX IF NOT EXISTS idx_proyecto_asesor ON "RSU_Proyecto"("id_docente_asesor");
+CREATE INDEX IF NOT EXISTS idx_proyecto_fecha_inicio ON "RSU_Proyecto"("fecha_inicio_plan");
+CREATE INDEX IF NOT EXISTS idx_proyecto_created ON "RSU_Proyecto"("created_at");
+CREATE INDEX IF NOT EXISTS idx_flujo_proyecto ON "RSU_Flujo_Aprobacion"("id_proyecto");
+CREATE INDEX IF NOT EXISTS idx_flujo_estados ON "RSU_Flujo_Aprobacion"("id_estado_origen","id_estado_destino");
+CREATE INDEX IF NOT EXISTS idx_flujo_rol ON "RSU_Flujo_Aprobacion"("id_rol_actor");
+CREATE INDEX IF NOT EXISTS idx_flujo_fecha ON "RSU_Flujo_Aprobacion"("fecha_transicion");
+CREATE INDEX IF NOT EXISTS idx_documento_proyecto ON "RSU_Documento"("id_proyecto");
+CREATE INDEX IF NOT EXISTS idx_documento_tipo ON "RSU_Documento"("id_tipo_doc");
+CREATE INDEX IF NOT EXISTS idx_documento_vigente ON "RSU_Documento"("vigente");
+CREATE INDEX IF NOT EXISTS idx_documento_fecha ON "RSU_Documento"("fecha_subida");
+CREATE INDEX IF NOT EXISTS idx_asignacion_docente ON "RSU_Asignacion_Docente"("id_docente");
+CREATE INDEX IF NOT EXISTS idx_asignacion_proyecto ON "RSU_Asignacion_Docente"("id_proyecto");
+CREATE INDEX IF NOT EXISTS idx_asignacion_ciclo ON "RSU_Asignacion_Docente"("id_ciclo");
+CREATE INDEX IF NOT EXISTS idx_asignacion_estado ON "RSU_Asignacion_Docente"("estado_asignacion");
+CREATE INDEX IF NOT EXISTS idx_participante_estudiante ON "RSU_Participante_Estudiante"("id_estudiante");
+CREATE INDEX IF NOT EXISTS idx_participante_proyecto ON "RSU_Participante_Estudiante"("id_proyecto");
+CREATE INDEX IF NOT EXISTS idx_participante_estado ON "RSU_Participante_Estudiante"("estado_participacion");
+CREATE INDEX IF NOT EXISTS idx_entregable_proyecto ON "RSU_Entregable"("id_proyecto");
+CREATE INDEX IF NOT EXISTS idx_entregable_estado ON "RSU_Entregable"("estado");
+CREATE INDEX IF NOT EXISTS idx_actividad_proyecto ON "RSU_Actividad_Campo"("id_proyecto");
+CREATE INDEX IF NOT EXISTS idx_actividad_estado ON "RSU_Actividad_Campo"("estado");
+CREATE INDEX IF NOT EXISTS idx_actividad_fecha ON "RSU_Actividad_Campo"("fecha_programada");
+CREATE INDEX IF NOT EXISTS idx_foto_actividad ON "RSU_Actividad_Foto"("id_actividad");
+CREATE INDEX IF NOT EXISTS idx_beneficiario_dni ON "RSU_Beneficiario"("dni");
+CREATE INDEX IF NOT EXISTS idx_beneficiario_distrito ON "RSU_Beneficiario"("distrito");
+CREATE INDEX IF NOT EXISTS idx_beneficiario_tipo ON "RSU_Beneficiario"("tipo_beneficiario");
+CREATE INDEX IF NOT EXISTS idx_proy_benef_proyecto ON "RSU_Proyecto_Beneficiario"("id_proyecto");
+CREATE INDEX IF NOT EXISTS idx_proy_benef_beneficiario ON "RSU_Proyecto_Beneficiario"("id_beneficiario");
+CREATE INDEX IF NOT EXISTS idx_encuesta_benef_proyecto ON "RSU_Encuesta_Beneficiario"("id_proyecto");
+CREATE INDEX IF NOT EXISTS idx_encuesta_sat_proyecto ON "RSU_Encuesta_Satisfaccion"("id_proyecto");
+CREATE INDEX IF NOT EXISTS idx_respuesta_encuesta ON "RSU_Respuesta_Encuesta"("id_encuesta_benef");
+CREATE INDEX IF NOT EXISTS idx_respuesta_pregunta ON "RSU_Respuesta_Encuesta"("id_pregunta");
+CREATE INDEX IF NOT EXISTS idx_presupuesto_proyecto ON "RSU_Presupuesto_Movimiento"("id_proyecto");
+CREATE INDEX IF NOT EXISTS idx_presupuesto_tipo ON "RSU_Presupuesto_Movimiento"("tipo");
+CREATE INDEX IF NOT EXISTS idx_pago_proyecto ON "RSU_Pago_Voucher"("id_proyecto");
+CREATE INDEX IF NOT EXISTS idx_pago_estado ON "RSU_Pago_Voucher"("estado");
+CREATE INDEX IF NOT EXISTS idx_monitoreo_proyecto ON "RSU_Monitoreo"("id_proyecto");
+CREATE INDEX IF NOT EXISTS idx_monitoreo_fecha ON "RSU_Monitoreo"("fecha_monitoreo");
+CREATE INDEX IF NOT EXISTS idx_indicador_proyecto ON "RSU_Indicador_Impacto"("id_proyecto");
+CREATE INDEX IF NOT EXISTS idx_leccion_proyecto ON "RSU_Leccion_Aprendida"("id_proyecto");
+CREATE INDEX IF NOT EXISTS idx_constancia_proyecto ON "RSU_Solicitud_Constancia"("id_proyecto");
+CREATE INDEX IF NOT EXISTS idx_constancia_estudiante ON "RSU_Solicitud_Constancia"("id_estudiante");
+CREATE INDEX IF NOT EXISTS idx_declaracion_proyecto ON "RSU_Declaracion_Jurada"("id_proyecto");
+CREATE INDEX IF NOT EXISTS idx_modificacion_proyecto ON "RSU_Modificacion_Informe"("id_proyecto");
+CREATE INDEX IF NOT EXISTS idx_justificacion_actividad ON "RSU_Justificacion_Falta"("id_actividad");
+CREATE INDEX IF NOT EXISTS idx_asistencia_actividad ON "RSU_Asistencia_Beneficiario"("id_actividad");
+CREATE INDEX IF NOT EXISTS idx_verificacion_proyecto ON "RSU_Verificacion"("id_proyecto");
+CREATE INDEX IF NOT EXISTS idx_resolucion_proyecto ON "RSU_Resolucion"("id_proyecto");
+CREATE INDEX IF NOT EXISTS idx_audit_usuario ON "RSU_Auditoria_Log"("id_usuario");
+CREATE INDEX IF NOT EXISTS idx_audit_fecha ON "RSU_Auditoria_Log"("fecha_hora");
+CREATE INDEX IF NOT EXISTS idx_notif_proyecto ON "RSU_Notificacion"("id_proyecto");
+CREATE INDEX IF NOT EXISTS idx_transicion_origen ON "RSU_Transicion_Estado"("estado_origen");
+CREATE INDEX IF NOT EXISTS idx_transicion_destino ON "RSU_Transicion_Estado"("estado_destino");
+CREATE INDEX IF NOT EXISTS idx_transicion_rol ON "RSU_Transicion_Estado"("id_rol_actor");
+CREATE INDEX IF NOT EXISTS idx_estudiante_escuela ON "Estudiante"("id_escuela");
+CREATE INDEX IF NOT EXISTS idx_estudiante_estado ON "Estudiante"("estado");
+CREATE INDEX IF NOT EXISTS idx_docente_escuela ON "Docente"("id_escuela");
+CREATE INDEX IF NOT EXISTS idx_docente_tipo ON "Docente"("tipo_docente");
+CREATE INDEX IF NOT EXISTS idx_escuela_facultad ON "Escuela"("id_facultad");
+CREATE INDEX IF NOT EXISTS idx_ciclo_activo ON "Ciclo_Academico"("activo");
+CREATE INDEX IF NOT EXISTS idx_rol_tipo ON "RSU_Rol_Actor"("tipo");
+CREATE INDEX IF NOT EXISTS idx_estado_orden ON "RSU_Estado_Proyecto"("orden_flujo");
+CREATE INDEX IF NOT EXISTS idx_est_ciclo_estudiante ON "Estudiante_Ciclo"("id_estudiante");
+CREATE INDEX IF NOT EXISTS idx_est_ciclo_ciclo ON "Estudiante_Ciclo"("id_ciclo");
+CREATE INDEX IF NOT EXISTS idx_comite_escuela ON "RSU_Comite_RSU"("id_escuela");
+CREATE INDEX IF NOT EXISTS idx_instrumento_proyecto ON "RSU_Instrumento_Impacto"("id_proyecto");
+CREATE INDEX IF NOT EXISTS idx_pr_proyecto ON "RSU_Proyecto_Rol"("id_proyecto");
+CREATE INDEX IF NOT EXISTS idx_pr_usuario ON "RSU_Proyecto_Rol"("id_usuario");

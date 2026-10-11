@@ -1,0 +1,325 @@
+package handler
+
+import (
+	"net/http"
+	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
+	"undc-rsu/backend/internal/domain"
+	"undc-rsu/backend/internal/dto"
+	"undc-rsu/backend/internal/repository"
+	"undc-rsu/backend/pkg/utils"
+)
+
+// ── Gestión de usuarios y permisos (solo ADMIN) ──
+//
+// El administrador crea usuarios, los activa/desactiva y decide a qué módulos
+// del sistema puede entrar cada uno.
+
+// Roles de negocio UNDC disponibles para asignar a un usuario.
+// Alcance vigente: Estudiante, Docente, Escuela, Facultad, Consejo y Admin.
+// Quedaron fuera Docente Colaborador, Comité PS, Dir. Departamento, Dir. Central
+// RS, Unidad de Abastecimiento y Comité de Calidad.
+var ROLES_NEGOCIO = []dto.ModuloInfo{
+	{Clave: "ESTUDIANTE_PROP", Nombre: "Estudiante proponente", Desc: "Crea el borrador y propone el proyecto"},
+	{Clave: "ESTUDIANTE_EJEC", Nombre: "Estudiante ejecutor", Desc: "Ejecuta, sube entregables y evidencias"},
+	{Clave: "DOCENTE_RESP", Nombre: "Docente responsable", Desc: "Asesora, monitorea y verifica entregables"},
+	{Clave: "DIR_ESCUELA", Nombre: "Director de Escuela Profesional", Desc: "Revisa y da V°B° a los proyectos"},
+	{Clave: "DIR_RS_FACULTAD", Nombre: "Dir. RS Facultad", Desc: "Prioriza banco, presupuesto y monitoreo"},
+	{Clave: "CONSEJO_FACULTAD", Nombre: "Consejo de Facultad", Desc: "Dictamina y emite resoluciones"},
+	{Clave: "ADMIN", Nombre: "Administrador", Desc: "Control total: usuarios y módulos"},
+}
+
+// Tipo de usuario derivado del rol (usado por el resto del sistema).
+func tipoDeRol(rol string) string {
+	switch rol {
+	case "ESTUDIANTE_PROP", "ESTUDIANTE_EJEC":
+		return "ESTUDIANTE"
+	case "DOCENTE_RESP":
+		return "DOCENTE"
+	default:
+		return "ADMINISTRATIVO"
+	}
+}
+
+// Módulos activables del sistema.
+var MODULOS = []dto.ModuloInfo{
+	{Clave: "proyectos", Nombre: "Proyectos", Desc: "Crear y consultar proyectos"},
+	{Clave: "bandeja", Nombre: "Bandeja", Desc: "Revisar pendientes de aprobación"},
+	{Clave: "entregables", Nombre: "Entregables", Desc: "Verificar entregables enviados"},
+	{Clave: "evidencias", Nombre: "Evidencias", Desc: "Actividades de campo y fotos"},
+	{Clave: "beneficiarios", Nombre: "Beneficiarios", Desc: "Padrón de beneficiarios"},
+	{Clave: "presupuesto", Nombre: "Presupuesto", Desc: "Movimientos y vouchers"},
+	{Clave: "encuestas", Nombre: "Encuestas", Desc: "Aplicar encuestas Likert"},
+	{Clave: "monitoreo", Nombre: "Monitoreo", Desc: "Seguimiento de avance"},
+	{Clave: "reportes", Nombre: "Reportes", Desc: "Reportes y memoria anual"},
+	{Clave: "personas", Nombre: "Personas", Desc: "Gestión de docentes y estudiantes"},
+	{Clave: "estructura", Nombre: "Estructura", Desc: "Facultades, escuelas y ciclos"},
+	{Clave: "catalogos", Nombre: "Catálogos", Desc: "Tipos, líneas y estados"},
+	{Clave: "documentos", Nombre: "Documentos", Desc: "Archivo documental"},
+	{Clave: "auditoria", Nombre: "Auditoría", Desc: "Trazabilidad de acciones"},
+}
+
+type UsuarioAdminHandler struct {
+	repo *repository.UsuarioRepo
+	db   *gorm.DB
+}
+
+func NewUsuarioAdminHandler(db *gorm.DB) *UsuarioAdminHandler {
+	return &UsuarioAdminHandler{repo: repository.NewUsuarioRepo(db), db: db}
+}
+
+// esAdmin comprueba el rol de negocio del token (claim user_id → RSU_Usuario.rol).
+// El middleware pone rol_actor (CODIGO como DIR_ESCUELA, ADMIN...), no "rol".
+func esAdmin(c *gin.Context) bool {
+	v, ok := c.Get("rol_actor")
+	return ok && v == "ADMIN"
+}
+
+func (h *UsuarioAdminHandler) vista(u *domain.RSUUsuario, modulos []string) dto.UsuarioConPermisos {
+	return dto.UsuarioConPermisos{
+		ID: u.ID, Correo: u.Correo, Nombre: u.Nombre,
+		Rol: u.Rol, RolActor: u.Rol, TipoUsuario: u.TipoUsuario,
+		IDPersona: u.IDPersona, Activo: u.Activo,
+		UltimoLogin: u.UltimoLogin, Modulos: modulos,
+	}
+}
+
+// List devuelve todos los usuarios con sus módulos activos.
+// @Tags		Usuarios
+// @Produce	json
+// @Success	200 {object} map[string]any "OK"
+// @Failure	401 "No autorizado"
+// @Failure	403 "Solo administradores"
+// @Router		/api/v1/usuarios [get]
+func (h *UsuarioAdminHandler) List(c *gin.Context) {
+	if !esAdmin(c) {
+		utils.Fail(c, http.StatusForbidden, "Solo el administrador puede gestionar usuarios", nil)
+		return
+	}
+	usuarios, err := h.repo.FindAll()
+	if err != nil {
+		utils.Fail(c, 500, "Error al listar usuarios", err.Error())
+		return
+	}
+	out := make([]dto.UsuarioConPermisos, 0, len(usuarios))
+	for i := range usuarios {
+		mods, _ := h.repo.PermisosDe(usuarios[i].ID)
+		out = append(out, h.vista(&usuarios[i], clavesModulos(mods)))
+	}
+	utils.Success(c, out, "OK")
+}
+
+// Crear da de alta un usuario con contraseña hasheada y módulos iniciales.
+// @Tags		Usuarios
+// @Accept		json
+// @Produce	json
+// @Success	201 {object} map[string]any "Creado"
+// @Router		/api/v1/usuarios [post]
+func (h *UsuarioAdminHandler) Crear(c *gin.Context) {
+	if !esAdmin(c) {
+		utils.Fail(c, http.StatusForbidden, "Solo el administrador puede crear usuarios", nil)
+		return
+	}
+	var req dto.CrearUsuarioReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.Fail(c, 400, "Datos inválidos: correo, nombre, contraseña y rol son obligatorios", err.Error())
+		return
+	}
+	if !rolValido(req.RolActor) {
+		utils.Fail(c, 400, "rol_actor inválido para el sistema UNDC", nil)
+		return
+	}
+	if _, err := h.repo.FindByCorreo(req.Correo); err == nil {
+		utils.Fail(c, 409, "Ya existe un usuario con ese correo", nil)
+		return
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		utils.Fail(c, 500, "No se pudo asegurar la contraseña", err.Error())
+		return
+	}
+	u := &domain.RSUUsuario{
+		Correo: req.Correo, Nombre: req.Nombre, PasswordHash: string(hash),
+		Rol: req.RolActor, TipoUsuario: tipoDeRol(req.RolActor), IDPersona: req.IDPersona,
+		Activo: req.Activo == nil || *req.Activo,
+	}
+	if err := h.repo.Create(u); err != nil {
+		utils.Fail(c, 500, "No se pudo crear el usuario", err.Error())
+		return
+	}
+	if len(req.Modulos) > 0 {
+		if err := h.repo.ReemplazarPermisos(u.ID, req.Modulos); err != nil {
+			utils.Fail(c, 500, "Usuario creado, pero falló asignar módulos", err.Error())
+			return
+		}
+	}
+	utils.Created(c, h.vista(u, req.Modulos), "Usuario creado")
+}
+
+// Actualizar edita nombre, rol, estado, persona, contraseña y módulos.
+// @Tags		Usuarios
+// @Accept		json
+// @Produce	json
+// @Router		/api/v1/usuarios/{id} [put]
+func (h *UsuarioAdminHandler) Actualizar(c *gin.Context) {
+	if !esAdmin(c) {
+		utils.Fail(c, http.StatusForbidden, "Solo el administrador puede editar usuarios", nil)
+		return
+	}
+	id, _ := strconv.Atoi(c.Param("id"))
+	u, err := h.repo.FindByID(uint(id))
+	if err != nil {
+		utils.Fail(c, 404, "Usuario no encontrado", nil)
+		return
+	}
+	var req dto.ActualizarUsuarioReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.Fail(c, 400, "Datos inválidos", err.Error())
+		return
+	}
+	if req.RolActor != nil {
+		if !rolValido(*req.RolActor) {
+			utils.Fail(c, 400, "rol_actor inválido", nil)
+			return
+		}
+		u.Rol = *req.RolActor
+		u.TipoUsuario = tipoDeRol(*req.RolActor)
+	}
+	if req.Nombre != nil {
+		u.Nombre = *req.Nombre
+	}
+	if req.IDPersona != nil {
+		u.IDPersona = req.IDPersona
+	}
+	if req.Activo != nil {
+		u.Activo = *req.Activo
+	}
+	if req.Password != nil && *req.Password != "" {
+		if len(*req.Password) < 6 {
+			utils.Fail(c, 400, "La contraseña debe tener al menos 6 caracteres", nil)
+			return
+		}
+		hash, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			utils.Fail(c, 500, "No se pudo asegurar la contraseña", err.Error())
+			return
+		}
+		u.PasswordHash = string(hash)
+	}
+	if err := h.repo.Update(u); err != nil {
+		utils.Fail(c, 500, "No se pudo actualizar el usuario", err.Error())
+		return
+	}
+	if req.Modulos != nil {
+		if err := h.repo.ReemplazarPermisos(u.ID, req.Modulos); err != nil {
+			utils.Fail(c, 500, "Usuario actualizado, pero falló guardar módulos", err.Error())
+			return
+		}
+	}
+	mods, _ := h.repo.PermisosDe(u.ID)
+	utils.Success(c, h.vista(u, clavesModulos(mods)), "Usuario actualizado")
+}
+
+// Eliminar borra un usuario y sus permisos. Nunca permite borrarse a sí mismo.
+// @Tags		Usuarios
+// @Produce	json
+// @Router		/api/v1/usuarios/{id} [delete]
+func (h *UsuarioAdminHandler) Eliminar(c *gin.Context) {
+	if !esAdmin(c) {
+		utils.Fail(c, http.StatusForbidden, "Solo el administrador puede eliminar usuarios", nil)
+		return
+	}
+	id, _ := strconv.Atoi(c.Param("id"))
+	if id == tokenUserID(c) {
+		utils.Fail(c, 400, "No puedes eliminar tu propio usuario", nil)
+		return
+	}
+	if err := h.repo.EliminarPermisos(uint(id)); err != nil {
+		utils.Fail(c, 500, "No se pudieron eliminar los permisos", err.Error())
+		return
+	}
+	if err := h.repo.Delete(uint(id)); err != nil {
+		utils.Fail(c, 500, "No se pudo eliminar el usuario", err.Error())
+		return
+	}
+	utils.Success(c, nil, "Usuario eliminado")
+}
+
+// Permiso activa o desactiva un módulo puntual.
+// @Tags		Usuarios
+// @Accept		json
+// @Produce	json
+// @Router		/api/v1/usuarios/{id}/permisos [put]
+func (h *UsuarioAdminHandler) Permiso(c *gin.Context) {
+	if !esAdmin(c) {
+		utils.Fail(c, http.StatusForbidden, "Solo el administrador cambia permisos", nil)
+		return
+	}
+	id, _ := strconv.Atoi(c.Param("id"))
+	if _, err := h.repo.FindByID(uint(id)); err != nil {
+		utils.Fail(c, 404, "Usuario no encontrado", nil)
+		return
+	}
+	var req dto.PermisoReq
+	if err := c.ShouldBindJSON(&req); err != nil || req.Modulo == "" {
+		utils.Fail(c, 400, "modulo requerido", err.Error())
+		return
+	}
+	if !moduloValido(req.Modulo) {
+		utils.Fail(c, 400, "módulo desconocido", nil)
+		return
+	}
+	if err := h.repo.SetPermiso(uint(id), req.Modulo, req.Activo); err != nil {
+		utils.Fail(c, 500, "No se pudo guardar el permiso", err.Error())
+		return
+	}
+	mods, _ := h.repo.PermisosDe(uint(id))
+	utils.Success(c, clavesModulos(mods), "Permiso actualizado")
+}
+
+// RolesDisponibles alimenta el selector del formulario.
+// @Tags		Usuarios
+// @Produce	json
+// @Router		/api/v1/usuarios/roles-disponibles [get]
+func (h *UsuarioAdminHandler) RolesDisponibles(c *gin.Context) {
+	utils.Success(c, ROLES_NEGOCIO, "OK")
+}
+
+// ModulosDisponibles alimenta las casillas de activación.
+// @Tags		Usuarios
+// @Produce	json
+// @Router		/api/v1/usuarios/modulos-disponibles [get]
+func (h *UsuarioAdminHandler) ModulosDisponibles(c *gin.Context) {
+	utils.Success(c, MODULOS, "OK")
+}
+
+func clavesModulos(ps []domain.RSUUsuarioPermiso) []string {
+	out := make([]string, 0, len(ps))
+	for _, p := range ps {
+		if p.Activo {
+			out = append(out, p.Modulo)
+		}
+	}
+	return out
+}
+
+func rolValido(rol string) bool {
+	for _, r := range ROLES_NEGOCIO {
+		if r.Clave == rol {
+			return true
+		}
+	}
+	return false
+}
+
+func moduloValido(mod string) bool {
+	for _, m := range MODULOS {
+		if m.Clave == mod {
+			return true
+		}
+ 	}
+ 	return false
+ }

@@ -24,7 +24,7 @@ func (r *NotificacionRepo) List(rolDestino *string, idUsuario *uint, onlyUnread 
 	if onlyUnread {
 		q = q.Where("leido = false")
 	}
-	q.Count(&total)
+	q.Session(&gorm.Session{}).Count(&total)
 	err := q.Order("created_at DESC").Limit(limit).Preload("Proyecto").Find(&items).Error
 	return items, total, err
 }

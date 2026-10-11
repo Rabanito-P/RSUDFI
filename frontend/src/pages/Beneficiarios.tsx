@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api } from '../api/client'
+import { api, asArray } from '../api/client'
 import { Search, Plus, MapPin, Users, Building2, UsersRound, Filter, Phone, Mail, Link2, ShieldCheck } from 'lucide-react'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
@@ -9,6 +9,8 @@ import { Badge } from '../components/ui/Badge'
 import { Skeleton } from '../components/ui/Skeleton'
 import { Alert } from '../components/ui/Alert'
 import { EmptySearch } from '../components/ui/Empty'
+import { Modal } from '../components/ui/Modal'
+import { useAuth } from '../context/AuthContext'
 
 type Ben = {
   id_beneficiario:number
@@ -26,33 +28,64 @@ type Ben = {
 }
 
 export default function Beneficiarios(){
+  const {user} = useAuth()
   const [items,setItems]=useState<Ben[]>([])
   const [search,setSearch]=useState('')
   const [tipoFiltro,setTipoFiltro]=useState('')
   const [loading,setLoading]=useState(true)
+  const [listError,setListError]=useState('')
   const [showForm,setShowForm]=useState(false)
   const [form,setForm]=useState({tipo:'PERSONA_NATURAL', dni:'', nombres:'', apellidos:'', ruc:'', razon:'', distrito:'San Vicente', celular:''})
   const [saving,setSaving]=useState(false)
   const [msg,setMsg]=useState('')
+  const [vinc,setVinc]=useState<{open:boolean, ben:Ben|null, proyecto:string}>({open:false, ben:null, proyecto:''})
+  const [proyectos,setProyectos]=useState<any[]>([])
+  const [vincMsg,setVincMsg]=useState<{type:'ok'|'err', text:string}|null>(null)
+  const [vincBusy,setVincBusy]=useState(false)
 
   const load = async()=>{
-    setLoading(true)
+    setLoading(true); setListError('')
     try{
       const q = new URLSearchParams()
       if(search) q.set('search', search)
       const r:any = await api.get(`/api/v1/beneficiarios?${q.toString()}`)
-      setItems(r.data||[])
-    }catch{
-      setItems([
-        {id_beneficiario:1, dni:'44551234', nombres:'María', apellidos:'Quispe Huamán', distrito:'San Vicente', provincia:'Cañete', tipo_beneficiario:'PERSONA_NATURAL', celular:'987654321', correo_electronico:'maria@example.com'},
-        {id_beneficiario:2, dni:'44551235', nombres:'José', apellidos:'Flores Ramos', distrito:'Imperial', tipo_beneficiario:'PERSONA_NATURAL', celular:'912345678'},
-        {id_beneficiario:3, razon_social:'I.E. José Olaya Balandra', ruc:'20123456789', distrito:'San Luis', tipo_beneficiario:'INSTITUCION'},
-        {id_beneficiario:4, razon_social:'Comunidad Campesina de Lunahuaná', ruc:'', distrito:'Lunahuaná', tipo_beneficiario:'COMUNIDAD'},
-      ])
+      setItems(asArray(r.data))
+    }catch(ex:any){
+      setItems([])
+      setListError(ex?.message || 'No se pudo cargar el padrón de beneficiarios')
     }finally{ setLoading(false)}
   }
   useEffect(()=>{ load() },[])
   const filtered = tipoFiltro ? items.filter(b=> b.tipo_beneficiario===tipoFiltro) : items
+
+  const abrirVincular = async(b:Ben)=>{
+    setVinc({open:true, ben:b, proyecto:''})
+    setVincMsg(null)
+    if(proyectos.length) return
+    try{
+      const endpoint = user?.rol==='ESTUDIANTE'
+        ? `/api/v1/estudiantes/${user?.persona_id}/proyectos?limit=50`
+        : user?.rol==='DOCENTE'
+          ? `/api/v1/docentes/${user?.persona_id}/proyectos?limit=50`
+          : '/api/v1/proyectos?limit=50'
+      const r:any = await api.get(endpoint)
+      const ps = asArray<any>(r.data)
+      setProyectos(ps)
+      if(ps[0]) setVinc(v=> ({...v, proyecto: String(ps[0].id_proyecto)}))
+    }catch(ex:any){ setProyectos([]); setVincMsg({type:'err', text: ex?.message||'No se pudieron cargar los proyectos'}) }
+  }
+
+  const vincular = async()=>{
+    if(!vinc.ben) return
+    if(!vinc.proyecto){ setVincMsg({type:'err', text:'Selecciona el proyecto'}); return }
+    setVincBusy(true); setVincMsg(null)
+    try{
+      await api.post('/api/v1/beneficiarios/vincular', {id_proyecto: Number(vinc.proyecto), id_beneficiario: Number(vinc.ben.id_beneficiario)})
+      setVincMsg({type:'ok', text:'Beneficiario vinculado al proyecto'})
+      setTimeout(()=> setVinc({open:false, ben:null, proyecto:''}), 700)
+    }catch(ex:any){ setVincMsg({type:'err', text: ex?.message||'No se pudo vincular'}) }
+    finally{ setVincBusy(false) }
+  }
 
   const submit = async(e:React.FormEvent)=>{
     e.preventDefault()
@@ -127,30 +160,29 @@ export default function Beneficiarios(){
         </Card>
       )}
 
-      <Card className="p-4">
-        <div className="flex flex-wrap gap-3 items-center">
-          <div className="relative flex-1 min-w-[260px]">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"/>
-            <Input value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>e.key==='Enter'&&load()} placeholder="Buscar por DNI, apellidos o razón social..." className="pl-9 bg-slate-50"/>
-          </div>
-          <div className="flex items-center gap-2">
-            <Filter size={14} className="text-slate-400"/>
-            <Select value={tipoFiltro} onChange={e=>setTipoFiltro(e.target.value)} className="bg-slate-50">
-              <option value="">Todos los tipos</option>
-              <option value="PERSONA_NATURAL">Persona natural</option>
-              <option value="INSTITUCION">Institución</option>
-              <option value="COMUNIDAD">Comunidad</option>
-            </Select>
-          </div>
-          <Button onClick={load} variant="secondary">Buscar</Button>
+      <Card className="p-4 flex flex-col sm:flex-row gap-3 sm:items-center flex-wrap">
+        <div className="relative flex-1 min-w-0 sm:min-w-[260px]">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"/>
+          <Input value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>e.key==='Enter'&&load()} placeholder="Buscar por DNI, apellidos o razón social..." className="pl-9 bg-slate-50"/>
         </div>
+        <div className="flex items-center gap-2">
+          <Filter size={14} className="text-slate-400"/>
+          <Select value={tipoFiltro} onChange={e=>setTipoFiltro(e.target.value)} className="bg-slate-50">
+            <option value="">Todos los tipos</option>
+            <option value="PERSONA_NATURAL">Persona natural</option>
+            <option value="INSTITUCION">Institución</option>
+            <option value="COMUNIDAD">Comunidad</option>
+          </Select>
+        </div>
+        <Button onClick={load} variant="secondary" className="w-full sm:w-auto">Buscar</Button>
       </Card>
 
       <Card className="overflow-hidden">
         {loading ? <div className="p-4"><Skeleton className="h-12 w-full mb-2"/><Skeleton className="h-12 w-full mb-2"/><Skeleton className="h-12 w-full"/></div> :
+          listError ? <div className="p-4"><Alert variant="error" className="text-xs"><div className="flex items-center justify-between gap-3"><span>{listError}</span><Button size="sm" variant="outline" onClick={load}>Reintentar</Button></div></Alert></div> :
           filtered.length===0 ? <EmptySearch query={search}/> :
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[680px]">
               <thead className="bg-slate-50 text-xs text-slate-500 border-b">
                 <tr><th className="text-left px-4 py-3 font-semibold">Beneficiario</th><th className="text-left px-4 py-3">Documento</th><th className="text-left px-4 py-3">Ubicación</th><th className="text-left px-4 py-3">Tipo</th><th className="text-left px-4 py-3">Contacto</th><th className="px-4 py-3">Acción</th></tr>
               </thead>
@@ -162,10 +194,10 @@ export default function Beneficiarios(){
                       <div className="text-xs text-slate-500 flex items-center gap-1">{b.provincia || 'Cañete'} · {b.distrito}</div>
                     </td>
                     <td className="px-4 py-3 font-mono text-xs bg-slate-50 border border-slate-200 rounded-lg inline-block mt-2 px-2 py-1">{b.dni || b.ruc || '—'}</td>
-                    <td className="px-4 py-3"><span className="inline-flex items-center gap-1 text-xs"><MapPin size={14} className="text-slate-400"/>{b.distrito}</span><div className="text-xs text-slate-500">{b.direccion || b.provincia || 'Lima'}</div></td>
+                    <td className="px-4 py-3"><span className="inline-flex items-center gap-1 text-xs"><MapPin size={14} className="text-slate-400"/>{b.distrito||'—'}</span><div className="text-xs text-slate-500">{b.direccion || b.provincia || 'Cañete'}</div></td>
                     <td className="px-4 py-3"><Badge color={b.tipo_beneficiario==='PERSONA_NATURAL'?'#0ea5e9':b.tipo_beneficiario==='INSTITUCION'?'#8b5cf6':'#f59e0b'} variant="soft">{b.tipo_beneficiario}</Badge></td>
                     <td className="px-4 py-3 text-xs"><div className="flex items-center gap-1"><Phone size={12} className="text-slate-400"/>{b.celular || '—'}</div>{b.correo_electronico && <div className="flex items-center gap-1 text-slate-500"><Mail size={12}/>{b.correo_electronico}</div>}</td>
-                    <td className="px-4 py-3 text-center"><Button size="sm" variant="outline" leftIcon={<Link2 size={12}/>}>Vincular</Button></td>
+                    <td className="px-4 py-3 text-center"><Button size="sm" variant="outline" leftIcon={<Link2 size={12}/>} onClick={()=>abrirVincular(b)}>Vincular</Button></td>
                   </tr>
                 ))}
               </tbody>
@@ -175,6 +207,36 @@ export default function Beneficiarios(){
       </Card>
 
       <Alert variant="info" className="text-xs">Beneficiarios por año, distrito y tipo disponibles.</Alert>
+
+      <Modal
+        open={vinc.open}
+        busy={vincBusy}
+        onClose={()=> setVinc({open:false, ben:null, proyecto:''})}
+        title="Vincular beneficiario a un proyecto"
+        desc="POST /api/v1/beneficiarios/vincular"
+        footer={<>
+          <Button variant="outline" onClick={()=> setVinc({open:false, ben:null, proyecto:''})} disabled={vincBusy}>Cancelar</Button>
+          <Button onClick={vincular} loading={vincBusy}>Vincular</Button>
+        </>}
+      >
+        <div className="space-y-3">
+          {vinc.ben && (
+            <div className="border border-slate-200 rounded-xl p-3 text-sm">
+              <div className="font-semibold">{vinc.ben.razon_social || `${vinc.ben.apellidos||''}, ${vinc.ben.nombres||''}`}</div>
+              <div className="text-xs text-slate-500">{vinc.ben.dni||vinc.ben.ruc||'S/D'} · {vinc.ben.distrito||'—'} · {vinc.ben.tipo_beneficiario}</div>
+            </div>
+          )}
+          <div>
+            <Label required>Proyecto</Label>
+            <Select value={vinc.proyecto} onChange={e=> setVinc(v=> ({...v, proyecto:e.target.value}))}>
+              <option value="">-- seleccionar proyecto --</option>
+              {proyectos.map(p=> <option key={p.id_proyecto} value={String(p.id_proyecto)}>{p.codigo_proyecto} — {p.titulo}</option>)}
+            </Select>
+          </div>
+          {proyectos.length===0 && !vincMsg && <div className="text-xs text-slate-500">No se encontraron proyectos disponibles para tu usuario.</div>}
+          {vincMsg && <Alert variant={vincMsg.type==='ok'?'success':'error'} className="text-xs">{vincMsg.text}</Alert>}
+        </div>
+      </Modal>
     </div>
   )
 }
