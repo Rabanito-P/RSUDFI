@@ -10,6 +10,7 @@ import { Empty } from '../components/ui/Empty'
 import { Skeleton } from '../components/ui/Skeleton'
 import { useAuth } from '../context/AuthContext'
 import { canStudentEdit, canStudentUploadDocs, canStudentRegisterActivity } from '../lib/permisos'
+import { mensajeError } from '../lib/errores'
 import { useCatalogoBpmn } from '../hooks/useCatalogoBpmn'
 import { Download, FileText, Camera, Link2, Pencil, ClipboardCheck, Gavel, Upload, UserPlus, Check, X, Inbox, Users } from 'lucide-react'
 
@@ -141,7 +142,7 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
       try{
         const s:any = await api.get(`/api/v1/proyectos/${id}/solicitudes-union`)
         setSolicitudes(asArray(s.data)); setSolicitudesError('')
-      }catch(ex:any){ setSolicitudes([]); setSolicitudesError(ex?.message || 'No se pudieron cargar las solicitudes') }
+      }catch(ex:any){ setSolicitudes([]); setSolicitudesError(mensajeError(ex, 'No se pudieron cargar las solicitudes')) }
     })())
     await Promise.all(jobs)
     setLoading(false)
@@ -240,7 +241,7 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
       setMensajeUnion('')
       setSolMsg({type:'ok', text:'Solicitud enviada al responsable del PEP. Te avisaremos por notificaciones.'})
       await reloadSolicitudes()
-    }catch(ex:any){ setSolMsg({type:'err', text: ex?.message || 'No se pudo enviar la solicitud'}) } finally{ setSolBusy(false) }
+    }catch(ex:any){ setSolMsg({type:'err', text: mensajeError(ex, 'No se pudo enviar la solicitud')}) } finally{ setSolBusy(false) }
   }
   const aceptarSolicitud = async (idSol:number)=>{
     setSolBusy(true); setSolMsg(null)
@@ -248,7 +249,7 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
       await api.patch(`/api/v1/solicitudes-union/${idSol}/aceptar`, { id_revisor: user?.persona_id })
       setSolMsg({type:'ok', text:'Solicitud aceptada: el estudiante ya es miembro del equipo.'})
       await reloadSolicitudes()
-    }catch(ex:any){ setSolMsg({type:'err', text: ex?.message || 'No se pudo aceptar'}) } finally{ setSolBusy(false) }
+    }catch(ex:any){ setSolMsg({type:'err', text: mensajeError(ex, 'No se pudo aceptar')}) } finally{ setSolBusy(false) }
   }
   const rechazarSolicitud = async ()=>{
     // Verificadores en form: motivo rápido obligatorio; OTRO exige texto.
@@ -262,7 +263,7 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
       setRechazoId(null); setMotivoRapido(''); setMotivoTexto('')
       setSolMsg({type:'ok', text:'Solicitud rechazada: se notificó al estudiante con el motivo.'})
       await reloadSolicitudes()
-    }catch(ex:any){ setSolMsg({type:'err', text: ex?.message || 'No se pudo rechazar'}) } finally{ setSolBusy(false) }
+    }catch(ex:any){ setSolMsg({type:'err', text: mensajeError(ex, 'No se pudo rechazar')}) } finally{ setSolBusy(false) }
   }
   const cancelarSolicitud = async (idSol:number)=>{
     setSolBusy(true); setSolMsg(null)
@@ -270,7 +271,7 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
       await api.del(`/api/v1/solicitudes-union/${idSol}?id_estudiante=${user?.persona_id}`)
       setSolMsg({type:'ok', text:'Solicitud cancelada.'})
       await reloadSolicitudes()
-    }catch(ex:any){ setSolMsg({type:'err', text: ex?.message || 'No se pudo cancelar'}) } finally{ setSolBusy(false) }
+    }catch(ex:any){ setSolMsg({type:'err', text: mensajeError(ex, 'No se pudo cancelar')}) } finally{ setSolBusy(false) }
   }
 
   const openModal = async (m:typeof modal)=>{

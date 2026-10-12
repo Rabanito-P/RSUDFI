@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle, CardDesc } from '../components/ui/Card'
 import { Input, Textarea, Label } from '../components/ui/Input'
 import { Alert } from '../components/ui/Alert'
+import { mensajeError } from '../lib/errores'
 import { Upload, AlertCircle, FileText, CheckCircle2, Download, FileSpreadsheet, FileDown, Users, UserPlus, X } from 'lucide-react'
 
 // Plantillas que el estudiante descarga antes de llenar el proyecto.
@@ -66,7 +67,7 @@ export default function CrearProyecto(){
         }catch{ cupos[p.id_proyecto] = '—/5' }
       }))
       setPepsCupos(cupos)
-    }).catch(()=> setPepsError('No se pudieron cargar los PEPs abiertos.'))
+    }).catch((e:any)=> setPepsError(mensajeError(e, 'No se pudieron cargar los PEPs abiertos.')))
   },[])
 
   // Descarga de un formato por su código del catálogo (PROPUESTA,
