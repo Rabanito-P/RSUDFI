@@ -57,6 +57,7 @@ func Setup(db *gorm.DB) *gin.Engine {
 	userAdminH := handler.NewUsuarioAdminHandler(db)
 	formatoH := handler.NewFormatoHandler(db)
 	regH := handler.NewRegistroHandler(db)
+	solUnionH := handler.NewSolicitudUnionHandler(db)
 
 	r.GET("/health", handler.Health)
 	r.GET("/", handler.Health)
@@ -228,6 +229,14 @@ func Setup(db *gorm.DB) *gin.Engine {
 		api.POST("/actividades/planificacion/preview", planH.Previsualizar)
 		api.GET("/actividades/plantilla-planificacion", planH.Plantilla)
 		api.GET("/plantillas/:archivo", planH.PlantillaDeDescarga)
+
+		// ── Solicitudes de unión a PEP (HU-063..HU-068) ──
+		api.POST("/proyectos/:id/solicitudes-union", solUnionH.Create)
+		api.GET("/proyectos/:id/solicitudes-union", solUnionH.ListByProyecto)
+		api.GET("/estudiantes/:id/solicitudes-union", solUnionH.ListByEstudiante)
+		api.PATCH("/solicitudes-union/:id/aceptar", solUnionH.Aceptar)
+		api.PATCH("/solicitudes-union/:id/rechazar", solUnionH.Rechazar)
+		api.DELETE("/solicitudes-union/:id", solUnionH.Cancelar)
 
 		// ── Gestión de usuarios y permisos (solo ADMIN) ──
 		api.GET("/usuarios", userAdminH.List)

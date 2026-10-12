@@ -1,0 +1,672 @@
+PROPUESTA DE SISTEMA DE GESTIÓN, SEGUIMIENTO Y CONTROL DE PROYECTOS DE
+RESPONSABILIDAD SOCIAL UNIVERSITARIA Facultad de Ingeniería — Escuela
+Profesional de Ingeniería de Sistemas Documento consolidado de trabajo
+Fecha de consolidación: 11/10/2026
+
+======================================================================
+0. PROPÓSITO Y ESTADO DEL DOCUMENTO
+======================================================================
+
+Este documento consolida los criterios, flujos, tablas y decisiones
+funcionales trabajados en la conversación para una propuesta de sistema
+de Responsabilidad Social Universitaria (RSU) a nivel de Facultad,
+incluyendo el proceso de Servicio Social Universitario (SSU) y los
+Proyectos de Escuelas Profesionales (PEP).
+
+IMPORTANTE SOBRE EL ESTADO: - “Acordado en esta propuesta” significa que
+es el diseño funcional definido en el trabajo entre el usuario y
+ChatGPT. - “Respaldado por el reglamento” significa que el aspecto
+aparece en el Reglamento de Responsabilidad Social Universitaria de la
+Universidad Nacional de Cañete, código R-M03-RSU-001, versión 04, fecha
+14/05/2026, según los artículos revisados. - “Pendiente de validación
+institucional” significa que la propuesta requiere revisión y visto
+bueno de la Facultad, su Comisión, el Decanato y/o la DRSU antes de
+considerarse aprobada oficialmente. Este documento no representa
+aprobación formal de la universidad ni reemplaza el reglamento.
+
+====================================================================== 1.
+VISIÓN GENERAL DE LA PROPUESTA
+======================================================================
+
+1.1. Idea central
+
+Desarrollar una plataforma propia de RSU dentro de la Facultad de
+Ingeniería, alineada con las capacidades de la Escuela Profesional de
+Ingeniería de Sistemas. La plataforma administrará integralmente los
+proyectos a nivel de Facultad: registro, revisión interna, aprobación
+interna, seguimiento, control, participantes, informes, encuestas,
+evidencias, evaluación de cierre y generación de un expediente digital
+exportable.
+
+La propuesta no consiste en hacer que los estudiantes registren y
+administren su proyecto en la plataforma actual de la DRSU. La gestión
+operativa se realizará en la plataforma de la Facultad.
+
+La DRSU conservará las intervenciones institucionales que le
+correspondan: visto bueno de la propuesta inicial y revisión/validación
+del expediente final exportado, además de las atribuciones que el
+reglamento le asigne. La constancia será emitida por la instancia
+institucional competente, no por la Facultad ni por su plataforma.
+
+1.2. Responsabilidades generales propuestas
+
+FACULTAD: - Administra el sistema y los proyectos en su ámbito. -
+Controla la información, el cronograma, los participantes, el avance y
+las incidencias. - Revisa el proyecto mediante la Escuela Profesional,
+la Comisión de RSU de la Facultad y el Decanato, conforme al
+procedimiento interno que se apruebe. - Consolida y revisa las
+evidencias y los resultados. - Genera el expediente digital final y lo
+remite a la DRSU. - Registra el resultado de las revisiones
+institucionales y comunica el estado a los participantes.
+
+DRSU: - Revisa la propuesta inicial remitida por la Facultad y comunica
+el visto bueno u observaciones, según el procedimiento que se acuerde y
+las competencias institucionales aplicables. - Revisa el expediente
+digital final enviado por la Facultad. - Confirma si el expediente
+cumple los requisitos institucionales, solicita subsanaciones si
+corresponde y habilita la continuación del trámite de constancia cuando
+proceda. - Mantiene la competencia de emisión de la constancia, de
+acuerdo con el procedimiento institucional aplicable.
+
+ESTUDIANTE / EQUIPO: - Registra o participa en el proyecto dentro de la
+plataforma de la Facultad. - Cumple las actividades, los requisitos y
+las horas aplicables. - Aporta la información y las evidencias que le
+correspondan. - Puede consultar el estado del proyecto y, cuando se
+encuentre habilitado, solicitar la constancia.
+
+1.3. Principio de diseño
+
+La plataforma de la Facultad será el entorno principal de gestión
+operativa y control del proyecto. La DRSU recibirá paquetes de
+expediente estructurados en los puntos de validación institucional. No
+se debe asumir que la DRSU dejará de requerir cualquier registro
+institucional hasta que apruebe formalmente el nuevo procedimiento.
+
+======================================================================
+2. PROCESO SSU: FLUJO PROPUESTO A NIVEL DE FACULTAD
+======================================================================
+
+2.1. Flujo narrativo
+
+INICIO | v 1. El equipo prepara la propuesta SSU y registra en la
+plataforma de la Facultad: - datos del proyecto; - estudiantes
+participantes; - docente asesor propuesto; - beneficiarios; - objetivos
+y actividades; - cronograma; - planificación de horas; - documentación
+inicial requerida. | v 2. La Escuela Profesional realiza la validación
+interna de la propuesta. | +–> Si observa datos o requisitos
+incompletos: | devuelve la propuesta al responsable para subsanación; |
+el equipo corrige y vuelve a presentar. | +–> Si está conforme: eleva la
+propuesta a la siguiente instancia interna. | v 3. La Comisión de RSU de
+la Facultad y el Decanato revisan la propuesta, conforme a la
+distribución de responsabilidades que defina la Facultad. | +–> Si hay
+observaciones: devolución para corrección y nueva revisión. | +–> Si
+está conforme: la Facultad remite la propuesta a la DRSU. | v 4. La DRSU
+revisa la propuesta y comunica su visto bueno u observaciones, dentro
+del procedimiento que se acuerde institucionalmente. | +–> Si hay
+observaciones: la Facultad las registra, coordina la | subsanación con
+el equipo y vuelve a remitir la propuesta. | +–> Si otorga el visto
+bueno: se registra el estado y se habilita la ejecución según el
+procedimiento aprobado. | v 5. EJECUCIÓN, SEGUIMIENTO Y CONTROL EN LA
+PLATAFORMA DE LA FACULTAD - seguimiento del cronograma; - control de
+participantes; - registro de actividades e incidencias; - seguimiento de
+horas y cumplimiento; - informes de avance; - encuestas; - evidencias y
+documentación del proyecto; - historial de revisiones y cambios. | v 6.
+CIERRE INTERNO La Escuela y los responsables de la Facultad revisan el
+cumplimiento de requisitos, resultados, participación, horas y
+documentación. | +–> Si hay faltantes: se devuelve para subsanación. |
++–> Si está conforme: se consolida el expediente digital final. | v 7.
+EXPORTACIÓN DEL EXPEDIENTE La plataforma genera un paquete estructurado
+con los archivos, encuestas, evidencias, informes, metadatos e índice. |
+v 8. VALIDACIÓN FINAL DE LA DRSU | +–> Observado: la DRSU comunica las
+observaciones; la Facultad las | registra, coordina la corrección y
+reenvía el expediente. | +–> Conforme: se registra la validación final y
+se continúa el procedimiento institucional de constancia. | v 9.
+SOLICITUD DE CONSTANCIA El estudiante queda habilitado para solicitarla
+cuando se hayan cumplido los requisitos. La constancia la emite la
+instancia institucional competente, no la plataforma de la Facultad. | v
+FIN
+
+2.2. Tabla de actividades del proceso SSU
+
+  ---------------------------------------------------------------------------------
+  N.º            Actividad          Responsable     Sistema/medio   Resultado
+                                    principal                       
+                                    propuesto                       
+  -------------- ------------------ --------------- --------------- ---------------
+  1              Registrar la       Equipo /        Plataforma de   Propuesta
+                 propuesta y        responsable del la Facultad     registrada
+                 participantes      proyecto                        
+
+  2              Validar requisitos Escuela         Plataforma de   Validación u
+                 internos           Profesional     la Facultad     observaciones
+
+  3              Revisar la         Comisión de RSU Plataforma de   Conformidad
+                 propuesta a nivel  y Decanato,     la Facultad     interna u
+                 de Facultad        según                           observaciones
+                                    procedimiento                   
+                                    interno                         
+
+  4              Remitir la         Responsable     Plataforma de   Propuesta
+                 propuesta a la     autorizado de   Facultad y      remitida
+                 DRSU               la Facultad     medio           
+                                                    institucional   
+                                                    acordado        
+
+  5              Dar visto bueno u  DRSU            Procedimiento   Visto bueno u
+                 observar la                        institucional   observaciones
+                 propuesta                          acordado        
+
+  6              Ejecutar y hacer   Equipo, docente Plataforma de   Avance y
+                 seguimiento        asesor y        la Facultad     registros de
+                                    responsables de                 seguimiento
+                                    Facultad                        
+
+  7              Revisar el cierre  Escuela y       Plataforma de   Cierre conforme
+                                    responsables de la Facultad     u observaciones
+                                    Facultad                        
+
+  8              Generar expediente Plataforma /    Exportación de  Paquete digital
+                 exportable         responsable     archivos        de cierre
+                                    autorizado                      
+
+  9              Validar expediente DRSU            Revisión        Conforme u
+                 final                              institucional   observado
+
+  10             Solicitar/emitir   Estudiante /    Procedimiento   Constancia
+                 constancia         instancia       institucional   según
+                                    institucional                   corresponda
+                                    competente                      
+  ---------------------------------------------------------------------------------
+
+Nota: la asignación definitiva de responsables y la secuencia exacta de
+las revisiones internas deben ser aprobadas por la Facultad.
+
+======================================================================
+3. SSU: REQUISITOS DEL REGLAMENTO QUE DEBEN CONSIDERARSE
+======================================================================
+
+Según los artículos revisados del Reglamento de Responsabilidad Social
+Universitaria de la Universidad Nacional de Cañete, código
+R-M03-RSU-001, versión 04, fecha 14/05/2026:
+
+-   Los proyectos SSU son liderados desde la Dirección de
+    Responsabilidad Social Universitaria (DRSU).
+-   El estudiante cuenta con asesoría de un docente contratado o
+    nombrado, propuesto por el estudiante y con consentimiento del
+    asesor.
+-   La ejecución corresponde al intervalo académico previsto por el
+    reglamento (entre quinto y décimo semestre) como requisito
+    obligatorio para el grado de bachiller.
+-   Los equipos se conforman por 2 a 5 estudiantes; los casos de más de
+    5 requieren solicitud formal y evaluación de la DRSU.
+-   El proyecto contempla un mínimo de 60 horas.
+-   Los proyectos son autofinanciados.
+-   La DRSU puede realizar supervisiones virtuales o presenciales sin
+    previo aviso.
+-   La constancia de participación exige el mínimo de 60 horas efectivas
+    de ejecución.
+-   La inscripción se realiza dentro del periodo que anuncie la DRSU y
+    mediante el mecanismo/plataforma que establece el reglamento
+    vigente.
+-   Los proyectos se evalúan durante la convocatoria. Cuando corresponda
+    subsanar, el reglamento contempla un máximo de 10 días hábiles
+    después del cierre de la convocatoria; transcurrido ese plazo, puede
+    retirarse el proyecto de la plataforma y proponerse para el
+    siguiente semestre o rechazarse según el caso.
+-   La evaluación del informe inicial utiliza una ficha de puntuación;
+    el reglamento revisado indica aprobación dentro del rango de 15 a 18
+    puntos según los criterios aplicables.
+-   Durante la ejecución se presentan tres informes de avance según el
+    cronograma aprobado, con formularios oficiales y evidencias
+    fotográficas requeridas.
+-   El cierre requiere encuestas a beneficiarios e informe final
+    evaluado por la DRSU.
+-   El reglamento contempla motivos y procedimientos para la separación
+    de integrantes, retiro voluntario, cambio de asesor y cambio
+    justificado de entidad beneficiaria.
+-   El docente asesor debe realizar al menos una supervisión presencial
+    por proyecto y mes, conforme al cronograma.
+-   La DRSU verifica restricciones sobre proyectos coincidentes en
+    ubicación, población beneficiaria, objetivos o actividades.
+-   El asesor informa formalmente a la Escuela Profesional sobre la
+    aprobación del esquema inicial, para conocimiento.
+
+IMPORTANTE: Estos requisitos se enumeran como restricciones funcionales
+que el sistema propuesto debe contemplar. La idea de administrar el
+proceso exclusivamente en la plataforma de Facultad requiere validación
+formal de la DRSU, porque el reglamento vigente menciona la plataforma y
+procedimientos institucionales actuales. No debe declararse que la nueva
+plataforma sustituye oficialmente el sistema vigente hasta que se
+apruebe la modificación o el mecanismo institucional correspondiente.
+
+======================================================================
+4. PEP: DISTINCIÓN ENTRE PROYECTOS FINANCIADOS Y AUTOFINANCIADOS
+======================================================================
+
+El PEP (Proyecto de Escuela Profesional) debe modelarse por separado del
+SSU. Según el reglamento revisado, hay dos rutas de formulación y
+aprobación distintas:
+
+A. PEP FINANCIADO - El presidente del Comité de Responsabilidad Social y
+Gestión Ambiental de la carrera presenta el esquema inicial RSU (Anexo
+3) a la Dirección de Escuela. - La presentación se realiza al menos 15
+días antes del inicio de clases. - La propuesta pasa de la Escuela a la
+Facultad. - La Facultad la eleva a la DRSU para evaluación técnica y
+presupuestal. - Luego pasa a la Vicepresidencia Académica. - La
+Vicepresidencia Académica eleva el expediente para la continuación del
+trámite y aprobación mediante resolución de la Comisión Organizadora. -
+Una vez aprobado, el presidente del Comité registra el proyecto y la
+resolución en el sistema RSU. - El presupuesto se asigna al centro de
+costos de la DRSU y se gestiona coordinadamente con las Escuelas, de
+acuerdo con las reglas presupuestales aplicables.
+
+B. PEP AUTOFINANCIADO - El docente responsable presenta el esquema
+inicial RSU (Anexo 3) a la Dirección de Escuela durante el semestre. -
+La Escuela revisa conforme al reglamento y lo remite a la Facultad. - La
+Facultad lo remite a la DRSU para evaluación y verificación de
+cumplimiento. - Si hay inconsistencias, se corrige la propuesta. - Si
+cumple, se remite a la Vicepresidencia Académica para la resolución
+correspondiente. - Tras la aprobación, el docente responsable registra
+el proyecto y la resolución en el sistema RSU. - No requiere presupuesto
+institucional; los proponentes son responsables de conseguir y
+administrar los recursos de forma transparente.
+
+En la plataforma propuesta de Facultad, estos circuitos se
+representarían y administrarían internamente. La salida a la DRSU se
+mantendría en los puntos de aprobación institucional acordados, sin
+asumir que la Facultad puede reemplazar unilateralmente los pasos que
+establece el reglamento.
+
+======================================================================
+5. PEP FINANCIADO: FLUJO PROPUESTO
+======================================================================
+
+INICIO | v 1. El Comité de RSU y Gestión Ambiental de la carrera define
+la iniciativa y prepara el esquema inicial del proyecto. | v 2. El
+presidente del Comité registra la propuesta en la plataforma de la
+Facultad y la presenta a la Dirección de Escuela al menos 15 días antes
+del inicio de clases. | v 3. La Escuela revisa y valida la propuesta. |
++–> Si observa: devuelve al Comité para corrección. | +–> Si está
+conforme: remite a la Facultad. | v 4. La Facultad revisa mediante los
+responsables internos definidos (Comisión de RSU y Decanato, de acuerdo
+con el procedimiento aprobado). | +–> Si observa: devuelve para
+subsanación. | +–> Si está conforme: remite a la DRSU. | v 5. La DRSU
+realiza evaluación técnica y presupuestal. | v 6. El expediente continúa
+a la Vicepresidencia Académica. | v 7. Continúa el trámite de aprobación
+por resolución de la Comisión Organizadora, según el procedimiento
+institucional. | +–> Si no se aprueba o se formulan observaciones:
+seguir la decisión | formal que comuniquen las instancias competentes. |
++–> Si se aprueba: registrar la decisión. | v 8. El presidente del
+Comité registra el proyecto aprobado y la resolución en la
+plataforma/sistema institucional que corresponda conforme al
+procedimiento finalmente autorizado. | v 9. Ejecución, seguimiento y
+control en la plataforma de la Facultad. | v 10. Presentación y revisión
+de informes de avance y final. | v 11. Exportación del expediente de
+cierre y remisión a la DRSU para la revisión institucional
+correspondiente. | v FIN DEL FLUJO PROPUESTO
+
+Nota: el reglamento indica el registro institucional posterior a la
+aprobación. La sustitución de ese registro por el registro interno de
+Facultad debe ser acordada formalmente con la DRSU. No se debe dar por
+aprobada esa sustitución antes de contar con el visto bueno
+institucional.
+
+======================================================================
+6. PEP AUTOFINANCIADO: FLUJO PROPUESTO
+======================================================================
+
+INICIO | v 1. El docente responsable prepara el esquema inicial RSU
+(Anexo 3). | v 2. Registra la propuesta en la plataforma de la Facultad
+y la presenta a la Dirección de Escuela durante el semestre. | v 3. La
+Escuela revisa la propuesta. | +–> Si observa: devuelve al docente
+responsable para corrección. | +–> Si está conforme: remite a la
+Facultad. | v 4. La Facultad revisa mediante los responsables internos
+definidos. | +–> Si observa: devuelve para subsanación. | +–> Si está
+conforme: remite a la DRSU. | v 5. La DRSU evalúa el cumplimiento. | +–>
+Si existen inconsistencias: la propuesta se corrige y se remite |
+nuevamente para evaluación. | +–> Si cumple: continúa a la
+Vicepresidencia Académica. | v 6. Se tramita la resolución
+correspondiente. | +–> Si hay observaciones o no se aprueba: se atiende
+la decisión | formal de la instancia competente. | +–> Si se aprueba: se
+registra la decisión. | v 7. El docente responsable registra el proyecto
+aprobado y la resolución según el procedimiento institucional
+autorizado. | v 8. Ejecución, seguimiento y control en la plataforma de
+la Facultad. | v 9. Informes de avance y cierre. | v 10. Exportación del
+expediente final y remisión a la DRSU para revisión institucional. | v
+FIN DEL FLUJO PROPUESTO
+
+Nota: la ruta de subsanación ante inconsistencias sí está descrita para
+el PEP autofinanciado en el reglamento revisado. No se debe inventar una
+ruta idéntica para el PEP financiado si el artículo correspondiente no
+la detalla.
+
+======================================================================
+7. PEP: SEGUIMIENTO, INFORMES Y CIERRE SEGÚN EL REGLAMENTO
+======================================================================
+
+-   Los proyectos PEP tienen una duración mínima de un semestre
+    académico.
+-   Las iniciativas responden a necesidades locales y a la participación
+    de actores sociales estratégicos.
+-   Las actividades pueden vincularse a cursos de cada semestre y deben
+    registrarse en los sílabos según el procedimiento aplicable.
+-   Para proyectos de un semestre, el informe de avance se presenta a
+    mitad del periodo.
+-   Si el proyecto dura más de un semestre, se presenta el informe de
+    avance al finalizar cada periodo correspondiente.
+-   Los informes se presentan a través de la Escuela, que los remite a
+    la Facultad y luego a la DRSU.
+-   El informe final del PEP financiado corresponde al presidente del
+    Comité; en el autofinanciado, al docente responsable.
+-   El informe final se presenta primero a la Escuela, luego a la
+    Facultad y después a la DRSU para revisión, evaluación y
+    verificación de cumplimiento.
+-   Una vez conforme, se tramita la resolución a través de la
+    Vicepresidencia Académica.
+-   Después de la aprobación, el responsable registra el informe final y
+    la resolución en el sistema RSU que corresponda según el
+    procedimiento institucional.
+-   Docentes y personal administrativo pueden solicitar reconocimiento;
+    los estudiantes pueden solicitar constancias de participación,
+    conforme a los requisitos institucionales.
+
+En la plataforma de Facultad, estos pasos deben reflejarse en estados,
+responsables, fechas, observaciones y trazabilidad documental.
+
+======================================================================
+8. TABLA COMPARATIVA SSU / PEP
+======================================================================
+
+  ------------------------------------------------------------------------------
+  Aspecto           SSU                  PEP financiado      PEP autofinanciado
+  ----------------- -------------------- ------------------- -------------------
+  Naturaleza        Servicio Social      Proyecto impulsado  Proyecto impulsado
+                    Universitario del    por Escuela/Comité  por docente(s) sin
+                    estudiante/equipo    con financiamiento  presupuesto
+                                                             institucional
+
+  Responsable de    Equipo/estudiante    Presidente del      Docente responsable
+  propuesta         con docente asesor   Comité de RSU y     
+                                         Gestión Ambiental   
+
+  Instancia inicial Registro de la       Dirección de        Dirección de
+                    propuesta; sujeto a  Escuela             Escuela
+                    convocatoria y                           
+                    procedimiento                            
+                    vigente                                  
+
+  Tiempo de         Según convocatoria   Al menos 15 días    Durante el semestre
+  presentación      publicada por la     antes del inicio de 
+                    DRSU                 clases              
+
+  Revisión de       Validación interna   Revisión inicial    Revisión inicial
+  Escuela en        propuesta                                
+  propuesta de                                               
+  Facultad                                                   
+
+  Revisión interna  Comisión/Decanato    Comisión/Decanato   Comisión/Decanato
+  de Facultad       según procedimiento  según procedimiento según procedimiento
+                    propuesto            propuesto           propuesto
+
+  Participación de  Visto bueno          Evaluación técnica  Evaluación de
+  DRSU en           propuesto; debe      y presupuestal      cumplimiento
+  aprobación        acordarse con el                         
+                    reglamento vigente                       
+
+  Instancia         Conforme al          Vicepresidencia     Vicepresidencia
+  superior          procedimiento SSU    Académica y         Académica y
+                    que se apruebe       aprobación por      resolución
+                    institucionalmente   resolución de       correspondiente
+                                         Comisión            
+                                         Organizadora        
+
+  Seguimiento       Plataforma de la     Plataforma de la    Plataforma de la
+                    Facultad propuesta   Facultad propuesta  Facultad propuesta
+
+  Informes          Tres informes de     Informe de avance   Informe de avance
+                    avance según el      según duración;     según duración;
+                    reglamento SSU;      informe final       informe final
+                    informe final                            
+
+  Evidencias        Administradas en la  Administradas en la Administradas en la
+                    plataforma de        plataforma de       plataforma de
+                    Facultad propuesta   Facultad propuesta  Facultad propuesta
+
+  Cierre            Revisión interna +   Revisión interna +  Revisión interna +
+                    expediente           expediente          expediente
+                    exportado +          exportado +         exportado +
+                    validación DRSU      validación          validación
+                                         institucional       institucional
+
+  Constancia        Instancia            Según procedimiento Según procedimiento
+                    institucional        institucional y     institucional y
+                    competente,          tipo de             tipo de
+                    condicionada a       reconocimiento      reconocimiento
+                    requisitos                               
+  ------------------------------------------------------------------------------
+
+======================================================================
+9. MÓDULOS FUNCIONALES PROPUESTOS
+======================================================================
+
+1.  Gestión de proyectos
+    -   Alta, edición y consulta de proyectos.
+    -   Código único, modalidad, objetivos, población beneficiaria y
+        ubicación.
+    -   Estado del proyecto y trazabilidad de cambios.
+2.  Gestión de participantes
+    -   Estudiantes, docente asesor, responsable del proyecto y comité.
+    -   Roles, funciones, fechas de incorporación y retiro.
+    -   Control de participación y horas según el tipo de proyecto.
+3.  Validación de Escuela
+    -   Lista de requisitos.
+    -   Observaciones y devolución para corrección.
+    -   Registro de responsable, fecha y resultado.
+4.  Revisión de Facultad
+    -   Bandeja de proyectos para la Comisión de RSU y Decanato.
+    -   Historial de decisiones, observaciones y aprobaciones internas.
+    -   Control de elevación a DRSU.
+5.  Aprobación institucional
+    -   Registro del envío a DRSU.
+    -   Fecha, expediente remitido y respuesta.
+    -   Estado: pendiente, observado, conforme, rechazado, según los
+        estados autorizados.
+6.  Seguimiento y control
+    -   Cronograma, actividades, hitos y alertas.
+    -   Registro de avances e incidencias.
+    -   Informes y tareas pendientes.
+    -   Seguimiento de horas y cumplimiento de requisitos.
+7.  Encuestas y evidencias
+    -   Formularios y encuestas pertinentes.
+    -   Archivos y metadatos.
+    -   Relación de cada evidencia con actividad, fecha y responsable.
+    -   Control de integridad y de requisitos mínimos de documentación.
+8.  Cierre del proyecto
+    -   Lista de verificación según SSU o PEP.
+    -   Revisión de resultados.
+    -   Confirmación interna de cumplimiento.
+    -   Devolución para subsanación si falta documentación.
+9.  Generación del expediente digital
+    -   Exportación en paquete ZIP.
+    -   Informe índice en PDF o formato legible.
+    -   Archivos de informes y actas.
+    -   Encuestas en formatos tabulares, por ejemplo CSV o XLSX, según
+        se acuerde.
+    -   Evidencias fotográficas y documentales.
+    -   Metadatos, fechas y responsables.
+    -   Identificador de proyecto y versión del paquete.
+10. Revisión final de DRSU
+
+-   Registro de recepción.
+-   Resultado de revisión: conforme u observado, y otros estados que
+    autorice el procedimiento.
+-   Observaciones y solicitudes de subsanación.
+-   Registro de la respuesta final.
+
+11. Constancias
+
+-   Estado de habilitación del estudiante.
+-   Solicitud de constancia.
+-   Registro del trámite y referencia de la respuesta institucional.
+-   No emitir la constancia desde la Facultad si su emisión corresponde
+    a la DRSU u otra instancia institucional.
+
+12. Auditoría y seguridad
+
+-   Autenticación y autorización por roles.
+-   Registro de accesos y operaciones relevantes.
+-   Historial de cambios.
+-   Protección de datos personales.
+-   Copias de seguridad y control de acceso a evidencias.
+-   Exportación segura y control de quién genera o remite el expediente.
+
+======================================================================
+10. ESTRUCTURA SUGERIDA DEL EXPEDIENTE EXPORTABLE
+======================================================================
+
+Nombre de paquete sugerido: RSU__CIERRE.zip
+
+Contenido sugerido: - 00_INDICE_EXPEDIENTE.pdf - 01_DATOS_PROYECTO.pdf -
+02_PROPUESTA_APROBADA.pdf - 03_PARTICIPANTES_Y_RESPONSABLES.pdf -
+04_CRONOGRAMA_Y_ACTIVIDADES.pdf - 05_INFORMES_AVANCE/ - 06_ENCUESTAS/ -
+07_EVIDENCIAS/ - 08_REGISTRO_HORAS_Y_PARTICIPACION.pdf -
+09_INFORME_FINAL.pdf - 10_VALIDACION_INTERNA_FACULTAD.pdf -
+11_HISTORIAL_DE_OBSERVACIONES.pdf - manifest.txt (listado de archivos,
+tamaños, fechas y, si se implementa, huellas hash)
+
+La estructura exacta debe acordarse con la DRSU. Solo se incluirán datos
+personales y evidencias estrictamente necesarios para la evaluación, con
+los permisos y medidas de protección correspondientes.
+
+======================================================================
+11. ESTADOS SUGERIDOS DEL PROYECTO
+======================================================================
+
+-   Borrador
+-   Presentado a Escuela
+-   Observado por Escuela
+-   En revisión de Facultad
+-   Observado por Facultad
+-   Remitido a DRSU
+-   Observado por DRSU
+-   Con visto bueno institucional
+-   En ejecución
+-   Seguimiento pendiente
+-   En revisión de cierre por Facultad
+-   Observado en cierre interno
+-   Expediente final preparado
+-   Expediente remitido a DRSU
+-   Observado en validación final
+-   Cierre validado
+-   Habilitado para solicitar constancia
+-   Constancia solicitada
+-   Constancia emitida
+-   Rechazado / cancelado / retirado, según las reglas aplicables
+
+Los nombres finales de estados deben ser aprobados por la Facultad y
+ajustados a las decisiones oficiales de la DRSU. No todos los estados
+son aplicables a todas las modalidades.
+
+======================================================================
+12. DECISIONES ACORDADAS EN LA PROPUESTA
+======================================================================
+
+1.  El sistema se desarrollará para uso interno de la Facultad de
+    Ingeniería.
+2.  La solución debe alinearse con las capacidades y objetivos de la
+    Escuela Profesional de Ingeniería de Sistemas.
+3.  La Facultad será el centro de gestión, seguimiento y control de los
+    proyectos.
+4.  La propuesta incluye validación de la Escuela Profesional y revisión
+    interna por la Comisión de RSU de la Facultad y el Decanato.
+5.  La propuesta inicial se remitirá a la DRSU para el visto bueno
+    institucional, de acuerdo con el procedimiento que se apruebe.
+6.  El seguimiento y la gestión operativa se realizarán en la plataforma
+    de la Facultad.
+7.  La Facultad consolidará y revisará los resultados y evidencias antes
+    de remitir el expediente final.
+8.  El sistema generará un paquete de exportación estructurado para la
+    DRSU.
+9.  La DRSU revisará el expediente final y confirmará si está conforme o
+    requiere subsanación.
+10. La constancia no la emitirá la Facultad; será emitida por la
+    instancia institucional competente.
+11. SSU, PEP financiado y PEP autofinanciado deben representarse como
+    flujos distintos.
+12. La plataforma debe registrar roles, responsables, fechas,
+    observaciones, decisiones y trazabilidad.
+
+======================================================================
+13. PUNTOS PENDIENTES DE VALIDACIÓN FORMAL
+======================================================================
+
+1.  Acordar con la DRSU si el registro interno de Facultad puede
+    sustituir el registro en la plataforma institucional actual o si se
+    requiere un mecanismo de registro institucional mínimo.
+2.  Definir el procedimiento formal para el visto bueno inicial de la
+    DRSU.
+3.  Definir el procedimiento y formato aceptado para remitir el
+    expediente final exportado.
+4.  Confirmar quién dentro de la Facultad tiene la autoridad para
+    aprobar cada etapa: Escuela, Comisión de RSU, Decanato u otras
+    instancias.
+5.  Confirmar quién revisa y firma la validación interna de cierre.
+6.  Definir la lista obligatoria de archivos, formatos de encuesta y
+    evidencias para el paquete exportable.
+7.  Acordar los estados oficiales y plazos de subsanación.
+8.  Confirmar qué órgano emite la constancia en cada tipo de proyecto y
+    cuáles son los requisitos que habilitan la solicitud.
+9.  Determinar cómo se aplican los artículos del reglamento que exigen
+    registro en plataforma institucional, informes oficiales,
+    supervisión y evaluación por la DRSU.
+10. Establecer reglas de acceso, conservación, privacidad, seguridad y
+    auditoría para la documentación y los datos de beneficiarios.
+
+======================================================================
+14. BASE NORMATIVA REVISADA
+======================================================================
+
+Documento revisado: Reglamento de Responsabilidad Social Universitaria
+de la Universidad Nacional de Cañete. Código: R-M03-RSU-001. Versión:
+04. Fecha: 14/05/2026.
+
+Aspectos revisados: - Artículos 20 y 21: Servicio Social Universitario
+(SSU), condiciones, asesoría, equipo, horas, supervisión, informes,
+registro, cierre y constancia. - Artículo 22: marco general de Proyectos
+de Escuelas Profesionales (PEP). - Artículo 23: PEP financiados. -
+Artículo 23.1: PEP autofinanciados. - Artículos 24 y 25: informes de
+avance y finales de PEP, remisión, evaluación y trámites de aprobación.
+
+La descripción normativa incluida en este documento es un resumen de los
+artículos revisados durante la conversación, no una transcripción
+literal ni un dictamen legal. Antes de presentar la propuesta formal, se
+debe cotejar el flujo final con el reglamento completo y con la DRSU.
+
+======================================================================
+15. CONCLUSIÓN
+======================================================================
+
+La propuesta consiste en una plataforma propia de la Facultad de
+Ingeniería para administrar integralmente el SSU y los PEP, con énfasis
+en el seguimiento, control, trazabilidad y evaluación de resultados. La
+Escuela Profesional de Ingeniería de Sistemas puede usar el proyecto
+como una solución aplicada a procesos, sistemas de información, gestión
+de datos, seguridad y automatización.
+
+La Facultad controla el ciclo operativo y prepara el expediente. La DRSU
+conserva los vistos buenos y las validaciones institucionales que
+correspondan, revisa el paquete final y habilita la continuación del
+procedimiento de constancia. La emisión de la constancia permanece a
+cargo de la instancia institucional competente.
+
+La propuesta funcional está consolidada para continuar su revisión; la
+sustitución del sistema institucional actual y los procedimientos
+oficiales requieren aprobación formal de la Facultad y de la DRSU.
+
+
+/*Comentarios de desarrollo y cambio*/
+[La vista de las pep deben verse al momento de que el estdiante creee un proyecto en la parte inferior, caso este tenga la intencion de no crear su ssu sino unirse a un PEP
+al darle a uno, debe permitierle ver la descripcion del pep, docente que lo propone lista de alumnos ya unidos y al final unirse, esto desencadena la solicitud que la recibe El responsable del pep
+el al entrar le debe abrir el panel de su proyecto de rsu, y poder ver las soliciutdes en una sección, ahi podra observar a los estudiantes que desean unirse el podra aceptarlos
+(desencadena la notificaicon al estudiante) o rechazarlos (de igual forma por notificacion), la vista de los estudiantes esta conformada por su nombre - ciclo - codigo, en el caso
+de rechazarlos el encargado de PEP peude comentar la razón, esto tiene razones rapida arriba del panel]

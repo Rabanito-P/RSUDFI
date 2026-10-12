@@ -18,7 +18,7 @@ export default function CrearProyecto(){
   const [tipos,setTipos]=useState<any[]>([])
   const [lineas,setLineas]=useState<any[]>([])
   const [escuelas,setEscuelas]=useState<any[]>([])
-  const [form,setForm]=useState({titulo:'', id_tipo:'', id_linea:'', id_escuela:'', descripcion:'', objetivo_general:'', poblacion:'', lugar:'', fecha_inicio:'', fecha_fin:'', presupuesto:'', semestre:'', ciclo: ''})
+  const [form,setForm]=useState({titulo:'', id_tipo:'', modalidad:'SSU', id_linea:'', id_escuela:'', descripcion:'', objetivo_general:'', poblacion:'', lugar:'', fecha_inicio:'', fecha_fin:'', presupuesto:'', semestre:'', ciclo: ''})
   const [file,setFile]=useState<File|null>(null)
   const [excel,setExcel]=useState<File|null>(null)
   const [catalogErr,setCatalogErr]=useState('')
@@ -28,6 +28,10 @@ export default function CrearProyecto(){
   // Equipo: mínimo 2 estudiantes (líder + 1) y máximo 5 en total.
   const [equipo,setEquipo]=useState<{nombres:string, apellidos:string, correo:string}[]>([])
   const [nuevo,setNuevo]=useState({nombres:'', apellidos:'', correo:''})
+  // PEPs abiertos para unirse en vez de crear (HU-063).
+  const [peps,setPeps]=useState<any[]>([])
+  const [pepsCupos,setPepsCupos]=useState<Record<number,string>>({})
+  const [pepsError,setPepsError]=useState('')
 
   // Validación del participante en curso (para marcar el campo y el botón).
   const correoValido = /^[^\s@]+@undc\.edu\.pe$/i.test(nuevo.correo.trim())
@@ -46,6 +50,23 @@ export default function CrearProyecto(){
       const activo = cs.find((c:any)=> c.activo) || cs[0]
       if(activo?.id_ciclo) setForm(f=> ({...f, ciclo: String(activo.id_ciclo)}))
     }).catch((e:any)=> setCatalogErr(prev=>prev||e?.message||'No se pudo cargar el ciclo académico activo'))
+    // PEPs abiertos (HU-063): el estudiante puede unirse en vez de crear su SSU.
+    api.get('/api/v1/proyectos?modalidad=PEP_FINANCIADO,PEP_AUTOFINANCIADO&limit=12').then(async (r:any)=>{
+      const lista = asArray(r.data)
+      setPeps(lista)
+      // Cupos por proyecto (miembros + líder si no figura como participante).
+      const cupos: Record<number,string> = {}
+      await Promise.all(lista.map(async (p:any)=>{
+        try{
+          const m:any = await api.get(`/api/v1/proyectos/${p.id_proyecto}/estudiantes`)
+          const ms = asArray(m.data)
+          const ids = ms.map((x:any)=> x.id_estudiante)
+          const ocup = ms.length + ((p.id_estudiante_lider && !ids.includes(p.id_estudiante_lider)) ? 1 : 0)
+          cupos[p.id_proyecto] = `${ocup}/5`
+        }catch{ cupos[p.id_proyecto] = '—/5' }
+      }))
+      setPepsCupos(cupos)
+    }).catch(()=> setPepsError('No se pudieron cargar los PEPs abiertos.'))
   },[])
 
   // Descarga de un formato por su código del catálogo (PROPUESTA,
@@ -89,6 +110,10 @@ export default function CrearProyecto(){
     if(!form.titulo || !form.id_tipo || !form.id_escuela){
       setErr('Título, tipo y escuela son obligatorios (HU-001 CA1).'); return
     }
+    // HU-069: el estudiante solo crea SSU o Voluntariado (verificador en form).
+    if(!['SSU','VOLUNTARIADO'].includes(form.modalidad)){
+      setErr('Como estudiante solo puedes crear SSU o Voluntariado. Los PEP los crea el docente responsable.'); return
+    }
     if(!form.ciclo){ setErr('No hay ciclo académico activo. Crea uno en Estructura antes de continuar.'); return }
     if(!file){ setErr('Adjunta tu Informe Inicial en PDF.'); return }
     if(!excel){ setErr('Adjunta la planificación de actividades en Excel (.xlsx).'); return }
@@ -107,6 +132,7 @@ export default function CrearProyecto(){
         titulo: form.titulo,
         id_escuela: Number(form.id_escuela),
         id_tipo: Number(form.id_tipo),
+        modalidad: form.modalidad,
         id_linea_accion: form.id_linea? Number(form.id_linea): null,
         id_ciclo_creacion: Number(form.ciclo),
         id_estudiante_lider: user?.persona_id,
@@ -206,12 +232,20 @@ export default function CrearProyecto(){
                 </select>
               </div>
               <div>
-                <Label>Línea de acción (ODS)</Label>
-                <select value={form.id_linea} onChange={e=>setForm({...form,id_linea:e.target.value})} className="input">
-                  <option value="">-- opcional --</option>
-                  {lineas.map(l=><option key={l.id_linea} value={l.id_linea}>{l.nombre} — {l.alineacion_ods}</option>)}
+                <Label>Modalidad *</Label>
+                <select value={form.modalidad} onChange={e=>setForm({...form,modalidad:e.target.value})} className="input">
+                  <option value="SSU">SSU — Servicio Social Universitario</option>
+                  <option value="VOLUNTARIADO">Voluntariado</option>
                 </select>
+                <div className="text-[11px] text-slate-400 mt-0.5">Los PEP los crea el docente responsable (HU-069).</div>
               </div>
+            </div>
+            <div>
+              <Label>Línea de acción (ODS)</Label>
+              <select value={form.id_linea} onChange={e=>setForm({...form,id_linea:e.target.value})} className="input">
+                <option value="">-- opcional --</option>
+                {lineas.map(l=><option key={l.id_linea} value={l.id_linea}>{l.nombre} — {l.alineacion_ods}</option>)}
+              </select>
             </div>
             <div>
               <Label>Escuela *</Label>
@@ -407,6 +441,42 @@ export default function CrearProyecto(){
             </div>
             <div className="text-xs text-slate-400">Al crear quedas como líder del grupo. Tu docente asesor y compañeros verán el proyecto para subir avances.</div>
           </form>
+        </CardContent>
+      </Card>
+
+      {/* ── PEPs abiertos (HU-063): si no quieres crear tu SSU, únete a un PEP ── */}
+      <Card>
+        <CardHeader>
+          <CardTitle>¿Prefieres unirte a un PEP?</CardTitle>
+          <CardDesc>Estos proyectos de Escuela Profesional buscan integrantes. Míralos y únete en vez de crear desde cero.</CardDesc>
+        </CardHeader>
+        <CardContent>
+          {pepsError && <Alert variant="warning">{pepsError}</Alert>}
+          {!pepsError && peps.length===0 && (
+            <div className="text-sm text-slate-500 bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
+              No hay PEPs abiertos por ahora. Puedes crear tu proyecto arriba.
+            </div>
+          )}
+          <div className="space-y-3">
+            {peps.map((p:any)=>(
+              <div key={p.id_proyecto} className="border border-slate-200 rounded-2xl p-4 hover:border-undc-300 transition-colors">
+                <div className="flex items-start gap-2 flex-wrap">
+                  <span className="font-mono text-[11px] bg-slate-900 text-white px-2 py-0.5 rounded-lg">{p.codigo_proyecto}</span>
+                  <span className="text-[11px] bg-violet-50 border border-violet-200 text-violet-700 px-2 py-0.5 rounded-full font-semibold">{p.modalidad}</span>
+                  <span className="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{p.estado_actual?.nombre || ''}</span>
+                  <span className="text-[11px] bg-sky-50 border border-sky-200 text-sky-700 px-2 py-0.5 rounded-full font-semibold">Equipo {pepsCupos[p.id_proyecto] || '—/5'}</span>
+                </div>
+                <div className="font-bold text-sm text-slate-800 mt-1.5">{p.titulo}</div>
+                <div className="text-xs text-slate-500 mt-0.5">
+                  {p.escuela?.nombre || ''} · Docente: {p.docente_asesor ? `${p.docente_asesor.nombres} ${p.docente_asesor.apellidos}` : '—'} · Avance {p.porcentaje_avance ?? 0}%
+                </div>
+                {p.descripcion && <div className="text-xs text-slate-600 mt-1 line-clamp-2">{p.descripcion}</div>}
+                <div className="mt-2 text-right">
+                  <Button type="button" variant="secondary" onClick={()=>nav(`/proyectos/${p.id_proyecto}?tab=equipo`)}>Ver detalle y unirme</Button>
+                </div>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>

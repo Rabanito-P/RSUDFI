@@ -2,6 +2,7 @@ package handler
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -61,6 +62,15 @@ func (h *ProyectoHandler) List(c *gin.Context) {
 	var estado, escuela *uint
 	if v := c.Query("estado"); v != "" { n, _ := strconv.Atoi(v); u := uint(n); estado = &u }
 	if v := c.Query("escuela"); v != "" { n, _ := strconv.Atoi(v); u := uint(n); escuela = &u }
+	// HU-063: ?modalidad=PEP_FINANCIADO,PEP_AUTOFINANCIADO (coma-separado).
+	var modalidades []string
+	if v := c.Query("modalidad"); v != "" {
+		for _, m := range strings.Split(v, ",") {
+			if m = strings.ToUpper(strings.TrimSpace(m)); m != "" {
+				modalidades = append(modalidades, m)
+			}
+		}
+	}
 	// soporte ?id_estudiante sin scope para filtro miembro (todos los estudiantes ven su proyecto sea o no líder)
 	if v := c.Query("id_estudiante"); v != "" && estado == nil && escuela == nil && c.Query("search") == "" {
 		// si solo piden por estudiante, usa join miembro
@@ -71,7 +81,7 @@ func (h *ProyectoHandler) List(c *gin.Context) {
 			return
 		}
 	}
-	items, total, err := h.svc.List(page, limit, estado, escuela, c.Query("search"))
+	items, total, err := h.svc.List(page, limit, estado, escuela, c.Query("search"), modalidades)
 	if err != nil { utils.Fail(c, 500, "Error", err.Error()); return }
 	utils.Paginated(c, items, utils.BuildMeta(page, limit, total), "OK")
 }

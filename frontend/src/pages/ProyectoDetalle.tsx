@@ -11,7 +11,7 @@ import { Skeleton } from '../components/ui/Skeleton'
 import { useAuth } from '../context/AuthContext'
 import { canStudentEdit, canStudentUploadDocs, canStudentRegisterActivity } from '../lib/permisos'
 import { useCatalogoBpmn } from '../hooks/useCatalogoBpmn'
-import { Download, FileText, Camera, Link2, Pencil, ClipboardCheck, Gavel, Upload } from 'lucide-react'
+import { Download, FileText, Camera, Link2, Pencil, ClipboardCheck, Gavel, Upload, UserPlus, Check, X, Inbox, Users } from 'lucide-react'
 
 const RESULTADOS = ['APROBADO','OBSERVADO','RECHAZADO','DEVUELTO']
 const ORDENES = [1,2,3,4,5]
@@ -43,6 +43,19 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
   const [esMiembro,setEsMiembro]=useState(false)
   const [membresiaCargada,setMembresiaCargada]=useState(false)
   const [miembrosIds,setMiembrosIds]=useState<number[]>([])
+  // Equipo completo + solicitudes de unión a PEP (HU-064..HU-068).
+  const [miembros,setMiembros]=useState<any[]>([])
+  const [solicitudes,setSolicitudes]=useState<any[]>([])
+  const [solicitudesError,setSolicitudesError]=useState('')
+  const [misSolicitudes,setMisSolicitudes]=useState<any[]>([])
+  const [solMsg,setSolMsg]=useState<Msg>(null)
+  const [solBusy,setSolBusy]=useState(false)
+  const [mensajeUnion,setMensajeUnion]=useState('')
+  // Rechazo con motivo rápido (HU-068): razones rápidas arriba del panel.
+  const [rechazoId,setRechazoId]=useState<number|null>(null)
+  const [motivoRapido,setMotivoRapido]=useState('')
+  const [motivoTexto,setMotivoTexto]=useState('')
+  const MOTIVOS_RAPIDOS = ['CUPO_LLENO','CICLO_INSUFICIENTE','PERFIL_NO_AFIN','FUERA_DE_PLAZO','OTRO']
   const [formAct,setFormAct]=useState({fecha: new Date().toISOString().slice(0,10), nombre:'', horas:0, minutos:0, horaInicio:'09:00', horaFin:'', descripcion:''})
   const [submitting,setSubmitting]=useState(false)
   const [actMsg,setActMsg]=useState<Msg>(null)
@@ -100,15 +113,36 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
       jobs.push((async()=>{
         try{
           const m:any = await api.get(`/api/v1/proyectos/${id}/estudiantes`)
-          setMiembrosIds(asArray<any>(m.data).map((x:any)=> x.id_estudiante).filter(Boolean))
-        }catch{ setMiembrosIds([]) }
+          const ms = asArray<any>(m.data)
+          setMiembros(ms)
+          setMiembrosIds(ms.map((x:any)=> x.id_estudiante).filter(Boolean))
+        }catch{ setMiembros([]); setMiembrosIds([]) }
         try{
           const e:any = await api.get(`/api/v1/proyectos/${id}/es-miembro/${user.persona_id}`)
           setEsMiembro(!!e.data?.es_miembro)
         }catch{ setEsMiembro(false) }
+        try{
+          const s:any = await api.get(`/api/v1/estudiantes/${user.persona_id}/solicitudes-union`)
+          setMisSolicitudes(asArray(s.data))
+        }catch{ setMisSolicitudes([]) }
         setMembresiaCargada(true)
       })())
+    }else{
+      // Docente/directivo también ve el equipo y las solicitudes del proyecto.
+      jobs.push((async()=>{
+        try{
+          const m:any = await api.get(`/api/v1/proyectos/${id}/estudiantes`)
+          setMiembros(asArray(m.data))
+        }catch{ setMiembros([]) }
+      })())
     }
+    // Bandeja de solicitudes del proyecto (la filtra por rol la propia vista).
+    jobs.push((async()=>{
+      try{
+        const s:any = await api.get(`/api/v1/proyectos/${id}/solicitudes-union`)
+        setSolicitudes(asArray(s.data)); setSolicitudesError('')
+      }catch(ex:any){ setSolicitudes([]); setSolicitudesError(ex?.message || 'No se pudieron cargar las solicitudes') }
+    })())
     await Promise.all(jobs)
     setLoading(false)
   },[id, user?.persona_id, user?.rol])
@@ -135,6 +169,17 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
   const esMiembroEquipo = esMiembro || p.id_estudiante_lider===user?.persona_id || user?.rol==='ADMIN' || user?.rol==='DOCENTE' || user?.rol==='DIRECTIVO'
   const esEstudiante = user?.rol==='ESTUDIANTE'
   const bloqueadoEstudianteNoMiembro = esEstudiante && membresiaCargada && !esMiembro && p.id_estudiante_lider!==user?.persona_id
+  // HU-064: los PEP abiertos se pueden ver sin ser miembro (vista previa + unirse).
+  const ESTADOS_FINALES = ['CERRADO','REPORTADO_SUNEDU','EVALUACION_VALIDADA']
+  const esPEP = String(p.modalidad || '').startsWith('PEP')
+  const pepAbierto = esPEP && !ESTADOS_FINALES.includes(codigo)
+  const bloqueado = bloqueadoEstudianteNoMiembro && !pepAbierto
+  // HU-066/068: resuelve el responsable del PEP (docente asesor) o ADMIN.
+  const soyResponsable = (user?.rol==='DOCENTE' && p.id_docente_asesor===user?.persona_id) || user?.rol==='ADMIN'
+  const idsMiembros = new Set(miembros.map((m:any)=> m.id_estudiante))
+  const ocupados = miembros.length + ((p.id_estudiante_lider && !idsMiembros.has(p.id_estudiante_lider)) ? 1 : 0)
+  const miSolicitudPendiente = misSolicitudes.find((s:any)=> Number(s.solicitud?.id_proyecto)===Number(id) && s.solicitud?.estado==='PENDIENTE')
+  const solicitudesPendientes = solicitudes.filter((s:any)=> s.solicitud?.estado==='PENDIENTE')
 
   const editableByStudent = canStudentEdit(codigo) && esEstudiante && esMiembroEquipo
   const puedeSubirDocs = (esEstudiante ? canStudentUploadDocs(codigo, esMiembroEquipo) : true)
@@ -158,6 +203,74 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
   const reloadBeneficiarios = async ()=>{
     try{ const b:any = await api.get(`/api/v1/proyectos/${id}/beneficiarios`); setBeneficiarios(asArray(b.data)); setBeneficiariosError('') }
     catch(ex:any){ setBeneficiariosError(ex?.message||'No se pudieron cargar los beneficiarios') }
+  }
+  const reloadSolicitudes = async ()=>{
+    try{
+      const s:any = await api.get(`/api/v1/proyectos/${id}/solicitudes-union`)
+      setSolicitudes(asArray(s.data)); setSolicitudesError('')
+    }catch(ex:any){ setSolicitudesError(ex?.message||'No se pudieron cargar las solicitudes') }
+    if(esEstudiante){
+      try{
+        const m:any = await api.get(`/api/v1/estudiantes/${user?.persona_id}/solicitudes-union`)
+        setMisSolicitudes(asArray(m.data))
+      }catch{ /* noop */ }
+      try{
+        const e:any = await api.get(`/api/v1/proyectos/${id}/es-miembro/${user?.persona_id}`)
+        setEsMiembro(!!e.data?.es_miembro)
+      }catch{ /* noop */ }
+      try{
+        const ms:any = await api.get(`/api/v1/proyectos/${id}/estudiantes`)
+        const lista = asArray(ms.data)
+        setMiembros(lista)
+        setMiembrosIds(lista.map((x:any)=> x.id_estudiante).filter(Boolean))
+      }catch{ /* noop */ }
+    }
+  }
+
+  // ── Solicitudes de unión a PEP (HU-065..HU-068) ──
+  const solicitarUnirse = async ()=>{
+    // Verificadores en form: mensaje corto, PEP abierto, sin solicitud pendiente.
+    if(mensajeUnion.trim().length > 500){ setSolMsg({type:'err', text:'El mensaje no puede pasar de 500 caracteres.'}); return }
+    if(!pepAbierto){ setSolMsg({type:'err', text:'Este proyecto no recibe solicitudes (no es PEP abierto).'}); return }
+    if(miSolicitudPendiente){ setSolMsg({type:'err', text:'Ya tienes una solicitud pendiente en este proyecto.'}); return }
+    if(ocupados >= 5){ setSolMsg({type:'err', text:'El equipo ya está completo (5/5).'}); return }
+    setSolBusy(true); setSolMsg(null)
+    try{
+      await api.post(`/api/v1/proyectos/${id}/solicitudes-union`, { id_estudiante: user?.persona_id, mensaje: mensajeUnion.trim() })
+      setMensajeUnion('')
+      setSolMsg({type:'ok', text:'Solicitud enviada al responsable del PEP. Te avisaremos por notificaciones.'})
+      await reloadSolicitudes()
+    }catch(ex:any){ setSolMsg({type:'err', text: ex?.message || 'No se pudo enviar la solicitud'}) } finally{ setSolBusy(false) }
+  }
+  const aceptarSolicitud = async (idSol:number)=>{
+    setSolBusy(true); setSolMsg(null)
+    try{
+      await api.patch(`/api/v1/solicitudes-union/${idSol}/aceptar`, { id_revisor: user?.persona_id })
+      setSolMsg({type:'ok', text:'Solicitud aceptada: el estudiante ya es miembro del equipo.'})
+      await reloadSolicitudes()
+    }catch(ex:any){ setSolMsg({type:'err', text: ex?.message || 'No se pudo aceptar'}) } finally{ setSolBusy(false) }
+  }
+  const rechazarSolicitud = async ()=>{
+    // Verificadores en form: motivo rápido obligatorio; OTRO exige texto.
+    if(!motivoRapido){ setSolMsg({type:'err', text:'Elige un motivo rápido de rechazo.'}); return }
+    if(motivoRapido==='OTRO' && motivoTexto.trim().length < 5){ setSolMsg({type:'err', text:'Con motivo OTRO escribe la razón (mínimo 5 caracteres).'}); return }
+    if(motivoTexto.trim().length > 500){ setSolMsg({type:'err', text:'El motivo no puede pasar de 500 caracteres.'}); return }
+    if(rechazoId==null) return
+    setSolBusy(true); setSolMsg(null)
+    try{
+      await api.patch(`/api/v1/solicitudes-union/${rechazoId}/rechazar`, { id_revisor: user?.persona_id, motivo_rapido: motivoRapido, motivo_rechazo: motivoTexto.trim() })
+      setRechazoId(null); setMotivoRapido(''); setMotivoTexto('')
+      setSolMsg({type:'ok', text:'Solicitud rechazada: se notificó al estudiante con el motivo.'})
+      await reloadSolicitudes()
+    }catch(ex:any){ setSolMsg({type:'err', text: ex?.message || 'No se pudo rechazar'}) } finally{ setSolBusy(false) }
+  }
+  const cancelarSolicitud = async (idSol:number)=>{
+    setSolBusy(true); setSolMsg(null)
+    try{
+      await api.del(`/api/v1/solicitudes-union/${idSol}?id_estudiante=${user?.persona_id}`)
+      setSolMsg({type:'ok', text:'Solicitud cancelada.'})
+      await reloadSolicitudes()
+    }catch(ex:any){ setSolMsg({type:'err', text: ex?.message || 'No se pudo cancelar'}) } finally{ setSolBusy(false) }
   }
 
   const openModal = async (m:typeof modal)=>{
@@ -358,7 +471,7 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
     }catch(err:any){ setActMsg({type:'err', text: err?.message||'No se pudo registrar la actividad'}) } finally { setSubmitting(false)}
   }
 
-  if(bloqueadoEstudianteNoMiembro){
+  if(bloqueado){
     return (
       <div className="max-w-2xl mx-auto mt-10 bg-white rounded-2xl border border-slate-200 p-8 text-center">
         <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 grid place-items-center mx-auto text-xl">!</div>
@@ -370,8 +483,8 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
   }
 
   const tabs = esEstudiante
-    ? [['general','Resumen'], ['entregables','Entregables'], ['evidencias','Evidencias'], ['beneficiarios','Beneficiarios']]
-    : [['general','General'], ['entregables','Entregables'], ['evidencias','Evidencias'], ['flujo','Flujo'], ['beneficiarios','Beneficiarios']]
+    ? [['general','Resumen'], ['equipo','Equipo'], ['entregables','Entregables'], ['evidencias','Evidencias'], ['beneficiarios','Beneficiarios']]
+    : [['general','General'], ['equipo','Equipo'], ['entregables','Entregables'], ['evidencias','Evidencias'], ['flujo','Flujo'], ['beneficiarios','Beneficiarios']]
   const tab = tabs.some(([k])=> k===tabParam) ? tabParam : 'general'
   const nombreEstado = (idEstado:any)=> estadosCat.find((e:any)=> Number(e.id_estado)===Number(idEstado))?.nombre || `Estado ${idEstado}`
   const codigoEstado = (idEstado:any)=> estadosCat.find((e:any)=> Number(e.id_estado)===Number(idEstado))?.codigo || String(idEstado)
@@ -420,6 +533,143 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
             {isDocente && codigo==='EN_EJECUCION' && <Button onClick={()=>openModal('monitoreo')} className="bg-emerald-600 hover:bg-emerald-700" leftIcon={<ClipboardCheck size={14}/>}>Registrar monitoreo</Button>}
             {isDirectivo && tieneLane(codigo) && <Button onClick={()=>openModal('transicion')} className="bg-amber-600 hover:bg-amber-700" leftIcon={<Gavel size={14}/>}>Revisar y dictaminar</Button>}
           </div>
+        </div>
+      )}
+
+      {tab==='equipo' && (
+        <div className="space-y-4">
+          {/* ── Equipo actual (HU-064) ── */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-6">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <h3 className="font-bold flex items-center gap-2"><Users size={16}/>Equipo del proyecto</h3>
+              <span className="text-xs bg-sky-50 border border-sky-200 text-sky-700 px-2 py-1 rounded-full font-semibold">Cupos {ocupados}/5</span>
+            </div>
+            <div className="grid md:grid-cols-2 gap-3 mt-3 text-sm">
+              <div className="bg-slate-50 rounded-xl p-3"><div className="text-xs text-slate-500">Líder</div><div className="font-semibold">{p.estudiante_lider ? `${p.estudiante_lider.nombres} ${p.estudiante_lider.apellidos}` : '—'}</div></div>
+              <div className="bg-slate-50 rounded-xl p-3"><div className="text-xs text-slate-500">Docente responsable / asesor</div><div className="font-semibold">{p.docente_asesor ? `${p.docente_asesor.nombres} ${p.docente_asesor.apellidos}` : '—'}</div></div>
+            </div>
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full text-sm border-collapse min-w-[560px]">
+                <thead><tr className="bg-slate-900 text-white text-xs">
+                  <th className="px-3 py-2 text-left font-semibold">NOMBRE</th>
+                  <th className="px-3 py-2 text-left font-semibold">CÓDIGO</th>
+                  <th className="px-3 py-2 text-left font-semibold">CORREO</th>
+                  <th className="px-3 py-2 text-center font-semibold">ESTADO</th>
+                </tr></thead>
+                <tbody>
+                  {miembros.length===0 && <tr><td colSpan={4} className="px-3 py-6 text-center text-xs text-slate-500">Sin participantes registrados (solo el líder).</td></tr>}
+                  {miembros.map((m:any)=>(
+                    <tr key={m.id_participante ?? m.id_estudiante} className="border-b border-slate-200">
+                      <td className="px-3 py-2 font-medium text-slate-700">{m.estudiante ? `${m.estudiante.nombres} ${m.estudiante.apellidos}` : `#${m.id_estudiante}`}</td>
+                      <td className="px-3 py-2 font-mono text-xs">{m.estudiante?.codigo_estudiante || '—'}</td>
+                      <td className="px-3 py-2 text-xs text-slate-500">{m.estudiante?.correo_institucional || '—'}</td>
+                      <td className="px-3 py-2 text-center"><span className="px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">{m.estado_participacion}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* ── Unirse al PEP (HU-065): estudiante no miembro en PEP abierto ── */}
+          {esEstudiante && !esMiembroEquipo && pepAbierto && (
+            <div className="bg-white rounded-2xl border border-violet-200 p-6">
+              <h3 className="font-bold flex items-center gap-2"><UserPlus size={16}/>Unirse a este PEP</h3>
+              {miSolicitudPendiente ? (
+                <div className="mt-3 text-sm">
+                  <Alert variant="warning">Ya enviaste una solicitud — está <b>PENDIENTE</b> de revisión del responsable. Te avisaremos por notificaciones.</Alert>
+                  <Button variant="outline" size="sm" className="mt-2" disabled={solBusy} onClick={()=>cancelarSolicitud(miSolicitudPendiente.solicitud.id_solicitud)}>Cancelar mi solicitud</Button>
+                </div>
+              ) : ocupados >= 5 ? (
+                <Alert variant="warning">El equipo ya está completo (5/5).</Alert>
+              ) : (
+                <div className="mt-3 space-y-2">
+                  <Label>Mensaje al responsable (opcional)</Label>
+                  <Textarea rows={2} value={mensajeUnion} onChange={e=>setMensajeUnion(e.target.value)} placeholder="Cuéntales por qué quieres unirte..." maxLength={500}/>
+                  <div className="text-xs text-slate-400 text-right">{mensajeUnion.trim().length}/500</div>
+                  <Button disabled={solBusy} onClick={solicitarUnirse} leftIcon={<UserPlus size={14}/>}>{solBusy?'Enviando...':'Solicitar unirme'}</Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Mis solicitudes (estudiante) ── */}
+          {esEstudiante && misSolicitudes.length>0 && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-6">
+              <h3 className="font-bold flex items-center gap-2"><Inbox size={16}/>Mis solicitudes</h3>
+              <div className="mt-3 space-y-2">
+                {misSolicitudes.map((s:any)=>(
+                  <div key={s.solicitud.id_solicitud} className="flex items-center gap-2 border border-slate-200 rounded-xl px-3 py-2 text-sm flex-wrap">
+                    <span className="font-mono text-[11px] bg-slate-900 text-white px-2 py-0.5 rounded-lg">{s.solicitud?.proyecto?.codigo_proyecto || `#${s.solicitud.id_proyecto}`}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${s.solicitud.estado==='PENDIENTE'?'bg-amber-100 text-amber-700':s.solicitud.estado==='ACEPTADA'?'bg-emerald-100 text-emerald-700':s.solicitud.estado==='RECHAZADA'?'bg-red-100 text-red-600':'bg-slate-100 text-slate-500'}`}>{s.solicitud.estado}</span>
+                    {s.solicitud.estado==='RECHAZADA' && <span className="text-xs text-slate-500">Motivo: <b>{s.solicitud.motivo_rapido}</b>{s.solicitud.motivo_rechazo ? ` — ${s.solicitud.motivo_rechazo}` : ''}</span>}
+                    {s.solicitud.estado==='PENDIENTE' && <button disabled={solBusy} onClick={()=>cancelarSolicitud(s.solicitud.id_solicitud)} className="ml-auto text-xs text-red-600 hover:underline font-semibold">Cancelar</button>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Bandeja del responsable (HU-066..HU-068) ── */}
+          {soyResponsable && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-6">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <h3 className="font-bold flex items-center gap-2"><Inbox size={16}/>Solicitudes de unión</h3>
+                <span className="text-xs bg-violet-50 border border-violet-200 text-violet-700 px-2 py-1 rounded-full font-semibold">{solicitudesPendientes.length} pendiente(s)</span>
+              </div>
+              {/* Razones rápidas arriba del panel (nota de desarrollo) */}
+              <div className="mt-3 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl p-3">
+                <span className="font-semibold text-slate-700">Motivos rápidos de rechazo:</span> {MOTIVOS_RAPIDOS.map(m=><span key={m} className="ml-1 px-1.5 py-0.5 bg-white border border-slate-200 rounded-md font-mono text-[10px]">{m}</span>)}
+              </div>
+              {solMsg && <Alert variant={solMsg.type==='ok'?'success':'error'} className="mt-3 text-xs">{solMsg.text}</Alert>}
+              {solicitudesError && <Alert variant="error" className="mt-3 text-xs">{solicitudesError} <button className="underline font-semibold" onClick={reloadSolicitudes}>Reintentar</button></Alert>}
+              <div className="mt-3 space-y-3">
+                {solicitudes.length===0 && !solicitudesError && <div className="text-sm text-slate-500 text-center py-4">Sin solicitudes.</div>}
+                {solicitudes.map((s:any)=>{
+                  const sol = s.solicitud
+                  const est = sol.estudiante
+                  return (
+                    <div key={sol.id_solicitud} className="border border-slate-200 rounded-2xl p-4">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-sm text-slate-800">{est ? `${est.nombres} ${est.apellidos}` : `#${sol.id_estudiante}`}</span>
+                        <span className="text-[11px] bg-slate-100 px-2 py-0.5 rounded-full">ciclo {s.ciclo || '—'}</span>
+                        <span className="font-mono text-[11px] bg-slate-900 text-white px-2 py-0.5 rounded-lg">{est?.codigo_estudiante || ''}</span>
+                        <span className={`ml-auto px-2 py-0.5 rounded-full text-[11px] font-semibold ${sol.estado==='PENDIENTE'?'bg-amber-100 text-amber-700':sol.estado==='ACEPTADA'?'bg-emerald-100 text-emerald-700':sol.estado==='RECHAZADA'?'bg-red-100 text-red-600':'bg-slate-100 text-slate-500'}`}>{sol.estado}</span>
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1">{s.escuela || ''} · {est?.correo_institucional || ''} · {sol.fecha_solicitud ? new Date(sol.fecha_solicitud).toLocaleDateString('es-PE') : ''}</div>
+                      {sol.mensaje_solicitud && <div className="text-xs text-slate-600 mt-1 italic">“{sol.mensaje_solicitud}”</div>}
+                      {sol.estado==='RECHAZADA' && <div className="text-xs text-slate-500 mt-1">Motivo: <b>{sol.motivo_rapido}</b>{sol.motivo_rechazo ? ` — ${sol.motivo_rechazo}` : ''}</div>}
+                      {sol.estado==='PENDIENTE' && (
+                        <div className="mt-2">
+                          {rechazoId===sol.id_solicitud ? (
+                            <div className="space-y-2 bg-red-50/50 border border-red-100 rounded-xl p-3">
+                              <Label>Motivo rápido *</Label>
+                              <Select value={motivoRapido} onChange={e=>setMotivoRapido(e.target.value)}>
+                                <option value="">-- elegir motivo --</option>
+                                {MOTIVOS_RAPIDOS.map(m=><option key={m} value={m}>{m}</option>)}
+                              </Select>
+                              <Label>Comentario {motivoRapido==='OTRO' ? '(obligatorio)' : '(opcional)'}</Label>
+                              <Textarea rows={2} value={motivoTexto} onChange={e=>setMotivoTexto(e.target.value)} placeholder="Razón del rechazo..." maxLength={500}/>
+                              <div className="flex gap-2">
+                                <Button size="sm" variant="outline" disabled={solBusy} onClick={()=>{setRechazoId(null); setMotivoRapido(''); setMotivoTexto('')}}>Volver</Button>
+                                <Button size="sm" className="bg-red-600 hover:bg-red-700" disabled={solBusy || !motivoRapido} onClick={rechazarSolicitud} leftIcon={<X size={14}/>}>Confirmar rechazo</Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex gap-2">
+                              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" disabled={solBusy} onClick={()=>aceptarSolicitud(sol.id_solicitud)} leftIcon={<Check size={14}/>}>Aceptar</Button>
+                              <Button size="sm" variant="outline" disabled={solBusy} onClick={()=>{setRechazoId(sol.id_solicitud); setMotivoRapido(''); setMotivoTexto(''); setSolMsg(null)}} leftIcon={<X size={14}/>}>Rechazar</Button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+          {solMsg && !soyResponsable && <Alert variant={solMsg.type==='ok'?'success':'error'} className="text-xs">{solMsg.text}</Alert>}
         </div>
       )}
 

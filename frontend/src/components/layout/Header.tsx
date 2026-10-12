@@ -19,7 +19,8 @@ function etiquetaEstado(v: SearchResult['estado']): string {
 
 // ── Notificaciones: icono y color por tipo ──
 // Tipos reales de RSU_Notificacion: TRANSICION, ASIGNACION, INVITACION,
-// MONITOREO, PROYECTO_CREADO, RECORDATORIO, REPORTE, ALERTA, OBSERVACION, CONFIG.
+// MONITOREO, PROYECTO_CREADO, RECORDATORIO, REPORTE, ALERTA, OBSERVACION, CONFIG,
+// SOLICITUD_UNION, UNION_ACEPTADA, UNION_RECHAZADA.
 // Si aparece uno nuevo se usa el icono genérico.
 const ICONOS_NOTIF: Record<string, any> = {
   TRANSICION: ArrowRightLeft,
@@ -32,6 +33,9 @@ const ICONOS_NOTIF: Record<string, any> = {
   ALERTA: AlertTriangle,
   OBSERVACION: MessageSquare,
   CONFIG: Settings,
+  SOLICITUD_UNION: Inbox,
+  UNION_ACEPTADA: Check,
+  UNION_RECHAZADA: X,
 }
 const TINTAS_NOTIF: Record<string, string> = {
   TRANSICION: 'bg-sky-50 text-sky-600 ring-sky-100',
@@ -44,6 +48,9 @@ const TINTAS_NOTIF: Record<string, string> = {
   ALERTA: 'bg-red-50 text-red-600 ring-red-100',
   OBSERVACION: 'bg-orange-50 text-orange-600 ring-orange-100',
   CONFIG: 'bg-slate-100 text-slate-600 ring-slate-200',
+  SOLICITUD_UNION: 'bg-violet-50 text-violet-600 ring-violet-100',
+  UNION_ACEPTADA: 'bg-emerald-50 text-emerald-700 ring-emerald-100',
+  UNION_RECHAZADA: 'bg-red-50 text-red-600 ring-red-100',
 }
 
 function iconoNotif(tipo?: string) {

@@ -6,6 +6,9 @@ type CreateProyectoReq struct {
 	Titulo               string   `json:"titulo" binding:"required,max=300"`
 	IDEscuela            uint     `json:"id_escuela" binding:"required"`
 	IDTipo               uint     `json:"id_tipo" binding:"required"`
+	// Modalidad HU-069: SSU|PEP_FINANCIADO|PEP_AUTOFINANCIADO|VOLUNTARIADO|PUBLICACION_CIENTIFICA.
+	// Vacío = SSU (default DB). Estudiante solo SSU/VOLUNTARIADO; PEP lo crea docente/responsable.
+	Modalidad            string   `json:"modalidad"`
 	IDLineaAccion        *uint    `json:"id_linea_accion"`
 	IDCicloCreacion      uint     `json:"id_ciclo_creacion" binding:"required"`
 	IDEstudianteLider    *uint    `json:"id_estudiante_lider"`

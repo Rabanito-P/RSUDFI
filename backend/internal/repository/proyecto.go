@@ -17,7 +17,7 @@ type ProyectoRepo struct{ db *gorm.DB }
 func NewProyectoRepo(db *gorm.DB) *ProyectoRepo { return &ProyectoRepo{db} }
 
 func (r *ProyectoRepo) Create(p *domain.RSUProyecto) error { return r.db.Create(p).Error }
-func (r *ProyectoRepo) FindAll(page, limit int, estado *uint, escuela *uint, search string) ([]domain.RSUProyecto, int64, error) {
+func (r *ProyectoRepo) FindAll(page, limit int, estado *uint, escuela *uint, search string, modalidades []string) ([]domain.RSUProyecto, int64, error) {
 	var items []domain.RSUProyecto
 	var total int64
 	q := r.db.Model(&domain.RSUProyecto{})
@@ -26,6 +26,10 @@ func (r *ProyectoRepo) FindAll(page, limit int, estado *uint, escuela *uint, sea
 	}
 	if escuela != nil {
 		q = q.Where("id_escuela = ?", *escuela)
+	}
+	// HU-063: filtro por modalidad (p. ej. ?modalidad=PEP_FINANCIADO,PEP_AUTOFINANCIADO).
+	if len(modalidades) > 0 {
+		q = q.Where("modalidad IN ?", modalidades)
 	}
 	if search != "" {
 		like := "%" + escapeLike(search) + "%"

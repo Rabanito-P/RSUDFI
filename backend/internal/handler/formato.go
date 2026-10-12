@@ -103,6 +103,9 @@ func baseDir() string {
 
 // asegurarCatalogo crea los registros que falten del catálogo fijo.
 func (h *FormatoHandler) asegurarCatalogo() {
+	if h.db == nil || h.db.Config == nil {
+		return
+	}
 	for _, f := range catalogoFormato {
 		var n int64
 		h.db.Model(&domain.RSUFormato{}).Where("codigo = ?", f.Codigo).Count(&n)

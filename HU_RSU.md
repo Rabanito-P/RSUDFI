@@ -1,7 +1,7 @@
-# HU RSU — Historias de Usuario Consolidadas (62 HU)
+# HU RSU — Historias de Usuario Consolidadas (69 HU)
 
 > **Proyecto:** Plataforma de RSU — Nivel Facultad · Universidad Nacional de Cañete (UNDC)
-> **Código:** R-M03-RSU-001-PF · **Versión:** 3.0 · **Fecha:** Octubre 2026
+> **Código:** R-M03-RSU-001-PF · **Versión:** 3.1 · **Fecha:** Octubre 2026
 > **Base legal:** Ley 30220 Art. 124-125 · SUNEDU Indicador 29 · SINEACE Estándar 25
 > **Stack:** Go 1.22 Gin/GORM + React 18 Vite TS + Tailwind + PostgreSQL 18
 
@@ -22,9 +22,10 @@
 11. [Historias de Usuario — Épica 8: Dashboards (HU-044..HU-051)](#11-épica-8-dashboards)
 12. [Historias de Usuario — Épica 9: Notificaciones (HU-052..HU-055)](#12-épica-9-notificaciones)
 13. [Historias de Usuario — Épica 10: Competencias (HU-056..HU-060)](#13-épica-10-competencias)
-14. [Historias de Usuario — Épica 11: SUNEDU/SINEACE (HU-061..HU-062)](#14-épica-11-sunedusineace)
-15. [Mapeo HU → Endpoints](#15-mapeo-hu--endpoints)
-16. [Reglas de negocio (R01–R35)](#16-reglas-de-negocio)
+14. [�pica 11: SUNEDU/SINEACE (HU-061..HU-062)](#14-�pica-11-sunedusineace)
+15. [�pica 12: Unirse a PEP (HU-063..HU-069)](#15-�pica-12-unirse-a-pep)
+16. [Mapeo HU ? Endpoints](#16-mapeo-hu--endpoints)
+17. [Reglas de negocio (R01–R42)](#17-reglas-de-negocio)
 
 ---
 
@@ -551,7 +552,103 @@ Ruta /proyectos BLOQUEADA → redirect /mis-proyectos
 
 ---
 
-## 15. MAPEO HU → ENDPOINTS
+## 15. ÉPICA 12: UNIRSE A PEP (HU-063..HU-069)
+
+### HU-063 — Explorar PEPs abiertos al crear proyecto
+| Campo | Detalle |
+|-------|---------|
+| Actor | ESTUDIANTE (sin proyecto activo) |
+| Prioridad | Alta · alternativa a crear SSU desde cero |
+| Pantalla | `CrearProyecto` — sección inferior "PEPs abiertos" |
+| Ruta | `/proyectos/nuevo` (abajo del formulario) |
+
+**CA:**
+- Lista paginada `GET /proyectos?modalidad=PEP_FINANCIADO,PEP_AUTOFINANCIADO&estado=BORRADOR,EN_REVISION_ESCUELA,CON_VB_ESCUELA,APROBADO_CON_RESOLUCION,EN_EJECUCION` con cards: código, título, escuela, docente responsable, cupos `X/5`, avance %.
+- Filtros por escuela y modalidad; CTA por card: `Ver detalle` → `/proyectos/:id`; nota arriba: "Si no creas tu SSU puedes unirte a un PEP".
+- Solo visible si el estudiante no tiene proyecto activo (misma condición que `Proponer proyecto`).
+
+### HU-064 — Ver detalle de PEP (descripción, docente, alumnos unidos)
+| Campo | Detalle |
+|-------|---------|
+| Actor | ESTUDIANTE (miembro o no) |
+| Pantalla | `ProyectoDetalle` — tab `Equipo` + vista previa sin bloqueo |
+| Ruta | `/proyectos/:id` |
+
+**CA:**
+- Tab `Equipo`: líder, docente asesor/responsable, lista de participantes con nombre – ciclo (`Estudiante_Ciclo.ciclo_numerico`) – código, rol y estado; contador de cupos `X/5`.
+- Reutiliza `GET /proyectos/:id/estudiantes` (hoy se carga y no se renderiza) + `GET /proyectos/:id`.
+- Vista previa: si el proyecto es PEP abierto y el estudiante NO es miembro, no aplica el bloqueo `bloqueadoEstudianteNoMiembro`; solo lectura + botón `Unirse` (HU-065).
+- Tablas: `RSU_Proyecto, RSU_Participante_Estudiante, Estudiante, Estudiante_Ciclo, Docente`.
+
+### HU-065 — Solicitar unirse a un PEP
+| Campo | Detalle |
+|-------|---------|
+| Actor | ESTUDIANTE (sin proyecto activo) |
+| Prioridad | Crítica · genera `PENDIENTE` (no inscripción directa) |
+| Pantalla | `ProyectoDetalle` (tab Equipo) — botón `Unirse` |
+| Ruta | `POST /proyectos/:id/solicitudes-union` |
+
+**CA:**
+- Verificadores en form y backend: proyecto existe y `modalidad LIKE 'PEP%'`, estado no final (`!= CERRADO/REPORTADO_SUNEDU/EVALUACION_VALIDADA`), solicitante no es líder ni ya `INSCRITO/ACTIVO` en ese proyecto, sin otro proyecto activo (R09/R10), cumple ciclo mínimo del tipo (R01), equipo + pendientes < 5, sin solicitud `PENDIENTE` duplicada (`UNIQUE` parcial).
+- Campo opcional `mensaje_solicitud` (máx 500); botón con estados: `Unirse` / `Solicitud pendiente` / `Ya eres miembro`.
+- Al crear: `INSERT RSU_Solicitud_Union(PENDIENTE)` + notificación `SOLICITUD_UNION` al responsable del PEP.
+- Tablas: `RSU_Solicitud_Union, RSU_Proyecto, RSU_Participante_Estudiante`.
+
+### HU-066 — Bandeja de solicitudes del responsable del PEP
+| Campo | Detalle |
+|-------|---------|
+| Actor | Responsable del PEP (presidente del Comité en financiado, docente responsable en autofinanciado; líder estudiante NO resuelve) |
+| Pantalla | `Panel del proyecto` — sección `Solicitudes` |
+| Ruta | `GET /proyectos/:id/solicitudes?estado=PENDIENTE` |
+
+**CA:**
+- Cards por solicitante: nombre – ciclo – código, escuela, correo, fecha, `mensaje_solicitud`; filtros por estado (`PENDIENTE/ACEPTADA/RECHAZADA`) + contador de pendientes.
+- Autorización: solo líder/asesor/responsable del proyecto listan y resuelven; `GET /estudiantes/:id/solicitudes` para "mis solicitudes" del estudiante (estado + motivo de rechazo).
+- Tablas: `RSU_Solicitud_Union, Estudiante, Estudiante_Ciclo, Escuela`.
+
+### HU-067 — Aceptar solicitud de unión
+| Campo | Detalle |
+|-------|---------|
+| Actor | Responsable del PEP |
+| Pantalla | `Solicitudes` — botón `Aceptar` por card |
+| Ruta | `PATCH /solicitudes-union/:id/aceptar` |
+
+**CA:**
+- Transacción: revalida cupo < 5 + V4 (sin otro proyecto activo) + ciclo mínimo; luego `INSERT RSU_Participante_Estudiante(estado=ACTIVO, rol Ejecutor, validacion_ciclo=TRUE)` + `UPDATE solicitud ACEPTADA (id_revisor, fecha_resolucion)`.
+- Si el cupo se llenó entre la solicitud y la aceptación, rechaza con `409 + motivo_rapido=CUPO_LLENO`.
+- Notificación `UNION_ACEPTADA` al solicitante (rol `ESTUDIANTE_EJEC`, con `id_usuario` dirigido) → la ve en Header/Bandeja (polling 30s existente).
+- Tablas: `RSU_Solicitud_Union, RSU_Participante_Estudiante, RSU_Notificacion`.
+
+### HU-068 — Rechazar con motivo rápido + cancelar solicitud propia
+| Campo | Detalle |
+|-------|---------|
+| Actor | Responsable del PEP / ESTUDIANTE solicitante |
+| Pantalla | `Solicitudes` — razones rápidas arriba del panel + modal motivo |
+| Ruta | `PATCH /solicitudes-union/:id/rechazar` · `DELETE /solicitudes-union/:id` |
+
+**CA:**
+- Verificadores en form: rechazar exige `motivo_rapido` enum fijo (`CUPO_LLENO, CICLO_INSUFICIENTE, PERFIL_NO_AFIN, FUERA_DE_PLAZO, OTRO`) + `motivo_rechazo` texto libre obligatorio si `OTRO` u opcional (máx 500) en el resto; sin motivo no envía (botón deshabilitado + mensaje inline).
+- `UPDATE solicitud RECHAZADA` + notificación `UNION_RECHAZADA` al solicitante con el motivo en el `mensaje`.
+- El solicitante puede `CANCELAR` su solicitud solo si sigue `PENDIENTE`.
+- Tablas: `RSU_Solicitud_Union, RSU_Notificacion`.
+
+### HU-069 — Crear proyecto con modalidad según rol
+| Campo | Detalle |
+|-------|---------|
+| Actor | ESTUDIANTE / DOCENTE / Comité RSU |
+| Prioridad | Alta · corrige origen: hoy todo nace `SSU` por default |
+| Pantalla | `CrearProyecto` — campo modalidad + validación por rol |
+| Ruta | `POST /proyectos` (DTO extendido) |
+
+**CA:**
+- `CreateProyectoReq` acepta `modalidad` (`SSU, PEP_FINANCIADO, PEP_AUTOFINANCIADO, VOLUNTARIADO, PUBLICACION_CIENTIFICA`); sin valor aplica `DEFAULT 'SSU'` (R23-estados + default DB).
+- Verificadores: estudiante solo `SSU`/`VOLUNTARIADO`; `PEP_*` lo crea docente/responsable o presidente del Comité; `SSU` exige equipo 2–5 también en backend (hoy solo frontend); ciclo mínimo y fechas se mantienen (R01/R05).
+- Sin esto la lista de PEPs de HU-063 nace vacía: los PEP visibles solo existirían por seed/SQL.
+- Tablas: `RSU_Proyecto` (`modalidad`), mismas notificaciones de HU-001.
+
+---
+
+## 16. MAPEO HU → ENDPOINTS
 
 | Épica | HU | Descripción | Backend endpoint : tabla | Frontend vista | Estado |
 |---|---|---|---|---|---|
@@ -608,10 +705,17 @@ Ruta /proyectos BLOQUEADA → redirect /mis-proyectos
 | 9 Notif | HU-052..055 | Notificaciones | `RSU_Notificacion` | Header | OK |
 | 10 Comp | HU-056..060 | Asistencia docente/est | `RSU_Asignacion_Docente` | `Docente/Estudiante` | OK |
 | 11 Sunedu | HU-061/062 | Indicadores SUNEDU/SINEACE | `vw_rsu_cobertura_anual` | `reportes` | OK |
+| 12 Unirse PEP | HU-063 | Explorar PEPs abiertos | `GET /proyectos?modalidad=PEP*` | `CrearProyecto` (sección inferior) | nuevo |
+| | HU-064 | Detalle PEP + equipo | `GET /proyectos/:id` + `GET /proyectos/:id/estudiantes` | `ProyectoDetalle` (tab Equipo) | nuevo |
+| | HU-065 | Solicitar unirse | `POST /proyectos/:id/solicitudes-union` : `RSU_Solicitud_Union` | `ProyectoDetalle` (botón Unirse) | nuevo |
+| | HU-066 | Bandeja responsable | `GET /proyectos/:id/solicitudes` + `GET /estudiantes/:id/solicitudes` | `Panel proyecto` (Solicitudes) | nuevo |
+| | HU-067 | Aceptar solicitud | `PATCH /solicitudes-union/:id/aceptar` + `RSU_Participante_Estudiante` | `Solicitudes` | nuevo |
+| | HU-068 | Rechazar + cancelar | `PATCH /solicitudes-union/:id/rechazar` · `DELETE /solicitudes-union/:id` | `Solicitudes` | nuevo |
+| | HU-069 | Crear con modalidad | `POST /proyectos` (DTO + `modalidad`) : `RSU_Proyecto` | `CrearProyecto` | nuevo |
 
 ---
 
-## 16. REGLAS DE NEGOCIO (R01–R35)
+## 17. REGLAS DE NEGOCIO (R01–R42)
 
 | ID | Regla | Validación |
 |----|-------|------------|
@@ -650,3 +754,10 @@ Ruta /proyectos BLOQUEADA → redirect /mis-proyectos
 | R33 | Equipo completo | Cualquier miembro puede subir docs |
 | R34 | Validación ciclo | `validacion_ciclo=TRUE` |
 | R35 | Modo mantenimiento | `RSU_Configuracion.clave='modo_mantenimiento'` |
+| R36 | Solicitud única | `UNIQUE (id_proyecto, id_estudiante) WHERE estado='PENDIENTE'` en `RSU_Solicitud_Union` |
+| R37 | Solo PEP recibe solicitudes | `RSU_Proyecto.modalidad LIKE 'PEP%'` para `POST .../solicitudes-union` |
+| R38 | Resuelve el responsable | Solo líder/asesor/responsable del PEP acepta o rechaza; líder estudiante no resuelve |
+| R39 | Cupo al aceptar | Revalidar equipo + pendientes < 5 en `PATCH .../aceptar`; si se llenó → `409 CUPO_LLENO` |
+| R40 | Motivo obligatorio | Rechazar exige `motivo_rapido` enum (`CUPO_LLENO, CICLO_INSUFICIENTE, PERFIL_NO_AFIN, FUERA_DE_PLAZO, OTRO`) |
+| R41 | Notificación dirigida | `UNION_ACEPTADA/UNION_RECHAZADA` con `id_usuario` del solicitante + motivo en `mensaje` |
+| R42 | Modalidad por rol | Estudiante solo `SSU`/`VOLUNTARIADO`; `PEP_*` lo crea docente/responsable o Comité |

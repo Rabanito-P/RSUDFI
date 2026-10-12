@@ -74,6 +74,19 @@ func (s *ProyectoService) pushNotificacion(rolDestino, tipo, titulo string, mens
 }
 
 func (s *ProyectoService) Create(req dto.CreateProyectoReq) (*domain.RSUProyecto, error) {
+	// HU-069: modalidad explícita con default SSU + regla por rol.
+	modalidad := strings.ToUpper(strings.TrimSpace(req.Modalidad))
+	if modalidad == "" {
+		modalidad = "SSU"
+	}
+	switch modalidad {
+	case "SSU", "PEP_FINANCIADO", "PEP_AUTOFINANCIADO", "VOLUNTARIADO", "PUBLICACION_CIENTIFICA":
+	default:
+		return nil, errors.New("modalidad inválida (SSU, PEP_FINANCIADO, PEP_AUTOFINANCIADO, VOLUNTARIADO, PUBLICACION_CIENTIFICA)")
+	}
+	if req.IDEstudianteLider != nil && (modalidad == "PEP_FINANCIADO" || modalidad == "PEP_AUTOFINANCIADO") {
+		return nil, errors.New("los proyectos PEP los crea el docente responsable o el Comité; el estudiante solo crea SSU o Voluntariado")
+	}
 	// Regla V4: estudiante solo 1 proyecto activo a la vez (lider o participante INSCRITO/ACTIVO). Si lo retiran (RETIRADO/FINALIZADO) queda libre.
 	if req.IDEstudianteLider != nil {
 		var cnt int64
@@ -115,6 +128,7 @@ func (s *ProyectoService) Create(req dto.CreateProyectoReq) (*domain.RSUProyecto
 		Titulo:         req.Titulo,
 		IDEscuela:      req.IDEscuela,
 		IDTipo:         req.IDTipo,
+		Modalidad:      modalidad,
 		IDLineaAccion:  req.IDLineaAccion,
 		IDEstadoActual: estado.ID,
 		IDCicloCreacion: req.IDCicloCreacion,
@@ -178,8 +192,8 @@ func (s *ProyectoService) getTipo(id uint) (*domain.RSUTipoProyecto, error) {
 	return &t, err
 }
 
-func (s *ProyectoService) List(page, limit int, estado, escuela *uint, search string) ([]domain.RSUProyecto, int64, error) {
-	return s.proyectoRepo.FindAll(page, limit, estado, escuela, search)
+func (s *ProyectoService) List(page, limit int, estado, escuela *uint, search string, modalidades []string) ([]domain.RSUProyecto, int64, error) {
+	return s.proyectoRepo.FindAll(page, limit, estado, escuela, search, modalidades)
 }
 func (s *ProyectoService) ListByEstudiante(page, limit int, idEstudiante uint, search string) ([]domain.RSUProyecto, int64, error) {
 	return s.proyectoRepo.FindAllByEstudiante(page, limit, idEstudiante, search)
