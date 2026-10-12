@@ -157,11 +157,8 @@ Detalle completo en **[ARCHITECTURE.md](./ARCHITECTURE.md)**.
 │   │   └── pages/           # 32 pantallas
 │   └── nginx.conf           # proxy, cabeceras de seguridad
 ├── db/
-│   ├── init.sql             # esquema, catálogos, 17 estados, 22 transiciones
-│   ├── seed_demo.sql        # datos de demostración
-│   ├── 05_usuario_permisos.sql
-│   ├── 07_formatos.sql      # catálogo fijo de 7 formatos
-│   └── 09_sin_creditos.sql  # limpieza de campos obsoletos
+│   ├── init.sql             # esquema, catálogos, 17 estados, 22 transiciones, 7 formatos
+│   └── seed_demo.sql        # datos de demostración y permisos por usuario
 ├── documentos/plantillas/   # formatos Word/Excel de fábrica
 ├── docker-compose.yml
 └── HU_RSU.md                # 62 historias de usuario

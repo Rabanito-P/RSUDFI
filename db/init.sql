@@ -326,6 +326,38 @@ JOIN "RSU_Proyecto_Beneficiario" pb ON b."id_beneficiario" = pb."id_beneficiario
 JOIN "RSU_Proyecto" p ON pb."id_proyecto" = p."id_proyecto"
 GROUP BY EXTRACT(YEAR FROM p."fecha_inicio_plan");
 
+-- ── MÓDULO ADMIN: permisos por usuario (activación de funciones/módulos) ──
+-- El administrador decide a qué módulos entra cada usuario.
+CREATE TABLE IF NOT EXISTS "RSU_Usuario_Permiso" (
+    id_permiso  SERIAL PRIMARY KEY,
+    id_usuario  INTEGER NOT NULL REFERENCES "RSU_Usuario"(id_usuario) ON DELETE CASCADE,
+    modulo      VARCHAR(50) NOT NULL,
+    activo      BOOLEAN NOT NULL DEFAULT true,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT uq_usuario_permiso UNIQUE (id_usuario, modulo)
+);
+CREATE INDEX IF NOT EXISTS idx_usuario_permiso_usuario ON "RSU_Usuario_Permiso"(id_usuario);
+
+-- ── FORMATOS Y GUÍAS OFICIALES ──
+-- El catálogo es FIJO: son los 7 formatos que el sistema usa siempre.
+-- El administrador no crea ni elimina formatos, solo reemplaza el archivo que
+-- se le ofrece al usuario. "ruta" vacía = usar el archivo de fábrica
+-- que viene en documentos/plantillas/.
+CREATE TABLE IF NOT EXISTS "RSU_Formato" (
+    "id_formato"          SERIAL PRIMARY KEY,
+    "codigo"              VARCHAR(40) NOT NULL UNIQUE,
+    "nombre"              VARCHAR(200) NOT NULL,
+    "descripcion"         TEXT DEFAULT '',
+    "archivo_base"        VARCHAR(200) NOT NULL,
+    "ruta"                VARCHAR(500) DEFAULT '',
+    "nombre_archivo"      VARCHAR(200) DEFAULT '',
+    "version"             VARCHAR(20) DEFAULT '1.0',
+    "peso_bytes"          BIGINT DEFAULT 0,
+    "orden"               INT DEFAULT 0,
+    "fecha_actualizacion" TIMESTAMP DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_formato_codigo ON "RSU_Formato"("codigo");
+
 -- SEED — 16 estados BPMN V3 (alineados a frontend utils/permissions.ts)
 -- Flujo: BORRADOR → EN_REVISION_ESCUELA → CON_VB_ESCUELA → EN_PRIORIZACION_FACULTAD →
 --        EN_DICTAMEN_CONSEJO → APROBADO_CON_RESOLUCION → EN_ASIGNACION_CARGA →
@@ -391,6 +423,18 @@ INSERT INTO "RSU_Notificacion" ("rol_destino","tipo","titulo","mensaje","leido")
 ('ESTUDIANTE_PROP','PROYECTO_CREADO','Proyecto creado','Tu proyecto quedó en BORRADOR. El equipo ya puede subir documentos',false),
 ('ESTUDIANTE_EJEC','INVITACION','Invitación a equipo','Has sido invitado como Ejecutor en un proyecto',false),
 ('ADMIN','CONFIG','Mantenimiento','Configuración del sistema actualizada por el Administrador',false);
+
+-- Catálogo fijo de formatos y guías oficiales. El orden es el orden en que se
+-- usan en el ciclo del proyecto. El backend los asegura al arrancar, pero aquí
+-- quedan sembrados para que existan desde el primer arranque del volumen.
+INSERT INTO "RSU_Formato" ("codigo","nombre","descripcion","archivo_base","orden") VALUES
+ ('PROPUESTA','Formato 1 · Propuesta de proyecto','Documento de propuesta: problema, objetivos, fundamentación y beneficiarios.','01-propuesta-de-proyecto.docx',1),
+ ('PLANIFICACION','Formato 2 · Planificación de actividades','Cronograma semanal de actividades (Excel). Se lee para crear las actividades del proyecto.','02-planificacion-de-actividades.xlsx',2),
+ ('PRIMER_ENTREGABLE','Formato 3 · Primer entregable','Reporte del primer entregable de la ejecución.','03-primer-entregable.docx',3),
+ ('SEGUNDO_ENTREGABLE','Formato 4 · Segundo entregable','Reporte del segundo entregable de la ejecución.','04-segundo-entregable.docx',4),
+ ('TERCER_ENTREGABLE','Formato 5 · Tercer entregable','Reporte del tercer entregable de la ejecución.','05-tercer-entregable.docx',5),
+ ('ENCUESTA','Formato 6 · Encuesta de satisfacción','Cuestionario Likert que se aplica a los beneficiarios del proyecto.','06-encuesta-satisfaccion.docx',6),
+ ('INFORME_FINAL','Formato 7 · Informe final','Informe de cierre del proyecto con resultados e impacto alcanzado.','07-informe-final.docx',7);
 
 -- ============================================================================
 -- SEED: Transiciones BPMN por modalidad (V1.1 §10) — solo entre los 10 roles

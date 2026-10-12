@@ -242,7 +242,7 @@ Cuando el destino no se indica explícitamente, el backend resuelve la única sa
 Los 7 formatos oficiales son un **catálogo fijo**: no se crean ni se eliminan. El administrador solo reemplaza el archivo de ejemplo que se ofrece al usuario.
 
 ```
-   db/07_formatos.sql                 backend (FormatoHandler)
+   db/init.sql  (catálogo)     backend (FormatoHandler)
    ┌──────────────────┐               ┌─────────────────────────────┐
    │ RSU_Formato      │◄──────────────│ asegurarCatalogo()          │
    │  codigo (único)  │               │  crea los 7 si faltan       │
@@ -356,15 +356,14 @@ El token se conserva con la sesión del usuario; el cliente detecta el `401`, li
 
 ### Orden de inicialización
 
-Los scripts se montan en `/docker-entrypoint-initdb.d` y se ejecutan por orden alfabético **solo en el primer arranque del volumen**:
+El esquema y los datos viven en dos archivos que se montan en `/docker-entrypoint-initdb.d` y se ejecutan por orden alfabético **solo en el primer arranque del volumen**:
 
 ```
-01-init.sql              esquema + catálogos + 17 estados + 22 transiciones
-03-seed-demo.sql         datos de demostración
-05-usuario-permisos.sql  permisos por usuario y módulo
-07-formatos.sql          catálogo fijo de los 7 formatos
-09-sin-creditos.sql      eliminación de campos obsoletos
+01-init.sql       esquema + catálogos + 17 estados + 22 transiciones + 7 formatos
+02-seed-demo.sql  datos de demostración + permisos por usuario y módulo
 ```
+
+`init.sql` define la estructura y los catálogos que son fijos por definición del negocio (estados del flujo, roles, preguntas Likert, catálogo de formatos). `seed_demo.sql` solo añade datos de ejemplo y depende de que el primero haya corrido.
 
 Para reaplicar desde cero:
 
@@ -473,7 +472,7 @@ Estado actual comprobado: 3 contenedores *healthy*, 85 operaciones documentadas,
 │   ├── src/{api,components,context,hooks,lib,pages}
 │   ├── nginx.conf
 │   └── vite.config.ts
-├── db/                           # esquema, seed y migraciones
+├── db/                           # esquema y datos (init.sql + seed_demo.sql)
 ├── documentos/plantillas/        # 7 formatos de fábrica
 ├── docker-compose.yml
 ├── .env

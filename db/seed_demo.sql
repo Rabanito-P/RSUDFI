@@ -18,10 +18,10 @@ INSERT INTO public."Estudiante" VALUES (3, 'EST003', '20000003', 'Diego', 'Varga
 INSERT INTO public."Estudiante" VALUES (4, 'EST004', '20000004', 'Fiorella', 'Gutiérrez', 'publicacion@undc.edu.pe', 1, 'ACTIVO', '2024-08-01');
 
 -- --- Estudiante_Ciclo ---
-INSERT INTO public."Estudiante_Ciclo" VALUES (1, 1, 5, 0, 'MATRICULADO');
-INSERT INTO public."Estudiante_Ciclo" VALUES (2, 1, 5, 0, 'MATRICULADO');
-INSERT INTO public."Estudiante_Ciclo" VALUES (3, 1, 3, 22, 'MATRICULADO');
-INSERT INTO public."Estudiante_Ciclo" VALUES (4, 1, 7, 20, 'MATRICULADO');
+INSERT INTO public."Estudiante_Ciclo" ("id_estudiante","id_ciclo","ciclo_numerico","estado") VALUES (1, 1, 5, 'MATRICULADO');
+INSERT INTO public."Estudiante_Ciclo" ("id_estudiante","id_ciclo","ciclo_numerico","estado") VALUES (2, 1, 5, 'MATRICULADO');
+INSERT INTO public."Estudiante_Ciclo" ("id_estudiante","id_ciclo","ciclo_numerico","estado") VALUES (3, 1, 3, 'MATRICULADO');
+INSERT INTO public."Estudiante_Ciclo" ("id_estudiante","id_ciclo","ciclo_numerico","estado") VALUES (4, 1, 7, 'MATRICULADO');
 
 -- --- RSU_Proyecto ---
 INSERT INTO public."RSU_Proyecto" ("id_proyecto", "codigo_proyecto", "titulo", "id_escuela", "id_tipo", "modalidad", "id_linea_accion", "id_estado_actual", "id_ciclo_creacion", "id_estudiante_lider", "id_docente_asesor", "descripcion", "objetivo_general", "objetivos_especificos", "poblacion_beneficiaria", "sector_beneficiario", "numero_beneficiarios", "lugar_intervencion", "semestre", "fecha_inicio_plan", "fecha_fin_plan", "presupuesto_solicitado", "presupuesto_aprobado", "monto_ejecutado", "porcentaje_avance", "archivo_proyecto_url", "archivo_aprobacion_url", "id_resolucion_aprobacion", "fecha_aprobacion", "id_resolucion_cierre", "fecha_cierre", "activo", "created_at", "updated_at") VALUES (1, 'UNDC-RSU-2026-011', 'Campaña de prevención de anemia en San Vicente de Cañete', 1, 1, 'SSU', 1, (SELECT id_estado FROM "RSU_Estado_Proyecto" WHERE codigo='EN_EJECUCION'), 1, 1, 1, 'Tamizaje de hemoglobina y charlas nutricionales en 3 colegios de San Vicente.', 'Reducir la prevalencia de anemia en escolares de primaria de San Vicente de Cañete.', '1. Tamizar 300 escolares. 2. Dictar 12 charlas nutricionales. 3. Entregar 200 kits de hierro.', 'Escolares de primaria', 'Salud', 120, 'San Vicente de Cañete', '2026-I', '2026-04-01', '2026-07-15', 1500.00, 1500.00, 675.00, 45.00, NULL, NULL, NULL, NULL, NULL, NULL, true, '2026-10-09 10:28:00.978079-05', '2026-10-09 10:28:00.978079-05');
@@ -41,9 +41,9 @@ INSERT INTO public."RSU_Proyecto_Rol" ("id_proyecto", "id_usuario", "tipo_usuari
 INSERT INTO public."RSU_Proyecto_Rol" ("id_proyecto", "id_usuario", "tipo_usuario", "rol_actor", "fecha_asignacion", "asignado_por", "activo") VALUES (5, 2, 'DOCENTE', 'DOCENTE_RESP', '2026-10-09 10:28:01.888817-05', 3, true);
 
 -- --- RSU_Participante_Estudiante ---
-INSERT INTO public."RSU_Participante_Estudiante" VALUES (1, 1, 2, 4, 0.00, 0.00, '2026-04-02', 'ACTIVO', true);
-INSERT INTO public."RSU_Participante_Estudiante" VALUES (2, 3, 3, 4, 0.00, 0.00, '2026-08-15', 'INSCRITO', true);
-INSERT INTO public."RSU_Participante_Estudiante" VALUES (3, 4, 4, 4, 0.00, 0.00, '2026-02-10', 'ACTIVO', true);
+INSERT INTO public."RSU_Participante_Estudiante" ("id_participante","id_proyecto","id_estudiante","id_rol_proyecto","horas_acumuladas","fecha_inscripcion","estado_participacion","validacion_ciclo") VALUES (1, 1, 2, 4, 0.00, '2026-04-02', 'ACTIVO', true);
+INSERT INTO public."RSU_Participante_Estudiante" ("id_participante","id_proyecto","id_estudiante","id_rol_proyecto","horas_acumuladas","fecha_inscripcion","estado_participacion","validacion_ciclo") VALUES (2, 3, 3, 4, 0.00, '2026-08-15', 'INSCRITO', true);
+INSERT INTO public."RSU_Participante_Estudiante" ("id_participante","id_proyecto","id_estudiante","id_rol_proyecto","horas_acumuladas","fecha_inscripcion","estado_participacion","validacion_ciclo") VALUES (3, 4, 4, 4, 0.00, '2026-02-10', 'ACTIVO', true);
 
 -- --- RSU_Asignacion_Docente ---
 INSERT INTO public."RSU_Asignacion_Docente" VALUES (1, 1, 1, 3, 4.00, 'NO_LECTIVA', 1, '2026-04-02', NULL, 'APROBADA', NULL, NULL);
@@ -229,4 +229,17 @@ UPDATE public."RSU_Usuario" SET password_hash = '$2a$10$UB8M2YVUs72FcI.Bzik7SuOB
 UPDATE public."RSU_Usuario" SET password_hash = '$2a$10$UQNtAX8Oab9F7CBYLAQ09ufWwx0Pv7POEbpPOuzDhYac/oMyS614O' WHERE id_usuario = 1;
 UPDATE public."RSU_Usuario" SET password_hash = '$2a$10$uEBf9azxH9gRlmfZ2VJKzOYoKBsmZ0XVJfZq5WcY7e2AsuXqM1NrS' WHERE id_usuario = 13;
 UPDATE public."RSU_Usuario" SET password_hash = '$2a$10$Szf6Ekq3VGex0Ryzq55zYeuZX5EZLxYYEJNtaqZklV2ndcvIi.ZEa' WHERE id_usuario = 9;
+
+-- ── MÓDULO ADMIN: permisos por usuario ──
+-- Los usuarios demo arrancan con todos los módulos activos: el sistema debe
+-- verse completo al iniciar y el administrador puede restringirlos después.
+INSERT INTO "RSU_Usuario_Permiso" (id_usuario, modulo)
+SELECT u.id_usuario, m.clave
+FROM "RSU_Usuario" u
+CROSS JOIN (VALUES
+    ('proyectos'),('bandeja'),('entregables'),('evidencias'),('beneficiarios'),
+    ('presupuesto'),('encuestas'),('monitoreo'),('reportes'),('personas'),
+    ('estructura'),('catalogos'),('documentos'),('auditoria')
+) AS m(clave)
+WHERE NOT EXISTS (SELECT 1 FROM "RSU_Usuario_Permiso" p WHERE p.id_usuario = u.id_usuario);
 COMMIT;

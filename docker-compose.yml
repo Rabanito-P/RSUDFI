@@ -24,11 +24,8 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql
-      - ./db/01-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
-      - ./db/seed_demo.sql:/docker-entrypoint-initdb.d/03-seed-demo.sql:ro
-      - ./db/05_usuario_permisos.sql:/docker-entrypoint-initdb.d/05-usuario-permisos.sql:ro
-      - ./db/07_formatos.sql:/docker-entrypoint-initdb.d/07-formatos.sql:ro
-      - ./db/09_sin_creditos.sql:/docker-entrypoint-initdb.d/09-sin-creditos.sql:ro
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./db/seed_demo.sql:/docker-entrypoint-initdb.d/02-seed-demo.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-undc} -d ${POSTGRES_DB:-undc_rsu}"]
       interval: 5s
