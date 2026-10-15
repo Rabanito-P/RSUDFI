@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../api/client'
+import { validarArchivo } from '../lib/archivos'
 import { useAuth } from '../context/AuthContext'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
@@ -94,6 +95,9 @@ export default function Administracion(){
   const alElegirArchivo = async (e: React.ChangeEvent<HTMLInputElement>)=>{
     const file = e.target.files?.[0]
     if(!file || !codigoActivo) return
+    // Validación cliente: Office (docx/xlsx) hasta 32MB antes de subir.
+    const errFile = validarArchivo(file, 'office')
+    if(errFile){ setMsg({tipo:'err', texto: errFile}); setCodigoActivo(null); return }
     setSubiendo(codigoActivo); setMsg(null)
     try{
       const fd = new FormData()

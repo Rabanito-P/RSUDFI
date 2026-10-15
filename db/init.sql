@@ -243,7 +243,7 @@ CREATE TABLE "RSU_Modificacion_Informe" ("id_modificacion" SERIAL PRIMARY KEY, "
 
 -- MÓDULO 8: Ejecución
 CREATE TABLE "RSU_Actividad_Campo" ("id_actividad" SERIAL PRIMARY KEY, "id_proyecto" INT NOT NULL REFERENCES "RSU_Proyecto"("id_proyecto") ON DELETE CASCADE, "id_entregable" INT NULL REFERENCES "RSU_Entregable"("id_entregable"), "nombre" VARCHAR(200) NOT NULL, "descripcion" TEXT, "fecha_programada" DATE, "fecha_ejecucion" DATE, "hora_inicio" TIME, "hora_fin" TIME, "minutos" INT DEFAULT 0, "lugar" VARCHAR(200), "id_responsable" INT NULL, "id_usuario_registro" INT NULL, "estado" VARCHAR(20) DEFAULT 'PROGRAMADA', "nro_beneficiarios" INT DEFAULT 0);
-CREATE TABLE "RSU_Actividad_Foto" ("id_foto" SERIAL PRIMARY KEY, "id_actividad" INT NOT NULL REFERENCES "RSU_Actividad_Campo"("id_actividad") ON DELETE CASCADE, "url_foto" VARCHAR(500) NOT NULL, "descripcion" VARCHAR(255), "fecha_subida" TIMESTAMPTZ DEFAULT NOW());
+CREATE TABLE "RSU_Actividad_Foto" ("id_foto" SERIAL PRIMARY KEY, "id_actividad" INT NOT NULL REFERENCES "RSU_Actividad_Campo"("id_actividad") ON DELETE CASCADE, "url_foto" VARCHAR(500) NOT NULL, "descripcion" VARCHAR(255), "fecha_subida" TIMESTAMPTZ DEFAULT NOW(), "etapa" VARCHAR(30) NULL, "minutos_transcurridos" INT NOT NULL DEFAULT 0);
 CREATE TABLE "RSU_Justificacion_Falta" ("id_justificacion" SERIAL PRIMARY KEY, "id_actividad" INT NOT NULL REFERENCES "RSU_Actividad_Campo"("id_actividad") ON DELETE CASCADE, "id_estudiante" INT NOT NULL REFERENCES "Estudiante"("id_estudiante"), "fecha_ausencia" DATE NOT NULL, "hora_inicio_actividad" TIME, "hora_fin_actividad" TIME, "motivo" TEXT NOT NULL, "id_documento_evidencia" INT NULL REFERENCES "RSU_Documento"("id_documento"), "estado" VARCHAR(20) DEFAULT 'PENDIENTE', "id_verificador" INT NULL, "fecha_verificacion" TIMESTAMPTZ, "observaciones" TEXT);
 CREATE TABLE "RSU_Monitoreo" ("id_monitoreo" SERIAL PRIMARY KEY, "id_proyecto" INT NOT NULL REFERENCES "RSU_Proyecto"("id_proyecto") ON DELETE CASCADE, "fecha_monitoreo" DATE NOT NULL, "id_monitor" INT NOT NULL REFERENCES "Docente"("id_docente"), "porcentaje_avance" NUMERIC(5,2), "hitos_cumplidos" TEXT, "observaciones" TEXT, "resultado" VARCHAR(30) NOT NULL, "id_documento" INT NULL REFERENCES "RSU_Documento"("id_documento"));
 
@@ -258,7 +258,7 @@ CREATE TABLE "RSU_Pago_Voucher" ("id_pago" SERIAL PRIMARY KEY, "id_proyecto" INT
 
 -- MÓDULO 10: Evaluación
 CREATE TABLE "RSU_Instrumento_Impacto" ("id_instrumento" SERIAL PRIMARY KEY, "id_proyecto" INT NOT NULL REFERENCES "RSU_Proyecto"("id_proyecto") ON DELETE CASCADE, "tipo" VARCHAR(20) NOT NULL, "nombre" VARCHAR(200) NOT NULL, "fecha_aplicacion" DATE, "nro_aplicados" INT DEFAULT 0, "id_documento" INT NULL REFERENCES "RSU_Documento"("id_documento"));
-CREATE TABLE "RSU_Encuesta_Satisfaccion" ("id_encuesta" SERIAL PRIMARY KEY, "id_proyecto" INT NOT NULL REFERENCES "RSU_Proyecto"("id_proyecto") ON DELETE CASCADE, "id_docente_asesor" INT NOT NULL REFERENCES "Docente"("id_docente"), "id_estudiante" INT NOT NULL REFERENCES "Estudiante"("id_estudiante"), "fecha_registro" TIMESTAMPTZ DEFAULT NOW(), "estado" VARCHAR(20) DEFAULT 'REGISTRADO', "id_documento" INT NULL REFERENCES "RSU_Documento"("id_documento"));
+CREATE TABLE "RSU_Encuesta_Satisfaccion" ("id_encuesta" SERIAL PRIMARY KEY, "id_proyecto" INT NOT NULL REFERENCES "RSU_Proyecto"("id_proyecto") ON DELETE CASCADE, "id_docente_asesor" INT NOT NULL REFERENCES "Docente"("id_docente"), "id_estudiante" INT NOT NULL REFERENCES "Estudiante"("id_estudiante"), "fecha_registro" TIMESTAMPTZ DEFAULT NOW(), "estado" VARCHAR(20) DEFAULT 'REGISTRADO', "id_documento" INT NULL REFERENCES "RSU_Documento"("id_documento"), "promedio_general" NUMERIC(3,2) NULL, "comentario" TEXT NULL);
 CREATE TABLE "RSU_Pregunta_Encuesta" ("id_pregunta" SERIAL PRIMARY KEY, "codigo" VARCHAR(20) UNIQUE NOT NULL, "texto_pregunta" VARCHAR(500) NOT NULL, "dimension" VARCHAR(20) NOT NULL, "orden" INT NOT NULL, "activa" BOOLEAN DEFAULT TRUE);
 CREATE TABLE "RSU_Encuesta_Beneficiario" ("id_encuesta_benef" SERIAL PRIMARY KEY, "id_proyecto" INT NOT NULL REFERENCES "RSU_Proyecto"("id_proyecto") ON DELETE CASCADE, "id_beneficiario" INT NOT NULL REFERENCES "RSU_Beneficiario"("id_beneficiario"), "fecha_aplicacion" DATE NOT NULL, "id_aplicador" INT NULL, "modalidad" VARCHAR(20) DEFAULT 'PRESENCIAL', "promedio_general" NUMERIC(3,2), "calificacion_cualitativa" VARCHAR(20), "comentario_abierto" TEXT, "sugerencia_mejora" TEXT, "id_documento_firmado" INT NULL REFERENCES "RSU_Documento"("id_documento"), "estado" VARCHAR(20) DEFAULT 'REGISTRADA', "id_validador" INT NULL, "fecha_validacion" TIMESTAMPTZ, "created_at" TIMESTAMPTZ DEFAULT NOW(), UNIQUE ("id_proyecto","id_beneficiario"));
 CREATE TABLE "RSU_Respuesta_Encuesta" ("id_respuesta" SERIAL PRIMARY KEY, "id_encuesta_benef" INT NOT NULL REFERENCES "RSU_Encuesta_Beneficiario"("id_encuesta_benef") ON DELETE CASCADE, "id_pregunta" INT NOT NULL REFERENCES "RSU_Pregunta_Encuesta"("id_pregunta"), "valor_numerico" SMALLINT NOT NULL CHECK ("valor_numerico" BETWEEN 1 AND 5), "valor_cualitativo" VARCHAR(20) NOT NULL, UNIQUE ("id_encuesta_benef","id_pregunta"));
@@ -385,11 +385,17 @@ INSERT INTO "RSU_Estado_Proyecto" ("codigo","nombre","orden_flujo","es_final","c
 -- SEED — 12 roles actor BPMN V3 (alineados a frontend utils/permissions.ts)
 INSERT INTO "RSU_Rol_Actor" ("codigo","nombre","tipo") VALUES
 ('DOCENTE_RESP','Docente Responsable','DOCENTE'),
+('DOCENTE_COLAB','Docente Colaborador','DOCENTE'),
 ('ESTUDIANTE_PROP','Estudiante Proponente','ESTUDIANTE'),
 ('ESTUDIANTE_EJEC','Estudiante Ejecutor','ESTUDIANTE'),
 ('DIR_ESCUELA','Director de Escuela Profesional','AUTORIDAD'),
+('COMITE_PS','Comité Proyección Social','COMITE'),
 ('DIR_RS_FACULTAD','Director RS Facultad','AUTORIDAD'),
 ('CONSEJO_FACULTAD','Consejo de Facultad','AUTORIDAD'),
+('DIR_DEPTO','Director de Departamento Académico','AUTORIDAD'),
+('DIR_CENTRAL_RS','Director Central RS / VRA','AUTORIDAD'),
+('UNIDAD_ABAST','Unidad de Abastecimiento','ADMINISTRATIVO'),
+('COMITE_CALIDAD','Comité de Calidad','COMITE'),
 ('ADMIN','Administrador','ADMINISTRATIVO');
 
 -- Tipos de proyecto = 5 modalidades (V1.1 §7). `modalidad` en RSU_Proyecto es la clasificación autoritativa.
@@ -453,16 +459,16 @@ INSERT INTO "RSU_Transicion_Estado" ("estado_origen","estado_destino","id_rol_ac
 ((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_PRIORIZACION_FACULTAD'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='RECHAZADO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_RS_FACULTAD'),true),
 ((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_DICTAMEN_CONSEJO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='APROBADO_CON_RESOLUCION'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='CONSEJO_FACULTAD'),true),
 ((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_DICTAMEN_CONSEJO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='RECHAZADO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='CONSEJO_FACULTAD'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='APROBADO_CON_RESOLUCION'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_ASIGNACION_CARGA'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='CONSEJO_FACULTAD'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_ASIGNACION_CARGA'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='REGISTRADO_OFICIAL'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_RS_FACULTAD'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='APROBADO_CON_RESOLUCION'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_ASIGNACION_CARGA'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_DEPTO'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_ASIGNACION_CARGA'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='REGISTRADO_OFICIAL'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_CENTRAL_RS'),true),
 ((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='REGISTRADO_OFICIAL'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EJECUCION'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_RS_FACULTAD'),true),
 ((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EJECUCION'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_MONITOREO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DOCENTE_RESP'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_MONITOREO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='INFORME_FINAL_PRESENTADO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_RS_FACULTAD'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='INFORME_FINAL_PRESENTADO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='CON_CONFORMIDAD_ESCUELA'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='ESTUDIANTE_EJEC'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='CON_CONFORMIDAD_ESCUELA'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='CERRADO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_ESCUELA'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='CERRADO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EVALUACION_IMPACTO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='CONSEJO_FACULTAD'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EVALUACION_IMPACTO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EVALUACION_VALIDADA'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_RS_FACULTAD'),true),
-((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EVALUACION_VALIDADA'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='REPORTADO_SUNEDU'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_RS_FACULTAD'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_MONITOREO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='INFORME_FINAL_PRESENTADO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='ESTUDIANTE_EJEC'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='INFORME_FINAL_PRESENTADO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='CON_CONFORMIDAD_ESCUELA'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_ESCUELA'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='CON_CONFORMIDAD_ESCUELA'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='CERRADO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='CONSEJO_FACULTAD'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='CERRADO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EVALUACION_IMPACTO'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='COMITE_CALIDAD'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EN_EVALUACION_IMPACTO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EVALUACION_VALIDADA'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='CONSEJO_FACULTAD'),true),
+((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='EVALUACION_VALIDADA'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='REPORTADO_SUNEDU'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DIR_CENTRAL_RS'),true),
 -- Rechazo rebota al emisor (R31/R32): RECHAZADO → BORRADOR para reenviar
 ((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='RECHAZADO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='BORRADOR'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='ESTUDIANTE_PROP'),true),
 ((SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='RECHAZADO'),(SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo"='BORRADOR'),(SELECT "id_rol_actor" FROM "RSU_Rol_Actor" WHERE "codigo"='DOCENTE_RESP'),true);
@@ -564,3 +570,29 @@ CREATE INDEX IF NOT EXISTS idx_comite_escuela ON "RSU_Comite_RSU"("id_escuela");
 CREATE INDEX IF NOT EXISTS idx_instrumento_proyecto ON "RSU_Instrumento_Impacto"("id_proyecto");
 CREATE INDEX IF NOT EXISTS idx_pr_proyecto ON "RSU_Proyecto_Rol"("id_proyecto");
 CREATE INDEX IF NOT EXISTS idx_pr_usuario ON "RSU_Proyecto_Rol"("id_usuario");
+
+-- ============================================================================
+-- MÓDULO: Solicitudes de unión a PEP (HU-063..HU-069)
+-- El estudiante solicita unirse a un PEP abierto; el responsable del PEP
+-- acepta o rechaza.
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS "RSU_Solicitud_Union" (
+  "id_solicitud"     SERIAL PRIMARY KEY,
+  "id_proyecto"      INT NOT NULL REFERENCES "RSU_Proyecto"("id_proyecto") ON DELETE CASCADE,
+  "id_estudiante"    INT NOT NULL REFERENCES "Estudiante"("id_estudiante"),
+  "mensaje_solicitud" TEXT NULL,
+  "estado"           VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE'
+    CHECK ("estado" IN ('PENDIENTE','ACEPTADA','RECHAZADA','CANCELADA')),
+  "motivo_rapido"    VARCHAR(30) NULL
+    CHECK ("motivo_rapido" IN ('CUPO_LLENO','CICLO_INSUFICIENTE','PERFIL_NO_AFIN','FUERA_DE_PLAZO','OTRO')),
+  "motivo_rechazo"   TEXT NULL,
+  "id_revisor"       INT NULL,
+  "fecha_solicitud"  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  "fecha_resolucion" TIMESTAMPTZ NULL
+);
+-- Una sola solicitud pendiente por (proyecto, estudiante) — R36.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_solicitud_union_pendiente
+  ON "RSU_Solicitud_Union"("id_proyecto", "id_estudiante")
+  WHERE ("estado" = 'PENDIENTE');
+CREATE INDEX IF NOT EXISTS idx_sol_union_proyecto ON "RSU_Solicitud_Union"("id_proyecto", "estado");
+CREATE INDEX IF NOT EXISTS idx_sol_union_estudiante ON "RSU_Solicitud_Union"("id_estudiante", "estado");

@@ -174,8 +174,9 @@ func Setup(db *gorm.DB) *gin.Engine {
 		api.GET("/proyectos/:id/presupuesto", presH.ByProyecto)
 
 		// encuestas e indicadores
-		api.POST("/encuestas/beneficiario", encH.Create)
-		api.GET("/proyectos/:id/encuestas", encH.ByProyecto)
+	api.POST("/encuestas/beneficiario", encH.Create)
+	api.POST("/encuestas/docente", encH.CrearDocente) // HU-023
+	api.GET("/proyectos/:id/encuestas", encH.ByProyecto)
 
 		api.POST("/indicadores", indH.Create)
 		api.GET("/proyectos/:id/indicadores", indH.ByProyecto)

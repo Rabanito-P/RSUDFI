@@ -1,6 +1,7 @@
 ﻿import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { useCallback, useEffect, useState } from 'react'
 import { api, asArray } from '../api/client'
+import { validarArchivo, validarLote } from '../lib/archivos'
 import { Badge } from '../components/ui/Badge'
 import { Alert } from '../components/ui/Alert'
 import { Button } from '../components/ui/Button'
@@ -397,6 +398,9 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
     if(!entForm.archivo){ setModalMsg({type:'err', text:'Selecciona el archivo PDF'}); return }
     if(!entForm.horas || Number(entForm.horas)<=0){ setModalMsg({type:'err', text:'Indica las horas del entregable'}); return }
     if(!entForm.id_tipo_doc){ setModalMsg({type:'err', text:'Selecciona el tipo de documento'}); return }
+    // Validación cliente antes de subir (el backend revalida siempre).
+    const errArchivo = validarArchivo(entForm.archivo, 'pdf')
+    if(errArchivo){ setModalMsg({type:'err', text: errArchivo}); return }
     setModalBusy(true)
     try{
       const fd = new FormData()
@@ -429,6 +433,9 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
     setModalMsg(null)
     if(!fotosForm.id_actividad){ setModalMsg({type:'err', text:'Selecciona la actividad'}); return }
     if(!fotosForm.archivos.length){ setModalMsg({type:'err', text:'Selecciona al menos una foto (JPG/PNG)'}); return }
+    // Validación cliente del lote: JPG/PNG, 5MB c/u, máximo 5 (R12/R13).
+    const errLote = validarLote(fotosForm.archivos, 'foto', 5)
+    if(errLote){ setModalMsg({type:'err', text: errLote}); return }
     setModalBusy(true)
     try{
       for(const f of fotosForm.archivos){
@@ -461,8 +468,8 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
         descripcion: formAct.descripcion,
         fecha_programada: formAct.fecha,
         lugar: p.lugar_intervencion,
-        hora_inicio: formAct.fecha + 'T' + formAct.horaInicio + ':00',
-        hora_fin: formAct.horaFin ? formAct.fecha + 'T' + formAct.horaFin + ':00' : null,
+        hora_inicio: formAct.horaInicio ? formAct.horaInicio + ':00' : null,
+        hora_fin: formAct.horaFin ? formAct.horaFin + ':00' : null,
         minutos: totalMin,
       })
       const a:any = await api.get(`/api/v1/proyectos/${id}/actividades`)
@@ -473,12 +480,23 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
   }
 
   if(bloqueado){
+    // HU-064: un estudiante sí puede VER un PEP abierto (vista previa para
+    // unirse). Solo se bloquea cuando el proyecto no es suyo y además no es
+    // un PEP abierto — y el motivo se dice claro según el caso.
+    const pepCerrado = esPEP
     return (
       <div className="max-w-2xl mx-auto mt-10 bg-white rounded-2xl border border-slate-200 p-8 text-center">
-        <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 grid place-items-center mx-auto text-xl">!</div>
-        <h2 className="font-bold text-slate-800 mt-3">Este no es tu proyecto</h2>
-        <p className="text-sm text-slate-500 mt-1">Solo puedes ver tu único proyecto activo. Si fuiste retirado, contacta al docente responsable.</p>
-        <Link to="/mis-proyectos" className="inline-flex mt-4 px-4 py-2 bg-sky-600 text-white rounded-xl text-sm font-semibold">Volver a mi proyecto</Link>
+        <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 grid place-items-center mx-auto text-xl">!</div>
+        <h2 className="font-bold text-slate-800 mt-3">{pepCerrado ? 'Este PEP ya cerró' : 'Este no es tu proyecto'}</h2>
+        <p className="text-sm text-slate-500 mt-1">
+          {pepCerrado
+            ? 'El proyecto ya cerró (o fue validado) y no recibe nuevas solicitudes de unión. Busca otro PEP abierto para participar.'
+            : 'Solo puedes ver tu único proyecto activo. Los PEP abiertos sí puedes verlos y pedir unirte desde la pestaña Equipo. Si fuiste retirado, contacta al docente responsable.'}
+        </p>
+        <div className="flex justify-center gap-2 flex-wrap mt-4">
+          <Link to="/mis-proyectos" className="inline-flex px-4 py-2 bg-sky-600 text-white rounded-xl text-sm font-semibold">Volver a mi proyecto</Link>
+          <Link to="/mis-proyectos" className="inline-flex px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold">Ver PEPs abiertos</Link>
+        </div>
       </div>
     )
   }

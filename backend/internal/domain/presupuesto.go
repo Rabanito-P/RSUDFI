@@ -14,7 +14,9 @@ type RSUPresupuestoMovimiento struct {
 	Monto           float64   `gorm:"column:monto" json:"monto"`
 	Fecha           time.Time `gorm:"column:fecha" json:"fecha"`
 	Observaciones   *string   `gorm:"column:observaciones" json:"observaciones"`
-}
+	// Auditoría del registro: la columna es NOT NULL en BD, debe salir del token.
+	IDUsuarioRegistro *uint   `gorm:"column:id_usuario_registro" json:"id_usuario_registro"`
+	}
 
 func (RSUPresupuestoMovimiento) TableName() string { return "RSU_Presupuesto_Movimiento" }
 

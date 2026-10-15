@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { api, asArray } from '../api/client'
+import { validarArchivo } from '../lib/archivos'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -112,6 +113,9 @@ export default function Actividades(){
 
   const subirFicha = async ()=>{
     if(!fichaFile || !actSel) return
+    // Validación cliente antes de subir (el backend revalida siempre).
+    const errArchivo = validarArchivo(fichaFile, 'foto')
+    if(errArchivo){ setFichaMsg({type:'err', text: errArchivo}); setFichaBusy(false); return }
     setFichaBusy(true); setFichaMsg(null)
     try{
       const fd = new FormData()

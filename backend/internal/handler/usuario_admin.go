@@ -19,16 +19,22 @@ import (
 // del sistema puede entrar cada uno.
 
 // Roles de negocio UNDC disponibles para asignar a un usuario.
-// Alcance vigente: Estudiante, Docente, Escuela, Facultad, Consejo y Admin.
-// Quedaron fuera Docente Colaborador, Comité PS, Dir. Departamento, Dir. Central
-// RS, Unidad de Abastecimiento y Comité de Calidad.
+// Los 12 roles BPMN del documento (HU-041): los 6 operativos de siempre más
+// Departamento, Central RS, Abastecimiento, Comité Calidad, Colaborador y
+// Comité PS — cada uno con sus transiciones en RSU_Transicion_Estado.
 var ROLES_NEGOCIO = []dto.ModuloInfo{
 	{Clave: "ESTUDIANTE_PROP", Nombre: "Estudiante proponente", Desc: "Crea el borrador y propone el proyecto"},
 	{Clave: "ESTUDIANTE_EJEC", Nombre: "Estudiante ejecutor", Desc: "Ejecuta, sube entregables y evidencias"},
 	{Clave: "DOCENTE_RESP", Nombre: "Docente responsable", Desc: "Asesora, monitorea y verifica entregables"},
+	{Clave: "DOCENTE_COLAB", Nombre: "Docente colaborador", Desc: "Apoya la ejecución de campo"},
 	{Clave: "DIR_ESCUELA", Nombre: "Director de Escuela Profesional", Desc: "Revisa y da V°B° a los proyectos"},
+	{Clave: "COMITE_PS", Nombre: "Comité Proyección Social", Desc: "Revisa no duplicidad y alinea al Plan RS"},
 	{Clave: "DIR_RS_FACULTAD", Nombre: "Dir. RS Facultad", Desc: "Prioriza banco, presupuesto y monitoreo"},
 	{Clave: "CONSEJO_FACULTAD", Nombre: "Consejo de Facultad", Desc: "Dictamina y emite resoluciones"},
+	{Clave: "DIR_DEPTO", Nombre: "Director de Departamento", Desc: "Asigna la carga no lectiva (Art.86)"},
+	{Clave: "DIR_CENTRAL_RS", Nombre: "Dir. Central RS / VRA", Desc: "Padrón oficial, memoria anual y reporte SUNEDU"},
+	{Clave: "UNIDAD_ABAST", Nombre: "Unidad de Abastecimiento", Desc: "Verifica vouchers y ejecución presupuestal"},
+	{Clave: "COMITE_CALIDAD", Nombre: "Comité de Calidad", Desc: "Procesa impacto e indicadores Likert"},
 	{Clave: "ADMIN", Nombre: "Administrador", Desc: "Control total: usuarios y módulos"},
 }
 
@@ -37,9 +43,11 @@ func tipoDeRol(rol string) string {
 	switch rol {
 	case "ESTUDIANTE_PROP", "ESTUDIANTE_EJEC":
 		return "ESTUDIANTE"
-	case "DOCENTE_RESP":
+	case "DOCENTE_RESP", "DOCENTE_COLAB":
 		return "DOCENTE"
 	default:
+		// DIR_ESCUELA, COMITE_PS, DIR_RS_FACULTAD, CONSEJO_FACULTAD, DIR_DEPTO,
+		// DIR_CENTRAL_RS, UNIDAD_ABAST, COMITE_CALIDAD, ADMIN
 		return "ADMINISTRATIVO"
 	}
 }

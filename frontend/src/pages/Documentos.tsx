@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from 'react'
 import { api, asArray } from '../api/client'
+import { validarArchivo } from '../lib/archivos'
 import { useAuth } from '../context/AuthContext'
 import { PageHeader } from '../components/ui/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
@@ -58,6 +59,9 @@ export default function Documentos(){
     if(!file){ setMsg('Selecciona un archivo (PDF, DOCX o XLSX)'); return }
     if(!form.proyecto){ setMsg('Selecciona un proyecto'); return }
     if(!form.tipo){ setMsg('Selecciona el tipo de documento'); return }
+    // Validación cliente antes de subir (el backend revalida siempre).
+    const errArchivo = validarArchivo(file, 'mixto')
+    if(errArchivo){ setMsg(errArchivo); return }
     const fd = new FormData()
     fd.append('id_proyecto', form.proyecto)
     fd.append('id_tipo_doc', form.tipo)

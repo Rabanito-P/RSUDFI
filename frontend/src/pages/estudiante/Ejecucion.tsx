@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../api/client'
+import { validarArchivo } from '../../lib/archivos'
 import { Download, CheckCircle2, Send, PencilLine, FileText } from 'lucide-react'
 
 const NOMBRES: Record<number, string> = { 1: 'PRIMER ENTREGABLE', 2: 'SEGUNDO ENTREGABLE', 3: 'TERCER ENTREGABLE', 4: 'ENCUESTA', 5: 'INFORME FINAL' }
@@ -107,7 +108,9 @@ export default function Ejecucion(){
   const registrarEntregable = async()=>{
     if(!modalFile || !modalOrden || !p || registrando) return
     if(!modalHoras || isNaN(Number(modalHoras)) || Number(modalHoras)<=0){ flash('Indica la cantidad de horas (mayor a 0).', true); return }
-    if(!esPdf(modalFile)){ flash('Solo se admite archivo PDF (.pdf).', true); return }
+    // Validación cliente antes de subir (el backend revalida siempre).
+    const errArchivo = validarArchivo(modalFile, 'pdf')
+    if(errArchivo){ flash(errArchivo, true); return }
     if(excesoTam){ flash(`El archivo excede ${MAX_MB}MB.`, true); return }
     setRegistrando(true)
     const fd=new FormData()

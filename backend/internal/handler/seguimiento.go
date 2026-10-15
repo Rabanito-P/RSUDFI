@@ -179,6 +179,11 @@ func (h *MonitoreoHandler) Create(c *gin.Context) {
 		utils.Fail(c, 400, "fecha_monitoreo inválida", err.Error())
 		return
 	}
+	// R30: el porcentaje de avance del monitoreo es 0-100.
+	if body.Porcentaje != nil && (*body.Porcentaje < 0 || *body.Porcentaje > 100) {
+		utils.Fail(c, 400, "porcentaje_avance debe estar entre 0 y 100 (R30)", nil)
+		return
+	}
 	m := &domain.RSUMonitoreo{IDProyecto: body.IDProyecto, IDMonitor: body.IDMonitor, FechaMonitoreo: fecha, PorcentajeAvance: body.Porcentaje, Resultado: body.Resultado, Observaciones: body.Observaciones}
 	if err := h.repo.Create(m); err != nil {
 		utils.Fail(c, 500, "Error creando monitoreo", err.Error())
@@ -430,19 +435,17 @@ func (h *EntregableHandler) Registrar(c *gin.Context) {
 		utils.Fail(c, 400, "id_tipo_doc requerido y usuario autenticado", nil)
 		return
 	}
-	// Solo el equipo (líder o participante) puede registrar
-	if idUser > 0 {
-		var esEstudiante int64
-		h.db.Model(&domain.Estudiante{}).Where("id_estudiante = ?", idUser).Count(&esEstudiante)
-		if esEstudiante > 0 {
-			var esMiembro int64
-			h.db.Model(&domain.RSUProyecto{}).Where("id_proyecto = ? AND id_estudiante_lider = ?", idProj, idUser).Count(&esMiembro)
+	// Solo el equipo (líder o participante) puede registrar. El tipo de usuario
+	// sale del token: antes se adivinaba por la persona y un docente con
+	// id_persona repetido recibía 403 injustificado.
+	if esEstudianteToken(h.db, c) {
+		var esMiembro int64
+		h.db.Model(&domain.RSUProyecto{}).Where("id_proyecto = ? AND id_estudiante_lider = ?", idProj, idUser).Count(&esMiembro)
+		if esMiembro == 0 {
+			h.db.Model(&domain.RSUParticipanteEstudiante{}).Where("id_proyecto = ? AND id_estudiante = ? AND estado_participacion IN ('INSCRITO','ACTIVO','FINALIZADO')", idProj, idUser).Count(&esMiembro)
 			if esMiembro == 0 {
-				h.db.Model(&domain.RSUParticipanteEstudiante{}).Where("id_proyecto = ? AND id_estudiante = ? AND estado_participacion IN ('INSCRITO','ACTIVO','FINALIZADO')", idProj, idUser).Count(&esMiembro)
-				if esMiembro == 0 {
-					utils.Fail(c, 403, "No eres miembro de este proyecto", nil)
-					return
-				}
+				utils.Fail(c, 403, "No eres miembro de este proyecto", nil)
+				return
 			}
 		}
 	}
@@ -468,22 +471,14 @@ func (h *EntregableHandler) Registrar(c *gin.Context) {
 		utils.Fail(c, 400, "archivo PDF requerido", err.Error())
 		return
 	}
-	if file.Size > 32<<20 {
-		utils.Fail(c, 400, "archivo excede 32MB", nil)
-		return
-	}
-	// Solo PDF: valida extensión y content-type (excepción: rechaza JPG/PNG/DOCX/etc.)
-	name := strings.ToLower(file.Filename)
-	ct := file.Header.Get("Content-Type")
-	if !strings.HasSuffix(name, ".pdf") || (ct != "" && ct != "application/pdf" && ct != "application/octet-stream") {
-		utils.Fail(c, 400, "solo se admite archivo PDF (.pdf)", nil)
-		return
-	}
-	// Guarda archivo (storage local activo / cloud cuando se habilite)
-	st := storage.New()
-	saved, err := st.Save(file, "")
+	// Validación robusta: 32MB (R13) + contenido PDF verificado (no solo extensión).
+	saved, err := storage.GuardarSeguro(file, storage.KindPDF, "")
 	if err != nil {
-		if st.Driver() == "cloud" {
+		if _, ok := err.(*storage.ErrorValidacion); ok {
+			utils.Fail(c, 400, err.Error(), nil)
+			return
+		}
+		if storage.New().Driver() == "cloud" {
 			utils.Fail(c, 501, "Almacenamiento cloud no habilitado en este MVP", err.Error())
 			return
 		}

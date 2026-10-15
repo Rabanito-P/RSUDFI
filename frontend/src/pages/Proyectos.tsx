@@ -12,6 +12,8 @@ import { PageHeader } from '../components/ui/PageHeader'
 import { Search, Plus, Eye, ArrowRight, Filter, FolderKanban, Layers, GraduationCap, ChevronLeft, ChevronRight, FileText } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { mensajeError } from '../lib/errores'
+import { UserPlus, Users } from 'lucide-react'
 
 const LIMIT = 10
 
@@ -30,6 +32,39 @@ export default function Proyectos(){
   const [error,setError]=useState('')
   const isEstudiante = user?.rol==='ESTUDIANTE'
   const isDocente = user?.rol==='DOCENTE'
+
+  // PEPs abiertos para unirse (HU-063): el estudiante descubre aquí dónde
+  // pedir cupo sin tener que pasar por "Proponer proyecto".
+  const [peps,setPeps]=useState<any[]>([])
+  const [pepsCerrados,setPepsCerrados]=useState(0)
+  const [pepsCupos,setPepsCupos]=useState<Record<number,string>>({})
+  const [pepsLoading,setPepsLoading]=useState(false)
+  const [pepsError,setPepsError]=useState('')
+  useEffect(()=>{
+    if(!isEstudiante) return
+    setPepsLoading(true); setPepsError('')
+    api.get('/api/v1/proyectos?modalidad=PEP_FINANCIADO,PEP_AUTOFINANCIADO&limit=12')
+      .then(async (r:any)=>{
+        const FINALES = ['CERRADO','REPORTADO_SUNEDU','EVALUACION_VALIDADA']
+        const todos = asArray<any>(r.data)
+        const lista = todos.filter((p:any)=> !FINALES.includes(String(p.estado_actual?.codigo || '')))
+        setPepsCerrados(todos.length - lista.length)
+        setPeps(lista)
+        const cupos: Record<number,string> = {}
+        await Promise.all(lista.map(async (p:any)=>{
+          try{
+            const m:any = await api.get(`/api/v1/proyectos/${p.id_proyecto}/estudiantes`)
+            const ms = asArray<any>(m.data)
+            const ids = ms.map((x:any)=> x.id_estudiante)
+            const ocup = ms.length + ((p.id_estudiante_lider && !ids.includes(p.id_estudiante_lider)) ? 1 : 0)
+            cupos[p.id_proyecto] = `${ocup}/5`
+          }catch{ cupos[p.id_proyecto] = '—/5' }
+        }))
+        setPepsCupos(cupos)
+      })
+      .catch((e:any)=> setPepsError(mensajeError(e, 'No se pudieron cargar los PEPs abiertos.')))
+      .finally(()=> setPepsLoading(false))
+  },[isEstudiante])
 
   useEffect(()=>{
     if(isEstudiante && (location.pathname==='/proyectos' || location.pathname==='/proyectos/')){
@@ -79,6 +114,43 @@ export default function Proyectos(){
   return (
     <div className="space-y-6 animate-fade-in">
       {isEstudiante && <div className="rounded-2xl bg-undc-50 border border-undc-200 p-3 text-xs flex gap-2 items-center"><span className="w-2 h-2 rounded-full bg-undc-700 animate-pulse"/> <b>Mi proyecto:</b> solo ves el proyecto donde estás incluido (grupo con líder + docente). Si te retiran, quedas libre.</div>}
+
+      {/* ── PEPs abiertos para unirse (HU-063) ── */}
+      {isEstudiante && (
+        <Card className="p-4">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h3 className="font-bold text-slate-900 flex items-center gap-2"><UserPlus size={16} className="text-undc-700"/> PEPs abiertos — pide tu cupo</h3>
+            {pepsLoading && <span className="text-xs text-slate-400">Cargando…</span>}
+          </div>
+          <p className="text-xs text-slate-500 mt-1">Son proyectos con financiamiento dirigidos por un docente responsable. Entra, revisa y solicita unirte desde la pestaña <b>Equipo</b>.</p>
+          {pepsError && <Alert variant="error" className="mt-3 text-xs">{pepsError}</Alert>}
+          {!pepsLoading && !pepsError && peps.length===0 && (
+            <div className="text-xs text-slate-500 mt-3">
+              {pepsCerrados > 0
+                ? `No hay PEPs abiertos por ahora (${pepsCerrados} cerrado(s) no se muestran). Vuelve más tarde o propone tu propio proyecto.`
+                : 'No hay PEPs abiertos por ahora. Vuelve más tarde o propone tu propio proyecto.'}
+            </div>
+          )}
+          {peps.length>0 && (
+            <div className="grid sm:grid-cols-2 gap-3 mt-3">
+              {peps.map((p:any)=>(
+                <div key={p.id_proyecto} className="border border-slate-200 rounded-2xl p-3 flex flex-col gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[11px] font-mono bg-slate-900 text-white px-2 py-0.5 rounded-lg">{p.codigo_proyecto}</span>
+                    <Badge color={p.estado_actual?.color_ui} variant="soft" dot>{p.estado_actual?.nombre}</Badge>
+                    <span className="text-[11px] bg-violet-50 border border-violet-200 text-violet-700 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1"><Users size={10}/> {pepsCupos[p.id_proyecto] || '—/5'}</span>
+                  </div>
+                  <div className="text-sm font-semibold text-slate-800 leading-tight">{p.titulo}</div>
+                  <div className="text-[11px] text-slate-500">Asesor: {p.docente_asesor ? `${p.docente_asesor.nombres} ${p.docente_asesor.apellidos}` : '—'} · {p.escuela?.nombre || ''}</div>
+                  <Link to={`/proyectos/${p.id_proyecto}?tab=equipo`} className="mt-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-undc-700 text-white text-xs font-bold hover:bg-undc-800">
+                    <UserPlus size={13}/> Ver y pedir unirme
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
       <PageHeader
         title={isEstudiante ? 'Mis proyectos — aislados' : isDocente ? 'Proyectos asesorados' : 'Proyectos — Supervisión'}
         subtitle={isEstudiante ? 'Tu único proyecto activo (grupo con líder y docente asesor)' : isDocente ? 'Proyectos donde eres docente asesor' : 'Tus proyectos vigentes'}

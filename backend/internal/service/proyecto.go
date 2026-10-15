@@ -73,6 +73,21 @@ func (s *ProyectoService) pushNotificacion(rolDestino, tipo, titulo string, mens
 	_ = s.db.Create(n).Error
 }
 
+// idUsuarioDePersona traduce el id de persona (Docente/Estudiante) al id de
+// RSU_Usuario. Sin esto las notificaciones "personales" quedaban con el id de
+// persona y el filtro individual del header no las encontraba: todos veían
+// los avisos de los demás.
+func (s *ProyectoService) idUsuarioDePersona(tipoUsuario string, idPersona *uint) *uint {
+	if idPersona == nil || *idPersona == 0 {
+		return nil
+	}
+	var u domain.RSUUsuario
+	if err := s.db.Where("tipo_usuario = ? AND id_persona = ?", tipoUsuario, *idPersona).First(&u).Error; err != nil {
+		return nil
+	}
+	return &u.ID
+}
+
 func (s *ProyectoService) Create(req dto.CreateProyectoReq) (*domain.RSUProyecto, error) {
 	// HU-069: modalidad explícita con default SSU + regla por rol.
 	modalidad := strings.ToUpper(strings.TrimSpace(req.Modalidad))
@@ -175,12 +190,13 @@ func (s *ProyectoService) Create(req dto.CreateProyectoReq) (*domain.RSUProyecto
 		tit := projCreado.Titulo
 		if req.IDEstudianteLider != nil {
 			msg := fmt.Sprintf("Tu proyecto %s «%s» quedó en BORRADOR. Todo el equipo (líder o participantes) ya puede subir documentos y evidencias (HU-033).", cod, tit)
-			s.pushNotificacion("ESTUDIANTE_PROP", "PROYECTO_CREADO", "Proyecto creado en BORRADOR — "+cod, &msg, &projCreado.ID, req.IDEstudianteLider)
-			s.pushNotificacion("ESTUDIANTE_EJEC", "PROYECTO_CREADO", "Nuevo proyecto en tu equipo — "+cod, &msg, &projCreado.ID, req.IDEstudianteLider)
+			idLider := s.idUsuarioDePersona("ESTUDIANTE", req.IDEstudianteLider)
+			s.pushNotificacion("ESTUDIANTE_PROP", "PROYECTO_CREADO", "Proyecto creado en BORRADOR — "+cod, &msg, &projCreado.ID, idLider)
+			s.pushNotificacion("ESTUDIANTE_EJEC", "PROYECTO_CREADO", "Nuevo proyecto en tu equipo — "+cod, &msg, &projCreado.ID, idLider)
 		}
 		if req.IDDocenteAsesor != nil {
 			msg2 := fmt.Sprintf("Has sido asignado como asesor en %s «%s». Valida ciclo mínimo y carga no lectiva.", cod, tit)
-			s.pushNotificacion("DOCENTE_RESP", "ASIGNACION", "Asignación como asesor — "+cod, &msg2, &projCreado.ID, req.IDDocenteAsesor)
+			s.pushNotificacion("DOCENTE_RESP", "ASIGNACION", "Asignación como asesor — "+cod, &msg2, &projCreado.ID, s.idUsuarioDePersona("DOCENTE", req.IDDocenteAsesor))
 		}
 	}
 	return projCreado, nil
@@ -264,6 +280,20 @@ func (s *ProyectoService) Transicion(idProyecto uint, req dto.TransicionReq) err
 		return errors.New("transicion no permitida: revise flujo BPMN y rol actor")
 	}
 
+	// R26: observar o rechazar exige motivo — sin él el emisor no sabe qué corregir.
+	if req.Resultado != "APROBADO" && (req.Comentarios == nil || strings.TrimSpace(*req.Comentarios) == "") {
+		return errors.New("debes escribir el motivo de la devolución (R26)")
+	}
+
+	// R27 / HU-005 / HU-007: el V°B° de Escuela y el dictamen del Consejo
+	// (con Resolución) exigen PDF firmado de sustento. Sin documento no aprob.
+	if req.Resultado == "APROBADO" && req.IDDocumentoSustento == nil {
+		switch codigo {
+		case "CON_VB_ESCUELA", "APROBADO_CON_RESOLUCION":
+			return errors.New("esta aprobación requiere adjuntar el PDF firmado (R27). Súbelo en Documentos y referencia su id")
+		}
+	}
+
 	// crear registro de trazabilidad
 	flujo := &domain.RSUFlujoAprobacion{
 		IDProyecto:          idProyecto,
@@ -279,30 +309,84 @@ func (s *ProyectoService) Transicion(idProyecto uint, req dto.TransicionReq) err
 	if err := s.flujoRepo.Create(flujo); err != nil {
 		return err
 	}
-	// actualizar estado actual solo si APROBADO
-	if req.Resultado == "APROBADO" {
+	// El estado se mueve también al rechazar, devolver u observar: si queda en
+	// el estado anterior, el rebote RECHAZADO → BORRADOR (R25/R31) nunca
+	// encuentra el proyecto en RECHAZADO y el flujo de corrección se traba.
+	if req.Resultado == "APROBADO" || req.Resultado == "RECHAZADO" || req.Resultado == "DEVUELTO" || req.Resultado == "OBSERVADO" {
 		if err := s.proyectoRepo.UpdateEstado(idProyecto, destinoID); err != nil {
 			return err
 		}
 	}
-	// Notificaciones por transicion (HU-052..055): avisa al lane destino
+	// ── Circuito de notificaciones del flujo (HU-052..055, R26/R31/R32) ──
+	// Dos caminos según el resultado:
+	//   APROBADO/derivado → avisa al lane DESTINO (quien debe actuar ahora).
+	//   RECHAZADO/OBSERVADO/DEVUELTO → vuelve al EMISOR con el motivo (R26).
+	// Las notificaciones de lane son bandera de rol (id_usuario NULL): las ve
+	// cualquier usuario con ese rol_destino. Antes llevaban el id del ejecutor
+	// y el destinatario real nunca las veía en su campana.
 	var estadoDest domain.RSUEstadoProyecto
 	if err := s.db.First(&estadoDest, "id_estado = ?", destinoID).Error; err == nil {
-		rolDestino := s.rolDestinoPorEstado(estadoDest.Codigo)
 		titulo := proj.Titulo
 		cod := proj.CodigoProyecto
-		msg := fmt.Sprintf("Proyecto %s (%s) -> %s [%s]. Resultado: %s. Revisa tu bandeja.", cod, titulo, estadoDest.Nombre, estadoDest.Codigo, req.Resultado)
-		tituloNotif := fmt.Sprintf("Transicion %s -> %s - %s", proj.EstadoActual.Codigo, estadoDest.Codigo, cod)
-		s.pushNotificacion(rolDestino, "TRANSICION", tituloNotif, &msg, &idProyecto, &req.IDUsuario)
+		nombreRolActor := s.nombreRolActor(req.IDRolActor)
 		if req.Resultado == "APROBADO" {
-			teamMsg := fmt.Sprintf("Avance! %s cambio a %s. Equipo: pueden seguir subiendo evidencias.", cod, estadoDest.Nombre)
+			if rolDestino := s.rolDestinoPorEstado(estadoDest.Codigo); rolDestino != "" {
+				msg := fmt.Sprintf("El proyecto %s «%s» avanzó a %s. Te toca revisarlo en tu bandeja.", cod, titulo, estadoDest.Nombre)
+				tituloNotif := fmt.Sprintf("%s — %s", estadoDest.Nombre, cod)
+				s.pushNotificacion(rolDestino, "TRANSICION", tituloNotif, &msg, &idProyecto, nil)
+			}
+			teamMsg := fmt.Sprintf("Avance! %s cambió a %s. El equipo puede seguir subiendo evidencias.", cod, estadoDest.Nombre)
 			s.pushNotificacion("ESTUDIANTE_EJEC", "AVANCE_EQUIPO", teamMsg, &teamMsg, &idProyecto, nil)
 			s.pushNotificacion("DOCENTE_RESP", "AVANCE_EQUIPO", teamMsg, &teamMsg, &idProyecto, proj.IDDocenteAsesor)
+		} else {
+			// Rechazo/observación: R26 exige motivo — se valida antes de registrar.
+			// Vuelve a quien puede corregir y reenviar: los roles con salida
+			// desde RECHAZADO (R25/R31: estudiante o docente que propuso).
+			rolEmisor := s.rolDestinoPorEstado(estadoDest.Codigo)
+			if rolEmisor != "" {
+				motivo := "(sin motivo)"
+				if req.Comentarios != nil && strings.TrimSpace(*req.Comentarios) != "" {
+					motivo = *req.Comentarios
+				}
+				msg := fmt.Sprintf("%s devolvió tu proyecto %s «%s» desde %s. Motivo: %s. Corrígelo y vuelve a enviarlo.",
+					nombreRolActor, cod, titulo, proj.EstadoActual.Nombre, motivo)
+				tituloNotif := fmt.Sprintf("Devuelto: %s — %s", proj.EstadoActual.Nombre, cod)
+				s.pushNotificacion(rolEmisor, "TRANSICION_DEVUELTA", tituloNotif, &msg, &idProyecto, nil)
+			}
 		}
 	}
 	return nil
 }
 
+// nombreRolActor devuelve el nombre legible del rol (para los mensajes).
+func (s *ProyectoService) nombreRolActor(idRol uint) string {
+	var ra domain.RSURolActor
+	if err := s.db.First(&ra, "id_rol_actor = ?", idRol).Error; err == nil {
+		return ra.Nombre
+	}
+	return "El revisor"
+}
+
+// rolEmisorPorEstado devuelve el rol que ENVIÓ el proyecto desde ese estado
+// (quien tiene una transición de salida hacia la revisión): es quien debe
+// recibir la devolución cuando el revisor rechaza u observa.
+func (s *ProyectoService) rolEmisorPorEstado(estadoCodigo string) string {
+	var codigo string
+	// Salida "hacia adelante" (no a RECHAZADO): el emisor original.
+	err := s.db.Model(&domain.RSUTransicionEstado{}).
+		Select(`r."codigo"`).
+		Joins(`JOIN "RSU_Estado_Proyecto" e ON e."id_estado" = "RSU_Transicion_Estado"."estado_origen"`).
+		Joins(`JOIN "RSU_Estado_Proyecto" d ON d."id_estado" = "RSU_Transicion_Estado"."estado_destino"`).
+		Joins(`JOIN "RSU_Rol_Actor" r ON r."id_rol_actor" = "RSU_Transicion_Estado"."id_rol_actor"`).
+		Where(`e."codigo" = ? AND d."codigo" <> 'RECHAZADO'`, estadoCodigo).
+		Order(`"RSU_Transicion_Estado"."id_transicion" ASC`).
+		Limit(1).
+		Scan(&codigo).Error
+	if err == nil && codigo != "" {
+		return codigo
+	}
+	return ""
+}
 func (s *ProyectoService) Historial(id uint) ([]domain.RSUFlujoAprobacion, error) {
 	return s.flujoRepo.History(id)
 }

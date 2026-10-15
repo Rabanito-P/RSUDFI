@@ -26,8 +26,6 @@ services:
       - pgdata:/var/lib/postgresql
       - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
       - ./db/seed_demo.sql:/docker-entrypoint-initdb.d/02-seed-demo.sql:ro
-      - ./db/11_solicitud_union.sql:/docker-entrypoint-initdb.d/03-solicitud-union.sql:ro
-      - ./db/12_usuario_pedro.sql:/docker-entrypoint-initdb.d/04-usuario-pedro.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-undc} -d ${POSTGRES_DB:-undc_rsu}"]
       interval: 5s

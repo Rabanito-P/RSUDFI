@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { api, asArray } from '../../api/client'
+import { validarArchivo } from '../../lib/archivos'
 import { Card, CardContent } from '../../components/ui/Card'
 import { Label, Textarea } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
@@ -157,12 +158,9 @@ export default function Evidencias() {
     setMsg('')
     const validas: File[] = []
     for (const f of files) {
-      if (!/\.(jpe?g|png)$/i.test(f.name) && !f.type.startsWith('image/')) {
-        setMsg(`"${f.name}" no es JPG/PNG`); continue
-      }
-      if (f.size > MAX_MB * 1024 * 1024) {
-        setMsg(`"${f.name}" excede ${MAX_MB}MB`); continue
-      }
+      // Helper compartido: extensión, tamaño y content-type en un solo lugar.
+      const err = validarArchivo(f, 'foto') || (f.size > MAX_MB * 1024 * 1024 ? `«${f.name}» excede ${MAX_MB}MB` : null)
+      if (err) { setMsg(err); continue }
       validas.push(f)
     }
     const espacio = MAX_FOTOS - fotos.length

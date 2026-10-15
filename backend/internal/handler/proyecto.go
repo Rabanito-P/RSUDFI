@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"undc-rsu/backend/internal/domain"
 	"undc-rsu/backend/internal/dto"
 	"undc-rsu/backend/internal/service"
 	"undc-rsu/backend/pkg/utils"
@@ -13,8 +14,8 @@ import (
 
 // ── Proyecto Handler ─────────────────────────────────────────
 
-type ProyectoHandler struct{ svc *service.ProyectoService }
-func NewProyectoHandler(db *gorm.DB) *ProyectoHandler { return &ProyectoHandler{svc: service.NewProyectoService(db)} }
+type ProyectoHandler struct{ svc *service.ProyectoService; db *gorm.DB }
+func NewProyectoHandler(db *gorm.DB) *ProyectoHandler { return &ProyectoHandler{svc: service.NewProyectoService(db), db: db} }
 // Crear proyecto RSU en BORRADOR (valida ciclo mínimo)
 // @Tags		Proyectos
 // @Accept		json
@@ -60,7 +61,20 @@ func (h *ProyectoHandler) List(c *gin.Context) {
 		}
 	}
 	var estado, escuela *uint
-	if v := c.Query("estado"); v != "" { n, _ := strconv.Atoi(v); u := uint(n); estado = &u }
+	// `estado` acepta id numérico O código ('EN_REVISION_ESCUELA'): la Bandeja
+	// filtra por código y, si no se resuelve, quedaba en id 0 = sin proyectos.
+	if v := c.Query("estado"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			u := uint(n); estado = &u
+		} else {
+			var e domain.RSUEstadoProyecto
+			if err := h.db.First(&e, "codigo = ?", strings.ToUpper(v)).Error; err != nil {
+				utils.Fail(c, 400, "estado inválido: usa el id numérico o el código (BORRADOR, EN_REVISION_ESCUELA...)", nil)
+				return
+			}
+			estado = &e.ID
+		}
+	}
 	if v := c.Query("escuela"); v != "" { n, _ := strconv.Atoi(v); u := uint(n); escuela = &u }
 	// HU-063: ?modalidad=PEP_FINANCIADO,PEP_AUTOFINANCIADO (coma-separado).
 	var modalidades []string

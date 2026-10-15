@@ -28,9 +28,14 @@ func (r *NotificacionRepo) List(rolDestino *string, idUsuario *uint, onlyUnread 
 	err := q.Order("created_at DESC").Limit(limit).Preload("Proyecto").Find(&items).Error
 	return items, total, err
 }
-func (r *NotificacionRepo) CountUnread(rolDestino string) (int64, error) {
+func (r *NotificacionRepo) CountUnread(rolDestino string, idUsuario *uint) (int64, error) {
 	var c int64
-	err := r.db.Model(&domain.RSUNotificacion{}).Where("rol_destino = ? AND leido = false", rolDestino).Count(&c).Error
+	q := r.db.Model(&domain.RSUNotificacion{}).Where("rol_destino = ? AND leido = false", rolDestino)
+	if idUsuario != nil {
+		// Individual: las dirigidas a su cuenta + las bandera de su rol (id NULL).
+		q = q.Where("id_usuario = ? OR id_usuario IS NULL", *idUsuario)
+	}
+	err := q.Count(&c).Error
 	return c, err
 }
 func (r *NotificacionRepo) CountUnreadByRoles(roles []string) (map[string]int64, error) {
@@ -44,6 +49,12 @@ func (r *NotificacionRepo) CountUnreadByRoles(roles []string) (map[string]int64,
 func (r *NotificacionRepo) MarkRead(id uint) error {
 	return r.db.Model(&domain.RSUNotificacion{}).Where("id_notificacion = ?", id).Update("leido", true).Error
 }
-func (r *NotificacionRepo) MarkAllRead(rolDestino string) error {
-	return r.db.Model(&domain.RSUNotificacion{}).Where("rol_destino = ? AND leido = false", rolDestino).Update("leido", true).Error
+// MarkAllRead marca las no leídas del usuario (las suyas + las bandera de su
+// rol). Sin idUsuario marca todas las del rol — comportamiento legacy.
+func (r *NotificacionRepo) MarkAllRead(rolDestino string, idUsuario *uint) error {
+	q := r.db.Model(&domain.RSUNotificacion{}).Where("rol_destino = ? AND leido = false", rolDestino)
+	if idUsuario != nil {
+		q = q.Where("id_usuario = ? OR id_usuario IS NULL", *idUsuario)
+	}
+	return q.Update("leido", true).Error
 }

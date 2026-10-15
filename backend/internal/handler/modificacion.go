@@ -43,20 +43,22 @@ func (h *ModificacionHandler) Create(c *gin.Context) {
 	}
 	idUser := personaIDFromToken(h.db, c)
 	var idDoc *uint
-	if file, err := c.FormFile("archivo"); err == nil {
-		if file.Size > 32<<20 {
-			utils.Fail(c, http.StatusBadRequest, "el archivo excede 32MB", nil)
+	file, err := c.FormFile("archivo")
+	if err != nil {
+		utils.Fail(c, http.StatusBadRequest, "adjunta el informe modificado en PDF (campo archivo)", nil)
+		return
+	}
+	// Validación robusta: 32MB (R13) + contenido PDF verificado.
+	saved, err := storage.GuardarSeguro(file, storage.KindPDF, "evidencias")
+	if err != nil {
+		if _, ok := err.(*storage.ErrorValidacion); ok {
+			utils.Fail(c, http.StatusBadRequest, err.Error(), nil)
 			return
 		}
-		if !isPDF(file.Filename) {
-			utils.Fail(c, http.StatusBadRequest, "solo se admite archivo PDF (.pdf)", nil)
-			return
-		}
-		saved, err := storage.New().Save(file, "evidencias")
-		if err != nil {
-			utils.Fail(c, http.StatusInternalServerError, "No se pudo guardar el sustento", err.Error())
-			return
-		}
+		utils.Fail(c, http.StatusInternalServerError, "No se pudo guardar el sustento", err.Error())
+		return
+	}
+	{
 		doc := &domain.RSUDocumento{
 			IDProyecto: uint(idProj), IDTipoDoc: 5, TamanoBytes: intPtr(saved.Size),
 			IDUsuarioSubida: uint(idUser), NombreArchivo: saved.Filename,
@@ -68,9 +70,6 @@ func (h *ModificacionHandler) Create(c *gin.Context) {
 			return
 		}
 		idDoc = &doc.ID
-	} else {
-		utils.Fail(c, http.StatusBadRequest, "adjunta el informe modificado en PDF (campo archivo)", nil)
-		return
 	}
 	m := &domain.RSUModificacionInforme{
 		IDProyecto: uint(idProj), Motivo: req.Motivo,

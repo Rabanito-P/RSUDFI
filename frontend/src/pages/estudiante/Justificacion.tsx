@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { api, asArray } from '../../api/client'
+import { validarArchivo } from '../../lib/archivos'
 
 const MAX_JUSTIF = 2
 
@@ -40,6 +41,9 @@ export default function Justificacion(){
     if(!file){ setMsg('Adjunta la evidencia en PDF'); setMsgOk(false); return }
     if(!p){ setMsg('No tienes un proyecto activo asignado'); setMsgOk(false); return }
     if(horaFin && horaInicio && horaFin <= horaInicio){ setMsg('La hora de fin debe ser posterior a la de inicio'); setMsgOk(false); return }
+    // Validación cliente antes de subir (el backend revalida siempre).
+    const errArchivo = validarArchivo(file, 'pdf')
+    if(errArchivo){ setMsg(errArchivo); setMsgOk(false); return }
     setBusy(true)
     try{
       const fd=new FormData()

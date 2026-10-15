@@ -194,16 +194,17 @@ INSERT INTO public."RSU_Usuario" VALUES (1, 'estudiante@undc.edu.pe', 'Ana Quisp
 INSERT INTO public."RSU_Notificacion" ("id_usuario", "rol_destino", "tipo", "titulo", "mensaje", "id_proyecto", "leido", "created_at") VALUES (NULL, 'DIR_ESCUELA', 'TRANSICION', 'Nuevo proyecto en revisión', 'RSU-2026-011 Campaña anemia requiere tu V°B° como Director de Escuela', NULL, false, '2026-10-09 10:27:58.543515-05');
 INSERT INTO public."RSU_Notificacion" ("id_usuario", "rol_destino", "tipo", "titulo", "mensaje", "id_proyecto", "leido", "created_at") VALUES (NULL, 'CONSEJO_FACULTAD', 'TRANSICION', 'Aprobación pendiente', 'RSU-2026-014 Reciclaje Quilmaná aprobado por Director de Escuela, pendiente tu revisión', NULL, false, '2026-10-09 10:27:58.543515-05');
 INSERT INTO public."RSU_Notificacion" ("id_usuario", "rol_destino", "tipo", "titulo", "mensaje", "id_proyecto", "leido", "created_at") VALUES (NULL, 'DOCENTE_RESP', 'ASIGNACION', 'Horas asignadas', 'Se te asignaron 4h NO_LECTIVA en RSU-2026-007 (Taller emprendimiento)', NULL, false, '2026-10-09 10:27:58.543515-05');
-INSERT INTO public."RSU_Notificacion" ("id_usuario", "rol_destino", "tipo", "titulo", "mensaje", "id_proyecto", "leido", "created_at") VALUES (NULL, 'ESTUDIANTE_PROP', 'PROYECTO_CREADO', 'Proyecto creado', 'Tu proyecto RSU-2026-011 quedó en BORRADOR. Equipo ya puede subir docs', NULL, false, '2026-10-09 10:27:58.543515-05');
+INSERT INTO public."RSU_Notificacion" ("id_usuario", "rol_destino", "tipo", "titulo", "mensaje", "id_proyecto", "leido", "created_at") VALUES (1, 'ESTUDIANTE_PROP', 'PROYECTO_CREADO', 'Proyecto creado', 'Tu proyecto RSU-2026-011 quedó en BORRADOR. Equipo ya puede subir docs', NULL, false, '2026-10-09 10:27:58.543515-05');
 INSERT INTO public."RSU_Notificacion" ("id_usuario", "rol_destino", "tipo", "titulo", "mensaje", "id_proyecto", "leido", "created_at") VALUES (NULL, 'DOCENTE_RESP', 'INVITACION', 'Invitación a equipo', 'Has sido invitado como Asesor en RSU-2026-007 por Ana Quispe', NULL, false, '2026-10-09 10:27:58.543515-05');
 INSERT INTO public."RSU_Notificacion" ("id_usuario", "rol_destino", "tipo", "titulo", "mensaje", "id_proyecto", "leido", "created_at") VALUES (NULL, 'ADMIN', 'CONFIG', 'Mantenimiento', 'Configuración del sistema actualizada por el Administrador', NULL, false, '2026-10-09 10:27:58.543515-05');
 INSERT INTO public."RSU_Notificacion" ("id_usuario", "rol_destino", "tipo", "titulo", "mensaje", "id_proyecto", "leido", "created_at") VALUES (NULL, 'DIR_ESCUELA', 'TRANSICION', 'Nuevo proyecto en revisión', 'RSU-2026-012 Plataforma de reciclaje comunitario requiere tu V°B° como Director de Escuela', 2, false, '2026-10-09 10:28:01.911963-05');
 INSERT INTO public."RSU_Notificacion" ("id_usuario", "rol_destino", "tipo", "titulo", "mensaje", "id_proyecto", "leido", "created_at") VALUES (NULL, 'CONSEJO_FACULTAD', 'TRANSICION', 'Aprobación pendiente', 'RSU-2026-011 Campaña anemia aprobado por Director de Escuela, pendiente tu revisión', 1, false, '2026-10-09 10:28:01.911963-05');
 INSERT INTO public."RSU_Notificacion" ("id_usuario", "rol_destino", "tipo", "titulo", "mensaje", "id_proyecto", "leido", "created_at") VALUES (NULL, 'DOCENTE_RESP', 'ASIGNACION', 'Horas asignadas', 'Se te asignaron 6h NO_LECTIVA en RSU-2026-012 (Plataforma reciclaje)', 2, false, '2026-10-09 10:28:01.911963-05');
-INSERT INTO public."RSU_Notificacion" ("id_usuario", "rol_destino", "tipo", "titulo", "mensaje", "id_proyecto", "leido", "created_at") VALUES (NULL, 'ESTUDIANTE_PROP', 'PROYECTO_CREADO', 'Proyecto creado', 'Tu proyecto RSU-2026-013 quedó en BORRADOR. Equipo ya puede subir docs', 3, false, '2026-10-09 10:28:01.911963-05');
+-- Diego (estudiante 3) no tiene cuenta de acceso: su notificación personal no
+-- se siembra — una bandera de rol haría que TODOS los estudiantes la vean.
 INSERT INTO public."RSU_Notificacion" ("id_usuario", "rol_destino", "tipo", "titulo", "mensaje", "id_proyecto", "leido", "created_at") VALUES (NULL, 'DOCENTE_RESP', 'INVITACION', 'Invitación a equipo', 'Has sido invitado como Asesor en RSU-2026-012 por Pedro Flores', 2, false, '2026-10-09 10:28:01.911963-05');
 INSERT INTO public."RSU_Notificacion" ("id_usuario", "rol_destino", "tipo", "titulo", "mensaje", "id_proyecto", "leido", "created_at") VALUES (NULL, 'ADMIN', 'CONFIG', 'Mantenimiento', 'Configuración del sistema actualizada por el Administrador', NULL, false, '2026-10-09 10:28:01.911963-05');
-INSERT INTO public."RSU_Notificacion" ("id_usuario", "rol_destino", "tipo", "titulo", "mensaje", "id_proyecto", "leido", "created_at") VALUES (NULL, 'ESTUDIANTE_PROP', 'TRANSICION', 'Proyecto en ejecución', 'RSU-2026-011 Campaña anemia ha sido aprobada y está en ejecución', 1, true, '2026-10-09 10:28:01.911963-05');
+INSERT INTO public."RSU_Notificacion" ("id_usuario", "rol_destino", "tipo", "titulo", "mensaje", "id_proyecto", "leido", "created_at") VALUES (1, 'ESTUDIANTE_PROP', 'TRANSICION', 'Proyecto en ejecución', 'RSU-2026-011 Campaña anemia ha sido aprobada y está en ejecución', 1, true, '2026-10-09 10:28:01.911963-05');
 INSERT INTO public."RSU_Notificacion" ("id_usuario", "rol_destino", "tipo", "titulo", "mensaje", "id_proyecto", "leido", "created_at") VALUES (NULL, 'DOCENTE_RESP', 'MONITOREO', 'Monitoreo programado', 'RSU-2026-011 requiere monitoreo mensual a partir de mayo', 1, true, '2026-10-09 10:28:01.911963-05');
 
 -- === SINCRONIZAR SECUENCIAS ===
@@ -221,6 +222,15 @@ SELECT setval('"RSU_Leccion_Aprendida_id_leccion_seq"', COALESCE((SELECT MAX("id
 SELECT setval('"RSU_Monitoreo_id_monitoreo_seq"', COALESCE((SELECT MAX("id_monitoreo") FROM "RSU_Monitoreo"),1));
 SELECT setval('"RSU_Solicitud_Constancia_id_solicitud_seq"', COALESCE((SELECT MAX("id_solicitud") FROM "RSU_Solicitud_Constancia"),1));
 SELECT setval('"RSU_Usuario_id_usuario_seq"', COALESCE((SELECT MAX("id_usuario") FROM "RSU_Usuario"),1));
+-- El seed inserta ids explícitos en estas tablas: sin sincronizar su secuencia,
+-- la API fallaría al crear el primer registro (duplicate key en la PK).
+SELECT setval('"RSU_Participante_Estudiante_id_participante_seq"', COALESCE((SELECT MAX("id_participante") FROM "RSU_Participante_Estudiante"),1));
+SELECT setval('"RSU_Asignacion_Docente_id_asignacion_seq"', COALESCE((SELECT MAX("id_asignacion") FROM "RSU_Asignacion_Docente"),1));
+SELECT setval('"RSU_Proyecto_Beneficiario_id_vinculacion_seq"', COALESCE((SELECT MAX("id_vinculacion") FROM "RSU_Proyecto_Beneficiario"),1));
+SELECT setval('"RSU_Asistencia_Beneficiario_id_asistencia_seq"', COALESCE((SELECT MAX("id_asistencia") FROM "RSU_Asistencia_Beneficiario"),1));
+SELECT setval('"RSU_Respuesta_Encuesta_id_respuesta_seq"', COALESCE((SELECT MAX("id_respuesta") FROM "RSU_Respuesta_Encuesta"),1));
+SELECT setval('"RSU_Presupuesto_Movimiento_id_movimiento_seq"', COALESCE((SELECT MAX("id_movimiento") FROM "RSU_Presupuesto_Movimiento"),1));
+SELECT setval('"RSU_Comite_RSU_id_comite_seq"', COALESCE((SELECT MAX("id_comite") FROM "RSU_Comite_RSU"),1));
 
 -- Hashes bcrypt únicos para los usuarios que el seed dejó sin contraseña.
 UPDATE public."RSU_Usuario" SET password_hash = '$2a$10$6as1j3fRrRguoNVZjssnFuwY4UzDW0K4mIbcI.gpy8tdYp1WX9nOG' WHERE id_usuario = 12;
@@ -242,4 +252,27 @@ CROSS JOIN (VALUES
     ('estructura'),('catalogos'),('documentos'),('auditoria')
 ) AS m(clave)
 WHERE NOT EXISTS (SELECT 1 FROM "RSU_Usuario_Permiso" p WHERE p.id_usuario = u.id_usuario);
+
+-- ── MÓDULO: cuenta de Pedro Flores (Docente 2) ──
+-- Responsable (asesor) de los PEP 2 y 5: sin usuario no puede entrar ni
+-- resolver solicitudes de unión. Hash = clave inicial undc2026.
+INSERT INTO "RSU_Usuario" (correo, nombre, password_hash, rol, tipo_usuario, id_persona, activo)
+VALUES ('colaborador@undc.edu.pe', 'Pedro Flores',
+        '$2a$10$6as1j3fRrRguoNVZjssnFuwY4UzDW0K4mIbcI.gpy8tdYp1WX9nOG',
+        'DOCENTE_RESP', 'DOCENTE', 2, true)
+ON CONFLICT (correo) DO NOTHING;
+
+INSERT INTO "RSU_Usuario_Permiso" (id_usuario, modulo)
+SELECT u.id_usuario, m.clave
+FROM "RSU_Usuario" u
+CROSS JOIN (VALUES
+    ('proyectos'),('bandeja'),('entregables'),('evidencias'),('beneficiarios'),
+    ('presupuesto'),('encuestas'),('monitoreo'),('reportes'),('personas'),
+    ('estructura'),('catalogos'),('documentos'),('auditoria')
+) AS m(clave)
+WHERE u.correo = 'colaborador@undc.edu.pe'
+ON CONFLICT (id_usuario, modulo) DO NOTHING;
+
+SELECT setval(pg_get_serial_sequence('"RSU_Usuario"', 'id_usuario'),
+              (SELECT COALESCE(MAX(id_usuario), 0) + 1 FROM "RSU_Usuario"), false);
 COMMIT;

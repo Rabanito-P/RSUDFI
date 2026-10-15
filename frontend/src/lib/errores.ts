@@ -9,6 +9,7 @@ const MAPA: [RegExp, string][] = [
   [/ya est[aá] cerrado/i, 'Este proyecto ya cerró y no recibe solicitudes.'],
   [/ya pertenece a otro proyecto activo/i, 'Ya perteneces a otro proyecto activo. Pide tu retiro para unirte a uno nuevo.'],
   [/el equipo ya tiene 5/i, 'El equipo ya está completo (5 de 5).'],
+  [/no se pudo inscribir al estudiante/i, 'No se pudo completar la inscripción. Intenta de nuevo en unos segundos.'],
   [/estudiante no encontrado/i, 'No se encontró tu perfil de estudiante. Vuelve a iniciar sesión.'],
   [/proyecto no encontrado|el proyecto ya no existe/i, 'El proyecto ya no existe. Recarga la lista.'],
   [/la solicitud ya fue resuelta/i, 'Esta solicitud ya fue resuelta. Recarga la lista.'],

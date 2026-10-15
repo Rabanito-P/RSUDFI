@@ -110,13 +110,15 @@ export function Header(){
   const load = async()=>{
     if(!user) return
     try{
-      const r:any = await api.get(`/api/v1/notificaciones?rol_destino=${user.rol_actor}&limit=12`)
+      // Individual: las dirigidas a esta cuenta + las bandera de su rol.
+      // Sin ?usuario= se veían los avisos de todas las cuentas del mismo rol.
+      const r:any = await api.get(`/api/v1/notificaciones?rol_destino=${user.rol_actor}&usuario=${user.id}&limit=12`)
       const list:Notif[] = r.data || []
       setNotifs(list)
       setUnread(list.filter((n:any)=> !n.leido).length)
       if(!list.length){
         try{
-          const c:any = await api.get(`/api/v1/notificaciones/count?rol_destino=${user.rol_actor}`)
+          const c:any = await api.get(`/api/v1/notificaciones/count?rol_destino=${user.rol_actor}&usuario=${user.id}`)
           setUnread(c.data?.unread ?? 0)
         }catch{ setUnread(0) }
       }
@@ -167,7 +169,7 @@ export function Header(){
     setNotifs(s=> s.map(n=> n.id_notificacion===id? {...n, leido:true}: n)); setUnread(c=> Math.max(0,c-1))
   }
   const markAll = async()=>{
-    try{ await api.patch(`/api/v1/notificaciones/marcar-todas-leidas?rol_destino=${user?.rol_actor}`, {})}catch{}
+    try{ await api.patch(`/api/v1/notificaciones/marcar-todas-leidas?rol_destino=${user?.rol_actor}&usuario=${user?.id}`, {})}catch{}
     setNotifs(s=> s.map(n=> ({...n, leido:true}))); setUnread(0)
   }
 

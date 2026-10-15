@@ -2,6 +2,7 @@ package handler
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -38,7 +39,15 @@ func (h *ActividadHandler) Create(c *gin.Context) {
 		Minutos: req.Minutos,
 	}
 	if req.FechaProgramada != nil {
-		t, _ := utils.ParseDate(*req.FechaProgramada); act.FechaProgramada = &t
+		t, err := utils.ParseDate(*req.FechaProgramada)
+		if err != nil { utils.Fail(c, 400, "fecha_programada inválida", err.Error()); return }
+		// HU-011: una actividad de campo no se programa a futuro — se registra lo realizado.
+		if t.After(time.Now()) { utils.Fail(c, 400, "la fecha de la actividad no puede ser futura (HU-011)", nil); return }
+		act.FechaProgramada = &t
+	}
+	// HU-011: hora fin > inicio cuando ambas están presentes.
+	if req.HoraInicio != nil && req.HoraFin != nil && *req.HoraFin <= *req.HoraInicio {
+		utils.Fail(c, 400, "la hora de finalización debe ser posterior a la de inicio (HU-011)", nil); return
 	}
 	if req.HoraInicio != nil { act.HoraInicio = req.HoraInicio }
 	if req.HoraFin != nil { act.HoraFin = req.HoraFin }

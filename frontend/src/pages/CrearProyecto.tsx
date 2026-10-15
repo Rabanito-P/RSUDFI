@@ -1,7 +1,8 @@
 ﻿import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { api, asArray } from '../api/client'
-import { useNavigate } from 'react-router-dom'
+import { validarArchivo } from '../lib/archivos'
+import { useNavigate, Link } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle, CardDesc } from '../components/ui/Card'
 import { Input, Textarea, Label } from '../components/ui/Input'
@@ -41,6 +42,14 @@ export default function CrearProyecto(){
     correoValido &&
     !equipo.some(m => m.correo.trim().toLowerCase() === nuevo.correo.trim().toLowerCase()) &&
     nuevo.correo.trim().toLowerCase() !== (user?.correo || '').toLowerCase()
+
+  // HU-069: el estudiante siempre propone SSU. La modalidad, el tipo y la línea
+  // de acción los fija el sistema (se guardan directo en la BD): el formulario
+  // no debe pedirlos. Docente/Comité sí eligen (ellos crean los PEP).
+  const esEstudiante = user?.rol === 'ESTUDIANTE'
+  useEffect(()=>{
+    if(esEstudiante){ setForm(f=> ({...f, id_tipo:'1', modalidad:'SSU', id_linea:''})) }
+  },[esEstudiante])
 
   useEffect(()=>{
     api.get('/api/v1/catalogos/tipos-proyecto').then((r:any)=>setTipos(asArray(r.data))).catch((e:any)=>{ setTipos([]); setCatalogErr(prev=>prev||e?.message||'No se pudo cargar el catálogo de tipos de proyecto') })
@@ -150,6 +159,10 @@ export default function CrearProyecto(){
       if(!idProyecto){ setErr('Proyecto creado pero sin id_proyecto en la respuesta. Revisa la lista de proyectos.'); setLoading(false); return }
 
       // 1) Informe Inicial en PDF
+      const errPdf = validarArchivo(file, 'pdf')
+      if(errPdf){ setErr(errPdf); setLoading(false); return }
+      const errExcel = validarArchivo(excel, 'office')
+      if(errExcel){ setErr(errExcel); setLoading(false); return }
       const fd = new FormData()
       fd.append('id_proyecto', String(idProyecto))
       fd.append('id_tipo_doc', '1')
@@ -224,30 +237,44 @@ export default function CrearProyecto(){
               <Input value={form.titulo} onChange={e=>setForm({...form,titulo:e.target.value})} placeholder="Ej. Campaña salud integral San Vicente" maxLength={300} required/>
               <div className="text-xs text-slate-400 text-right">{form.titulo.length}/300</div>
             </div>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label>Tipo de proyecto *</Label>
-                <select value={form.id_tipo} onChange={e=>setForm({...form,id_tipo:e.target.value})} className="input">
-                  <option value="">-- seleccionar --</option>
-                  {tipos.map(t=><option key={t.id_tipo} value={t.id_tipo}>{t.nombre} {t.ciclo_minimo_estudiante? `(ciclo ≥${t.ciclo_minimo_estudiante})`:''}</option>)}
-                </select>
+            {esEstudiante ? (
+              <div className="flex items-start gap-2 rounded-xl border border-undc-200 bg-undc-50 p-3">
+                <span className="w-6 h-6 rounded-full bg-undc-700 text-white grid place-items-center text-xs font-bold shrink-0">1</span>
+                <div className="text-xs text-undc-800">
+                  <b>Tipo: SSU — Servicio Social Universitario.</b> Lo propone el estudiante y el sistema lo
+                  registra así directamente (modalidad SSU, ciclo mínimo 5). Los proyectos PEP los crea el
+                  docente responsable — puedes unirte a uno abierto desde <Link to="/mis-proyectos" className="underline font-bold">Mis proyectos</Link>.
+                </div>
               </div>
-              <div>
-                <Label>Modalidad *</Label>
-                <select value={form.modalidad} onChange={e=>setForm({...form,modalidad:e.target.value})} className="input">
-                  <option value="SSU">SSU — Servicio Social Universitario</option>
-                  <option value="VOLUNTARIADO">Voluntariado</option>
-                </select>
-                <div className="text-[11px] text-slate-400 mt-0.5">Los PEP los crea el docente responsable (HU-069).</div>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Tipo de proyecto *</Label>
+                  <select value={form.id_tipo} onChange={e=>setForm({...form,id_tipo:e.target.value})} className="input">
+                    <option value="">-- seleccionar --</option>
+                    {tipos.map(t=><option key={t.id_tipo} value={t.id_tipo}>{t.nombre} {t.ciclo_minimo_estudiante? `(ciclo ≥${t.ciclo_minimo_estudiante})`:''}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <Label>Modalidad *</Label>
+                  <select value={form.modalidad} onChange={e=>setForm({...form,modalidad:e.target.value})} className="input">
+                    <option value="SSU">SSU — Servicio Social Universitario</option>
+                    <option value="VOLUNTARIADO">Voluntariado</option>
+                    <option value="PEP_FINANCIADO">PEP Financiado</option>
+                    <option value="PEP_AUTOFINANCIADO">PEP Autofinanciado</option>
+                    <option value="PUBLICACION_CIENTIFICA">Publicación Científica</option>
+                  </select>
+                  <div className="text-[11px] text-slate-400 mt-0.5">Los PEP los crea el docente responsable (HU-069).</div>
+                </div>
+                <div>
+                  <Label>Línea de acción (ODS)</Label>
+                  <select value={form.id_linea} onChange={e=>setForm({...form,id_linea:e.target.value})} className="input">
+                    <option value="">-- opcional --</option>
+                    {lineas.map(l=><option key={l.id_linea} value={l.id_linea}>{l.nombre} — {l.alineacion_ods}</option>)}
+                  </select>
+                </div>
               </div>
-            </div>
-            <div>
-              <Label>Línea de acción (ODS)</Label>
-              <select value={form.id_linea} onChange={e=>setForm({...form,id_linea:e.target.value})} className="input">
-                <option value="">-- opcional --</option>
-                {lineas.map(l=><option key={l.id_linea} value={l.id_linea}>{l.nombre} — {l.alineacion_ods}</option>)}
-              </select>
-            </div>
+            )}
             <div>
               <Label>Escuela *</Label>
               <select value={form.id_escuela} onChange={e=>setForm({...form,id_escuela:e.target.value})} className="input" required>

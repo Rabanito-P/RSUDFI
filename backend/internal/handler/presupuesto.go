@@ -32,6 +32,11 @@ func (h *PresupuestoHandler) CreateMov(c *gin.Context) {
 	fecha, err := utils.ParseDate(req.Fecha)
 	if err != nil { utils.Fail(c, 400, "fecha inválida", err.Error()); return }
 	m := &domain.RSUPresupuestoMovimiento{IDProyecto: req.IDProyecto, IDFacultad: req.IDFacultad, Tipo: req.Tipo, Monto: req.Monto, Fecha: fecha, Observaciones: req.Observaciones}
+	// Auditoría: id_usuario_registro es NOT NULL en BD; sale del token, nunca del body.
+	if v, ok := c.Get("user_id"); ok {
+		if uid, ok := v.(uint); ok && uid > 0 { m.IDUsuarioRegistro = &uid }
+	}
+	if m.IDUsuarioRegistro == nil { utils.Fail(c, 401, "sesión no identificada", nil); return }
 	if err := h.repo.CreateMov(m); err != nil { utils.Fail(c, 400, "Error", err.Error()); return }
 	utils.Created(c, m, "Movimiento registrado")
 }

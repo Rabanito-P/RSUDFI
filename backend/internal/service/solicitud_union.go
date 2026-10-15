@@ -276,7 +276,7 @@ func (s *SolicitudUnionService) Aceptar(idSolicitud, idRevisor uint, esAdmin boo
 	}
 	if err := tx.Create(pe).Error; err != nil {
 		tx.Rollback()
-		return nil, err
+		return nil, errors.New("no se pudo inscribir al estudiante en el equipo. Intenta de nuevo")
 	}
 	ahora := time.Now()
 	if err := tx.Model(&sol).Updates(map[string]any{"estado": "ACEPTADA", "id_revisor": idRevisor, "fecha_resolucion": ahora}).Error; err != nil {

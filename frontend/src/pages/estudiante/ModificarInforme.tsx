@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { api, asArray } from '../../api/client'
+import { validarArchivo } from '../../lib/archivos'
 import { Link } from 'react-router-dom'
 
 export default function ModificarInforme(){
@@ -33,6 +34,9 @@ export default function ModificarInforme(){
   const guardar = async()=>{
     if(!titulo.trim() || !motivo.trim()){ setMsg('Título y motivo son obligatorios'); setMsgOk(false); return }
     if(!file){ setMsg('Adjunta el nuevo informe en PDF'); setMsgOk(false); return }
+    // Validación cliente antes de subir (el backend revalida siempre).
+    const errFile = validarArchivo(file, 'pdf')
+    if(errFile){ setMsg(errFile); setMsgOk(false); return }
     if(!p){ setMsg('No tienes un proyecto activo asignado'); setMsgOk(false); return }
     setBusy(true)
     try{
@@ -51,10 +55,25 @@ export default function ModificarInforme(){
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <h2 className="font-black text-lg">Modificación de Informe Inicial</h2>
-        <button onClick={()=>setShowForm(v=>!v)} className="px-3 py-1.5 bg-undc-700 text-white rounded-xl text-sm w-full sm:w-auto">{showForm?'Cancelar':'Nueva Modificación'}</button>
+        <button
+          onClick={()=>setShowForm(v=>!v)}
+          disabled={!p}
+          title={!p ? 'Necesitas un proyecto activo asignado para solicitar modificaciones' : ''}
+          className="px-3 py-1.5 bg-undc-700 text-white rounded-xl text-sm w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed">{showForm?'Cancelar':'Nueva Modificación'}
+        </button>
       </div>
       <div className="bg-white rounded-2xl border border-slate-200 p-4 text-xs">
-        <div className="font-semibold">Proyecto asignado: {p?.titulo || '—'}</div>
+        {p ? (
+          <div className="font-semibold">Proyecto asignado: {p.titulo}</div>
+        ) : (
+          <div className="flex items-start gap-2 text-slate-600">
+            <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-700 grid place-items-center font-bold shrink-0">!</span>
+            <div>
+              <div className="font-semibold">No tienes un proyecto activo asignado.</div>
+              <div className="text-slate-500 mt-0.5">Las modificaciones de informe aplican a tu proyecto como líder. Únete a un PEP abierto o espera tu asignación para solicitar cambios.</div>
+            </div>
+          </div>
+        )}
         <div className="mt-2 bg-slate-50 border border-slate-200 rounded-xl p-2 leading-tight">
           <b>Instrucciones según estado:</b> Pendiente: puedes modificar/eliminar. Revisado: en proceso de validación. Aprobado: sin cambios. Rechazada: sin cambios. Observado: puedes editar.
         </div>
@@ -82,8 +101,8 @@ export default function ModificarInforme(){
         <table className="w-full text-xs border-collapse min-w-[720px]">
           <thead><tr className="bg-[#0f2b24] text-white"><th className="px-3 py-2 text-left">Proyecto</th><th className="px-3 py-2 text-left">Motivos</th><th className="px-3 py-2">Archivo</th><th className="px-3 py-2">Fecha</th><th className="px-3 py-2">Estado</th><th className="px-3 py-2">Acciones</th></tr></thead>
           <tbody>
-            {loading ? <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-400">Cargando solicitudes…</td></tr>
-            : rows.length===0 ? <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-400">Sin solicitudes de modificación registradas</td></tr>
+            {loading && p ? <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-400">Cargando solicitudes…</td></tr>
+            : rows.length===0 ? <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-400">{p ? 'Sin solicitudes de modificación registradas' : 'Sin proyecto activo no hay solicitudes que mostrar'}</td></tr>
             : rows.map((r:any)=>{
               const editable = r.estado==='PENDIENTE' || r.estado==='OBSERVADO'
               return (

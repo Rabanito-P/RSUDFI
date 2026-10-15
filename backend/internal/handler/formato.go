@@ -231,14 +231,24 @@ func (h *FormatoHandler) Subir(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Adjunta el archivo del formato"})
 		return
 	}
-	// 20 MB es suficiente para Word y Excel con imágenes.
-	if fh.Size > 20<<20 {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "El archivo supera los 20 MB"})
+	// 32 MB es suficiente para Word y Excel con imágenes (R13).
+	if fh.Size > 32<<20 {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "El archivo supera los 32 MB"})
 		return
 	}
 	// El formato debe conservar su tipo: si el catálogo es Excel, se pide Excel.
-	if ext := strings.ToLower(filepath.Ext(fh.Filename)); ext != filepath.Ext(f.ArchivoBase) {
+	extDeseado := strings.ToLower(filepath.Ext(f.ArchivoBase))
+	if ext := strings.ToLower(filepath.Ext(fh.Filename)); ext != extDeseado {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "El archivo debe tener la extensión " + filepath.Ext(f.ArchivoBase)})
+		return
+	}
+	// Contenido real (magic bytes): un .exe renombrado a .docx se rechaza.
+	if err := storage.ValidarArchivo(fh, storage.KindOffice); err != nil {
+		msg := "el archivo no es un Office válido"
+		if _, ok := err.(*storage.ErrorValidacion); ok {
+			msg = err.Error()
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 		return
 	}
 

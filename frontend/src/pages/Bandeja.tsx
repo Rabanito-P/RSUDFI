@@ -3,11 +3,21 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useCatalogoBpmn } from '../hooks/useCatalogoBpmn'
 import { api, asArray } from '../api/client'
-import { CheckCircle, Clock, FileText, Eye } from 'lucide-react'
+import { validarArchivo } from '../lib/archivos'
+import { CheckCircle, Clock, FileText, Eye, Upload } from 'lucide-react'
 import { Alert } from '../components/ui/Alert'
 import { Skeleton } from '../components/ui/Skeleton'
 
 type Opcion = { destino: string; nombre: string; rechazo: boolean }
+
+// R27 / HU-005 / HU-007: estas aprobaciones exigen PDF firmado de sustento.
+// El backend lo valida igual; aquí se pide ANTES para no perder el trabajo.
+const DESTINOS_CON_PDF = ['CON_VB_ESCUELA', 'APROBADO_CON_RESOLUCION']
+// Tipo de documento del sustento según el destino (catálogo RSU_Tipo_Documento).
+const TIPO_DOC_SUSTENTO: Record<string, string> = {
+  CON_VB_ESCUELA: '2',           // Informe Técnico de Viabilidad
+  APROBADO_CON_RESOLUCION: '3',  // Resolución de Aprobación
+}
 
 // El estado puede venir como string o como objeto RSU_Estado_Proyecto.
 function nombreEstado(v: any): string {
@@ -28,6 +38,10 @@ export default function Bandeja() {
   // Modal de observación: reemplaza al window.prompt (R26 exige motivo).
   const [obs, setObs] = useState<{ proyecto: any; motivo: string } | null>(null)
   const [obsBusy, setObsBusy] = useState(false)
+  // Modal de sustento PDF (R27): se abre cuando la aprobación lo exige.
+  const [sustento, setSustento] = useState<{ proyecto: any; destino: string } | null>(null)
+  const [sustentoFile, setSustentoFile] = useState<File | null>(null)
+  const [sustentoBusy, setSustentoBusy] = useState(false)
 
   // Escape cierra el modal de observación (misma conducta que el resto de la app).
   useEffect(() => {
@@ -123,7 +137,7 @@ export default function Bandeja() {
     loadPendientes()
   }, [loadPendientes])
 
-  const transicionar = async (proyecto: any, resultado: string, comentarios?: string) => {
+  const transicionar = async (proyecto: any, resultado: string, comentarios?: string, idDocumento?: number) => {
     const key = String(proyecto.id_proyecto)
     setBusy((prev) => ({ ...prev, [key]: true }))
     setErr('')
@@ -133,12 +147,19 @@ export default function Bandeja() {
       // APROBADO -> primer destino que no sea rechazo; OBSERVADO -> destino de rechazo (rebote)
       const elegida = resultado === 'APROBADO' ? opcs.find((o) => !o.rechazo) : opcs.find((o) => o.rechazo)
       if (!elegida) throw new Error('Tu rol no tiene una transición válida desde el estado actual del proyecto.')
+      // R27: si la aprobación exige PDF y aún no lo tenemos, se pide primero.
+      if (resultado === 'APROBADO' && DESTINOS_CON_PDF.includes(elegida.destino) && !idDocumento) {
+        setSustento({ proyecto, destino: elegida.destino })
+        setSustentoFile(null)
+        return
+      }
       await api.post(`/api/v1/proyectos/${proyecto.id_proyecto}/transicion`, {
         estado_destino: elegida.destino,
         id_rol_actor: user?.rol_actor_id,
         id_usuario: user?.id,
         resultado,
         comentarios: comentarios || undefined,
+        id_documento_sustento: idDocumento || undefined,
       })
       setMsg(`${proyecto.codigo_proyecto}: ${resultado === 'APROBADO' ? 'aprobado → ' + elegida.nombre : 'observado y devuelto al emisor'}.`)
       loadPendientes()
@@ -146,6 +167,29 @@ export default function Bandeja() {
       setErr(e?.message?.replace(/^HTTP \d+: /, '')?.slice(0, 200) || 'Error al procesar la transición')
     } finally {
       setBusy((prev) => ({ ...prev, [key]: false }))
+    }
+  }
+
+  // R27: sube el PDF firmado y continúa la aprobación con su id.
+  const confirmarSustento = async () => {
+    if (!sustento) return
+    const errFile = validarArchivo(sustentoFile, 'pdf')
+    if (errFile) { setErr(errFile); return }
+    setSustentoBusy(true); setErr('')
+    try {
+      const fd = new FormData()
+      fd.append('id_proyecto', String(sustento.proyecto.id_proyecto))
+      fd.append('id_tipo_doc', TIPO_DOC_SUSTENTO[sustento.destino] || '1')
+      fd.append('archivo', sustentoFile as File)
+      const r: any = await api.upload('/api/v1/documentos/upload', fd)
+      const idDoc = r?.data?.id_documento
+      if (!idDoc) throw new Error('El documento se subió pero no devolvió su id')
+      await transicionar(sustento.proyecto, 'APROBADO', undefined, idDoc)
+      setSustento(null); setSustentoFile(null)
+    } catch (e: any) {
+      setErr(e?.message?.replace(/^HTTP \d+: /, '')?.slice(0, 220) || 'No se pudo subir el sustento')
+    } finally {
+      setSustentoBusy(false)
     }
   }
 
@@ -327,6 +371,80 @@ export default function Bandeja() {
               >
                 {obsBusy && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
                 {obsBusy ? 'Enviando…' : 'Observar y devolver'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal de sustento PDF (R27): V°B° de Escuela y dictamen del Consejo ── */}
+      {sustento && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50"
+          onClick={() => !sustentoBusy && setSustento(null)}
+        >
+          <div
+            className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg p-4 sm:p-6 shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="font-bold text-slate-900">Adjuntar PDF firmado</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  {sustento.proyecto?.codigo_proyecto} — {sustento.proyecto?.titulo}
+                </p>
+              </div>
+              <button
+                onClick={() => !sustentoBusy && setSustento(null)}
+                className="w-9 h-9 rounded-full bg-slate-100 grid place-items-center shrink-0 hover:bg-slate-200"
+                aria-label="Cerrar"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-4 bg-undc-50 border border-undc-200 rounded-xl p-3 text-xs text-undc-800">
+              {sustento.destino === 'CON_VB_ESCUELA'
+                ? 'El V°B° del Director de Escuela requiere el Informe Técnico de Viabilidad firmado (HU-005).'
+                : 'El dictamen del Consejo requiere la Resolución firmada (HU-007 / R27).'}
+            </div>
+
+            <div className="mt-4">
+              <label className="text-xs font-semibold text-slate-700">
+                Documento PDF <span className="text-red-500">*</span>
+              </label>
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={e => setSustentoFile(e.target.files?.[0] || null)}
+                  className="block w-full text-xs file:mr-3 file:px-3 file:py-2 file:rounded-xl file:border-0 file:bg-undc-700 file:text-white file:text-xs file:font-semibold"
+                />
+                <Upload size={16} className="text-slate-400 shrink-0" />
+              </div>
+              {sustentoFile && (
+                <div className="mt-2 text-xs text-slate-600">
+                  {sustentoFile.name} · {(sustentoFile.size / 1024).toFixed(0)} KB
+                </div>
+              )}
+              <div className="text-[11px] text-slate-400 mt-1">Solo PDF · máximo 32MB. Se guarda con hash y queda en el expediente del proyecto.</div>
+            </div>
+
+            <div className="mt-5 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+              <button
+                onClick={() => setSustento(null)}
+                disabled={sustentoBusy}
+                className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarSustento}
+                disabled={sustentoBusy || !sustentoFile}
+                className="px-4 py-2.5 bg-undc-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {sustentoBusy && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {sustentoBusy ? 'Subiendo y aprobando…' : 'Subir y aprobar'}
               </button>
             </div>
           </div>

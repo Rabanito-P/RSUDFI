@@ -14,6 +14,14 @@ type RespuestaReq struct {
 	IDPregunta    uint `json:"id_pregunta" binding:"required"`
 	ValorNumerico int  `json:"valor_numerico" binding:"required,min=1,max=5"`
 }
+
+// ── HU-023: encuesta de satisfacción del docente asesor ──
+// La responde el estudiante del equipo sobre su propio proyecto.
+type CrearEncuestaDocenteReq struct {
+	IDProyecto uint     `json:"id_proyecto" binding:"required"`
+	Promedio   *float64 `json:"promedio_general" binding:"required,min=1,max=5"`
+	Comentario *string  `json:"comentario"`
+}
 type CreateIndicadorReq struct {
 	IDProyecto      uint    `json:"id_proyecto" binding:"required"`
 	NombreIndicador string  `json:"nombre_indicador" binding:"required"`

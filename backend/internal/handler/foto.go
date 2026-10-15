@@ -35,19 +35,21 @@ func (h *FotoHandler) Upload(c *gin.Context) {
 		utils.Fail(c, 400, "archivo requerido", err.Error())
 		return
 	}
-	if file.Size > 20<<20 {
-		utils.Fail(c, 400, "archivo excede el límite de 20MB", nil)
+	// R12: máximo 5 fotos por actividad (una por etapa del cronograma).
+	var nFotos int64
+	h.db.Model(&domain.RSUActividadFoto{}).Where("id_actividad = ?", idAct).Count(&nFotos)
+	if nFotos >= 5 {
+		utils.Fail(c, 409, "la actividad ya tiene 5 fotos (máximo por actividad, R12)", nil)
 		return
 	}
-	ext := strings.ToLower(file.Filename)
-	if !strings.HasSuffix(ext, ".jpg") && !strings.HasSuffix(ext, ".jpeg") && !strings.HasSuffix(ext, ".png") {
-		utils.Fail(c, 400, "extensión no permitida. Solo .jpg, .jpeg, .png", nil)
-		return
-	}
-	st := storage.New()
-	saved, err := st.Save(file, "evidencias")
+	// Validación robusta: 5MB (R13), jpg/jpeg/png con contenido verificado.
+	saved, err := storage.GuardarSeguro(file, storage.KindImagen, "evidencias")
 	if err != nil {
-		if st.Driver() == "cloud" {
+		if _, ok := err.(*storage.ErrorValidacion); ok {
+			utils.Fail(c, 400, err.Error(), nil)
+			return
+		}
+		if storage.New().Driver() == "cloud" {
 			utils.Fail(c, 501, "Almacenamiento cloud no habilitado", err.Error())
 			return
 		}

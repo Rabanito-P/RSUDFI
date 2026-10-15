@@ -36,37 +36,29 @@ func (h *DocumentoHandler) Upload(c *gin.Context) {
 	// El usuario SIEMPRE sale del token: nunca se confía en el valor enviado por
 	// el cliente (evita suplantar identidad y saltar la validación de membresía).
 	idUser := personaIDFromToken(h.db, c)
-	idUserStr := strconv.Itoa(idUser)
 	// HU: permitir a cualquier estudiante miembro subir (no solo líder) — valida membresía si es estudiante
-	if idUserStr != "" {
-		var esEstudiante int64
-		h.db.Model(&domain.Estudiante{}).Where("id_estudiante = ?", idUser).Count(&esEstudiante)
-		if esEstudiante > 0 {
-			var esMiembro int64
-			h.db.Model(&domain.RSUProyecto{}).Where("id_proyecto = ? AND id_estudiante_lider = ?", idProj, idUser).Count(&esMiembro)
+	// El tipo sale del token (no se adivina por la persona: un docente con
+	// id_persona repetido recibía 403 injustificado).
+	if esEstudianteToken(h.db, c) {
+		var esMiembro int64
+		h.db.Model(&domain.RSUProyecto{}).Where("id_proyecto = ? AND id_estudiante_lider = ?", idProj, idUser).Count(&esMiembro)
+		if esMiembro == 0 {
+			h.db.Model(&domain.RSUParticipanteEstudiante{}).Where("id_proyecto = ? AND id_estudiante = ? AND estado_participacion IN ('INSCRITO','ACTIVO','FINALIZADO')", idProj, idUser).Count(&esMiembro)
 			if esMiembro == 0 {
-				h.db.Model(&domain.RSUParticipanteEstudiante{}).Where("id_proyecto = ? AND id_estudiante = ? AND estado_participacion IN ('INSCRITO','ACTIVO','FINALIZADO')", idProj, idUser).Count(&esMiembro)
-				if esMiembro == 0 {
-					utils.Fail(c, 403, "No eres miembro de este proyecto. Solo el equipo (líder o participantes) puede subir documentos.", nil); return
-				}
+				utils.Fail(c, 403, "No eres miembro de este proyecto. Solo el equipo (líder o participantes) puede subir documentos.", nil); return
 			}
 		}
 	}
 	file, err := c.FormFile("archivo")
 	if err != nil { utils.Fail(c, 400, "archivo requerido", err.Error()); return }
-	if file.Size > 20<<20 {
-		utils.Fail(c, 400, "archivo excede el límite de 20MB", nil); return
-	}
-	ext := strings.ToLower(file.Filename)
-	if !strings.HasSuffix(ext, ".pdf") && !strings.HasSuffix(ext, ".docx") && !strings.HasSuffix(ext, ".xlsx") {
-		utils.Fail(c, 400, "extensión no permitida. Solo .pdf, .docx, .xlsx", nil); return
-	}
-	// Storage intercambiable: local activo, cloud presente pero desactivado.
-	st := storage.New()
-	saved, err := st.Save(file, "")
+	// Validación robusta (tamaño, extensión y contenido) + guardado seguro.
+	saved, err := storage.GuardarSeguro(file, storage.KindMixto, "")
 	if err != nil {
+		if _, ok := err.(*storage.ErrorValidacion); ok {
+			utils.Fail(c, 400, err.Error(), nil); return
+		}
 		// Si el driver cloud no está configurado, error 501 controlado.
-		if st.Driver() == "cloud" {
+		if storage.New().Driver() == "cloud" {
 			utils.Fail(c, 501, "Almacenamiento cloud no habilitado en este MVP; sigue activo el local", err.Error()); return
 		}
 		utils.Fail(c, 500, "No se pudo guardar", err.Error()); return

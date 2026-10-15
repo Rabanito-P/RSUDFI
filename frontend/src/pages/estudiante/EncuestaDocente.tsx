@@ -45,16 +45,23 @@ export default function EncuestaDocente(){
     }
     setBusy(true); setMsg(null)
     try{
-      // Se registra el promedio como indicador del proyecto (escala Likert 1-5)
-      // para que el dashboard pueda consolidarlo.
+      // HU-023: la encuesta se guarda en RSU_Encuesta_Satisfaccion (promedio
+      // Likert + comentario). El indicador se mantiene solo como resumen para
+      // el dashboard.
       const prom = promedio() as number
-      await api.post('/api/v1/indicadores', {
+      await api.post('/api/v1/encuestas/docente', {
         id_proyecto: p.id_proyecto,
-        nombre_indicador: 'ENCUESTA_DOCENTE',
-        valor_alcanzado: prom,
-        meta_planificada: 5,
-        unidad_medida: 'Likert 1-5',
+        promedio_general: prom,
       })
+      try{
+        await api.post('/api/v1/indicadores', {
+          id_proyecto: p.id_proyecto,
+          nombre_indicador: 'ENCUESTA_DOCENTE',
+          valor_alcanzado: prom,
+          meta_planificada: 5,
+          unidad_medida: 'Likert 1-5',
+        })
+      }catch{ /* el indicador es complementario: si falla, la encuesta ya quedó */ }
       setHecha(true)
       setMsg({type:'ok', text:`Encuesta registrada · Promedio ${prom.toFixed(2)}/5`})
     }catch(ex:any){

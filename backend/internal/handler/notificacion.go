@@ -34,17 +34,11 @@ func (h *NotificacionHandler) List(c *gin.Context) {
 	if rol == "" { rol = c.Query("rol_actor") }
 	var rolPtr *string
 	if rol != "" { rolPtr = &rol }
-	var uidPtr *uint
-	if v := c.Query("usuario"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil { u := uint(n); uidPtr = &u }
-	}
-	if v := c.Query("id_usuario"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil { u := uint(n); uidPtr = &u }
-	}
+	idUsuario := usuarioDeQuery(c)
 	onlyUnread := c.Query("only_unread") == "true" || c.Query("unread") == "true"
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 	if limit < 1 || limit > 100 { limit = 20 }
-	items, total, err := h.repo.List(rolPtr, uidPtr, onlyUnread, limit)
+	items, total, err := h.repo.List(rolPtr, idUsuario, onlyUnread, limit)
 	if err != nil { utils.Fail(c, 500, "Error listando notificaciones", err.Error()); return }
 	utils.Paginated(c, items, utils.BuildMeta(1, limit, total), "OK")
 }
@@ -60,9 +54,20 @@ func (h *NotificacionHandler) CountUnread(c *gin.Context) {
 	rol := c.Query("rol_destino")
 	if rol == "" { rol = c.Query("rol_actor") }
 	if rol == "" { utils.Fail(c, 400, "rol_destino requerido", nil); return }
-	cnt, err := h.repo.CountUnread(rol)
+	cnt, err := h.repo.CountUnread(rol, usuarioDeQuery(c))
 	if err != nil { utils.Fail(c, 500, "Error contando no leídas", err.Error()); return }
 	utils.Success(c, gin.H{"rol_destino": rol, "unread": cnt}, "OK")
+}
+
+// usuarioDeQuery lee ?usuario= / ?id_usuario= para que el contador y el
+// "marcar todas" sean individuales (no barran con los avisos de otras
+// cuentas que comparten el mismo rol_destino).
+func usuarioDeQuery(c *gin.Context) *uint {
+	v := c.Query("usuario")
+	if v == "" { v = c.Query("id_usuario") }
+	if v == "" { return nil }
+	if n, err := strconv.Atoi(v); err == nil && n > 0 { u := uint(n); return &u }
+	return nil
 }
 // Contadores multi-rol (counts?roles=A,B)
 // @Tags		Notificaciones
@@ -123,7 +128,7 @@ func (h *NotificacionHandler) MarkAllRead(c *gin.Context) {
 	rol := c.Query("rol_destino")
 	if rol == "" { rol = c.Query("rol_actor") }
 	if rol != "" {
-		if err := h.repo.MarkAllRead(rol); err != nil { utils.Fail(c, 500, "Error marcando como leídas", err.Error()); return }
+		if err := h.repo.MarkAllRead(rol, usuarioDeQuery(c)); err != nil { utils.Fail(c, 500, "Error marcando como leídas", err.Error()); return }
 	}
 	utils.Success(c, nil, "Todas marcadas leídas")
 }
