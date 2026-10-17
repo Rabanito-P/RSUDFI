@@ -1,6 +1,8 @@
 ﻿package handler
 
 import (
+	"errors"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -153,20 +155,64 @@ func (h *FormatoHandler) aVista(f *domain.RSUFormato) vistaFormato {
 	}
 }
 
-// rutaArchivo devuelve el archivo a servir: el subido por el admin si existe,
-// si no el de fábrica en documentos/plantillas.
-func (h *FormatoHandler) rutaArchivo(f *domain.RSUFormato) string {
+// abrirFormato resuelve el archivo a servir: el subido por el admin si
+// existe; si no, la guía de fábrica. Con el driver B2 activo se baja del
+// bucket privado (las guías viven ahí desde la migración) y solo si no está
+// en la nube se cae al disco local — así el sistema funciona en los dos modos.
+// Devuelve stream, content-type y nombre de archivo.
+func (h *FormatoHandler) abrirFormato(f *domain.RSUFormato) (io.ReadCloser, string, string, error) {
+	ctDe := func(ct, nombre string) string {
+		if ct == "" || ct == "application/octet-stream" {
+			// B2 sube todo como octet-stream: se deduce por extensión para que
+			// Word/Excel se abran correctamente en el navegador.
+			switch strings.ToLower(filepath.Ext(nombre)) {
+			case ".docx":
+				return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+			case ".xlsx":
+				return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+			case ".pdf":
+				return "application/pdf"
+			}
+		}
+		return ct
+	}
+	// 1) Archivo que subió el administrador.
 	if f.Ruta != "" {
-		if _, err := os.Stat(f.Ruta); err == nil {
-			return f.Ruta
+		if storage.EsCloud() && !esRutaLocal(f.Ruta) {
+			if body, ct, err := storage.AbrirArchivo(f.Ruta); err == nil {
+				return body, ctDe(ct, nombreFormato(f)), nombreFormato(f), nil
+			}
+		} else if file, err := os.Open(f.Ruta); err == nil {
+			return file, ctDe("", nombreFormato(f)), nombreFormato(f), nil
+		}
+	}
+	// 2) Guía de fábrica: bucket B2 primero, disco local después.
+	if storage.EsCloud() {
+		key := "plantillas/" + f.ArchivoBase
+		if body, ct, err := storage.AbrirArchivo(key); err == nil {
+			return body, ctDe(ct, f.ArchivoBase), f.ArchivoBase, nil
 		}
 	}
 	if d := baseDir(); d != "" {
-		if _, err := os.Stat(filepath.Join(d, f.ArchivoBase)); err == nil {
-			return filepath.Join(d, f.ArchivoBase)
+		if file, err := os.Open(filepath.Join(d, f.ArchivoBase)); err == nil {
+			return file, ctDe("", f.ArchivoBase), f.ArchivoBase, nil
 		}
 	}
-	return ""
+	return nil, "", "", errors.New("archivo no disponible")
+}
+
+// esRutaLocal distingue una ruta de disco de un key del bucket.
+func esRutaLocal(s string) bool {
+	return strings.HasPrefix(s, "/") || strings.HasPrefix(s, ".") ||
+		(len(s) > 2 && s[1] == ':') || strings.HasPrefix(s, "uploads/")
+}
+
+// nombreFormato es el nombre que ve el usuario al descargar.
+func nombreFormato(f *domain.RSUFormato) string {
+	if f.NombreArchivo != "" {
+		return f.NombreArchivo
+	}
+	return f.ArchivoBase
 }
 
 // List devuelve los 7 formatos con su estado actual.
@@ -192,25 +238,27 @@ func (h *FormatoHandler) Codigos(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": out})
 }
 
-// Descargar entrega el archivo actual del formato (subido o de fábrica).
+// Descargar entrega el archivo actual del formato (subido o de fábrica),
+// desde el bucket B2 si está migrado, o del disco local como respaldo.
 func (h *FormatoHandler) Descargar(c *gin.Context) {
 	var f domain.RSUFormato
 	if err := h.db.Where("codigo = ?", strings.ToUpper(c.Param("codigo"))).First(&f).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Formato no encontrado"})
 		return
 	}
-	ruta := h.rutaArchivo(&f)
-	if ruta == "" {
+	body, contentType, nombre, err := h.abrirFormato(&f)
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "El archivo del formato no está disponible"})
 		return
 	}
-	// Nombre que ve el usuario: el original del administrador, o el de fábrica.
-	nombreDescarga := f.ArchivoBase
-	if f.NombreArchivo != "" {
-		nombreDescarga = f.NombreArchivo
+	if body != nil {
+		defer body.Close()
 	}
-	c.Header("Content-Disposition", `attachment; filename="`+filepath.Base(nombreDescarga)+`"`)
-	c.File(ruta)
+	c.Header("Content-Disposition", `attachment; filename="`+filepath.Base(nombre)+`"`)
+	if contentType != "" {
+		c.Header("Content-Type", contentType)
+	}
+	_, _ = io.Copy(c.Writer, body)
 }
 
 // Subir reemplaza el archivo de un formato. Solo ADMIN.
@@ -252,15 +300,30 @@ func (h *FormatoHandler) Subir(c *gin.Context) {
 		return
 	}
 
-	dir := formatosDir()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudo preparar el directorio de formatos"})
-		return
+	// 1) Fuente de verdad: bucket B2 (las guías viven en la nube).
+	var key string
+	if storage.EsCloud() {
+		saved, err := storage.New().Save(fh, "formatos")
+		if err != nil {
+			responderErrorGuardado(c, err)
+			return
+		}
+		key = saved.URL
 	}
-	// Nombre en disco: código del formato + sello temporal, para que cada
-	// reemplazo deje el anterior intacto hasta confirmar.
-	ruta := filepath.Join(dir, f.Codigo+"_"+time.Now().Format("20060102150405")+filepath.Ext(fh.Filename))
-	if err := c.SaveUploadedFile(fh, ruta); err != nil {
+	// 2) Copia local (no se elimina: sirve de respaldo si B2 no está).
+	rutaLocal := ""
+	dir := formatosDir()
+	if err := os.MkdirAll(dir, 0o755); err == nil {
+		rutaLocal = filepath.Join(dir, f.Codigo+"_"+time.Now().Format("20060102150405")+filepath.Ext(fh.Filename))
+		if err := c.SaveUploadedFile(fh, rutaLocal); err != nil {
+			rutaLocal = ""
+		}
+	}
+	ruta := key
+	if ruta == "" {
+		ruta = rutaLocal // sin nube configurada: manda el disco
+	}
+	if ruta == "" {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudo guardar el archivo"})
 		return
 	}
@@ -287,9 +350,13 @@ func (h *FormatoHandler) Subir(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudo actualizar el formato"})
 		return
 	}
-	// El archivo anterior ya no se referencia: se borra para no acumular basura.
+	// El archivo anterior ya no se referencia: se borra (bucket o disco).
 	if anterior != "" && anterior != ruta {
-		_ = os.Remove(anterior)
+		if storage.EsCloud() && !esRutaLocal(anterior) {
+			_ = storage.New().(*storage.B2Bucket).Eliminar(anterior)
+		} else {
+			_ = os.Remove(anterior)
+		}
 	}
 	c.JSON(http.StatusOK, gin.H{"data": h.aVista(&f), "mensaje": "Formato actualizado"})
 }
@@ -316,7 +383,11 @@ func (h *FormatoHandler) Restaurar(c *gin.Context) {
 		return
 	}
 	if anterior != "" {
-		_ = os.Remove(anterior)
+		if storage.EsCloud() && !esRutaLocal(anterior) {
+			_ = storage.New().(*storage.B2Bucket).Eliminar(anterior)
+		} else {
+			_ = os.Remove(anterior)
+		}
 	}
 	c.JSON(http.StatusOK, gin.H{"data": h.aVista(&f), "mensaje": "Formato restaurado al original"})
 }

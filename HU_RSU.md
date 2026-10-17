@@ -761,3 +761,8 @@ Ruta /proyectos BLOQUEADA → redirect /mis-proyectos
 | R40 | Motivo obligatorio | Rechazar exige `motivo_rapido` enum (`CUPO_LLENO, CICLO_INSUFICIENTE, PERFIL_NO_AFIN, FUERA_DE_PLAZO, OTRO`) |
 | R41 | Notificación dirigida | `UNION_ACEPTADA/UNION_RECHAZADA` con `id_usuario` del solicitante + motivo en `mensaje` |
 | R42 | Modalidad por rol | Estudiante solo `SSU`/`VOLUNTARIADO`; `PEP_*` lo crea docente/responsable o Comité |
+| R43 | Max. equipos por docente | Un docente asesora como maximo 2 equipos/proyectos a la vez (configurable en `RSU_Configuracion.maximo_proyectos_ssu_docente`); se valida al crear el proyecto y al asignar asesor |
+| R44 | Asesor obligatorio al crear | `SSU`/`VOLUNTARIADO` exigen `id_docente_asesor` en `POST /proyectos` (HU-002); el celular del lider (9XXXXXXXX) se guarda en `Estudiante.celular` |
+| R45 | Archivos por carpeta | En el bucket B2 los archivos se guardan en `proyectos/<id>/documentos|evidencias/`, los formatos en `formatos/` y las guias en `plantillas/`; descargas por `GET /api/v1/archivos?key=` con control de acceso por objeto |
+| R46 | Acceso a archivos | Solo miembros del equipo (lider o participante), docente asesor o roles de gestion ven/descargan los archivos de un proyecto; cualquier miembro puede subir (HU-033), no solo el lider |
+| R47 | Seguridad OWASP | Rate limit en subidas (30/min) y transiciones (20/min), errores 5XX sin detalle interno en produccion, contrasenas 8+ con mayuscula/minuscula/numero, roles forzados en rutas front y backend |

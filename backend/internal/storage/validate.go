@@ -144,16 +144,19 @@ func etiquetaKind(k Kind) string {
 	return "archivos"
 }
 
-// GuardarSeguro combina validación + guardado atómico: valida primero, y si
-// algo falla al escribir, borra el archivo parcial para no dejar basura.
+// GuardarSeguro combina validación + guardado. Con el driver B2 activo NO se
+// guarda en local: si la nube falla se devuelve el error real para que el
+// usuario sepa que el almacenamiento no está disponible (y ningún archivo
+// queda "a medias" en dos lugares).
 func GuardarSeguro(file *multipart.FileHeader, kind Kind, subdir string) (*Saved, error) {
 	if err := ValidarArchivo(file, kind); err != nil {
 		return nil, err
 	}
-	saved, err := New().Save(file, subdir)
+	st := New()
+	saved, err := st.Save(file, subdir)
 	if err != nil {
-		// Limpieza del parcial si quedó algo escrito.
-		if saved != nil && saved.Filename != "" {
+		// Limpieza del parcial si quedó algo escrito (solo local).
+		if saved != nil && saved.Filename != "" && !EsCloud() {
 			ruta := filepath.Join(UploadDir(), saved.Filename)
 			if subdir != "" {
 				ruta = filepath.Join(UploadDir(), subdir, saved.Filename)

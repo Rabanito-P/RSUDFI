@@ -472,17 +472,10 @@ func (h *EntregableHandler) Registrar(c *gin.Context) {
 		return
 	}
 	// Validación robusta: 32MB (R13) + contenido PDF verificado (no solo extensión).
-	saved, err := storage.GuardarSeguro(file, storage.KindPDF, "")
+	// Carpeta por proyecto: proyectos/<id>/documentos/.
+	saved, err := storage.GuardarSeguro(file, storage.KindPDF, storage.PrefijoProyecto(uint(idProj))+"/documentos")
 	if err != nil {
-		if _, ok := err.(*storage.ErrorValidacion); ok {
-			utils.Fail(c, 400, err.Error(), nil)
-			return
-		}
-		if storage.New().Driver() == "cloud" {
-			utils.Fail(c, 501, "Almacenamiento cloud no habilitado en este MVP", err.Error())
-			return
-		}
-		utils.Fail(c, 500, "No se pudo guardar el archivo", err.Error())
+		responderErrorGuardado(c, err)
 		return
 	}
 	sz := saved.Size

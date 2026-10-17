@@ -41,6 +41,20 @@ func (r *DocenteRepo) HorasAsignadas(idDocente, idCiclo uint) (float64, error) {
 	return *total, err
 }
 
+// ProyectosAsesoradosActivos cuenta los proyectos NO finalizados donde el
+// docente es asesor. Norma institucional: un docente no puede asesorar más
+// de 2 equipos/proyectos a la vez (máximo configurable en
+// RSU_Configuracion.maximo_proyectos_ssu_docente).
+func (r *DocenteRepo) ProyectosAsesoradosActivos(idDocente uint) (int64, error) {
+	var n int64
+	err := r.db.Model(&domain.RSUProyecto{}).
+		Where(`"id_docente_asesor" = ? AND "activo" = ? AND "id_estado_actual" IN (
+			SELECT "id_estado" FROM "RSU_Estado_Proyecto" WHERE "codigo" NOT IN ('CERRADO','REPORTADO_SUNEDU','EVALUACION_VALIDADA'))`,
+			idDocente, true).
+		Count(&n).Error
+	return n, err
+}
+
 type EstudianteRepo struct{ db *gorm.DB }
 func NewEstudianteRepo(db *gorm.DB) *EstudianteRepo { return &EstudianteRepo{db} }
 func (r *EstudianteRepo) Create(e *domain.Estudiante) error { return r.db.Create(e).Error }

@@ -22,6 +22,10 @@ type CreateProyectoReq struct {
 	FechaInicioPlan      *string  `json:"fecha_inicio_plan"`
 	FechaFinPlan         *string  `json:"fecha_fin_plan"`
 	PresupuestoSolicitado float64 `json:"presupuesto_solicitado"`
+	// CelularLider: celular del líder (9 dígitos, empieza con 9). Opcional en
+	// la creación pero obligatorio para estudiantes líderes — se guarda en
+	// Estudiante.celular para que el equipo y RSU facultad puedan contactarlo.
+	CelularLider         string   `json:"celular_lider"`
 }
 type UpdateProyectoReq struct {
 	Titulo               *string  `json:"titulo"`
@@ -43,4 +47,12 @@ type TransicionReq struct {
 	IDDocumentoSustento *uint   `json:"id_documento_sustento"`
 	Comentarios         *string `json:"comentarios"`
 	Resultado           string  `json:"resultado" binding:"required,oneof=APROBADO OBSERVADO RECHAZADO DEVUELTO"`
+}
+
+// CambioLiderReq transfiere el liderazgo a otro miembro del equipo (HU-060):
+// lo decide el líder actual o la Dirección de RSU de Facultad. Se notifica
+// por panel y correo al líder saliente y al entrante con el motivo.
+type CambioLiderReq struct {
+	IDNuevoLider uint   `json:"id_nuevo_lider" binding:"required"`
+	Motivo       string `json:"motivo" binding:"required,max=500"`
 }

@@ -23,9 +23,15 @@ func NewAsignacionService(db *gorm.DB) *AsignacionService {
 }
 func (s *AsignacionService) AsignarDocente(req dto.AsignarDocenteReq) (*domain.RSUAsignacionDocente, error) {
 	// Validación carga no lectiva Art 86
-	var docente domain.Docente
-	if err := s.db.First(&docente, "id_docente = ?", req.IDDocente).Error; err != nil {
+	docente, err := s.docenteRepo.FindByID(req.IDDocente)
+	if err != nil {
 		return nil, errors.New("docente no encontrado")
+	}
+	// Norma institucional: un docente no puede asesorar más de 2 equipos a la
+	// vez (configurable en RSU_Configuracion.maximo_proyectos_ssu_docente).
+	max := maxProyectosDocente(s.db)
+	if n, err := s.docenteRepo.ProyectosAsesoradosActivos(req.IDDocente); err == nil && n >= max {
+		return nil, fmt.Errorf("el docente ya asesora %d equipo(s): la norma permite como máximo %d a la vez (HU-002/Art. 86)", n, max)
 	}
 	horasYa, err := s.docenteRepo.HorasAsignadas(req.IDDocente, req.IDCiclo)
 	if err != nil {

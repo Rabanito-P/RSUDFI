@@ -3,6 +3,7 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -14,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"undc-rsu/backend/internal/domain"
+	"undc-rsu/backend/internal/storage"
 	"undc-rsu/backend/pkg/utils"
 )
 
@@ -292,6 +294,20 @@ func (h *PlanificacionHandler) PlantillaDeDescarga(c *gin.Context) {
 
 // servir busca la plantilla en las rutas conocidas y la envía como adjunto.
 func servir(c *gin.Context, nombre string) {
+	// 1) Bucket B2: las guías viven en la nube desde la migración.
+	if storage.EsCloud() {
+		key := "plantillas/" + nombre
+		if body, ct, err := storage.AbrirArchivo(key); err == nil {
+			defer body.Close()
+			c.Header("Content-Disposition", `attachment; filename="`+nombre+`"`)
+			if ct != "" {
+				c.Header("Content-Type", ct)
+			}
+			_, _ = io.Copy(c.Writer, body)
+			return
+		}
+	}
+	// 2) Disco local (respaldo, desarrollo o sin nube).
 	rutas := []string{
 		os.Getenv("RSU_PLANTILLAS_DIR"),
 		"/app/documentos/plantillas/",

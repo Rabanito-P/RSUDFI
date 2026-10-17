@@ -1,0 +1,85 @@
+DOCUMENTO TÉCNICO DE PROCESOS: FASE DE APERTURA (FORMULACIÓN, REVISIÓN, APROBACIÓN Y ACTIVACIÓN)
+SISTEMA DE GESTIÓN INTERNO DE RESPONSABILIDAD SOCIAL UNIVERSITARIA ("MINI-RSU") - VERSIÓN 0.2
+Universidad Nacional de Cañete (UNDC)
+Facultad de Ingeniería - Escuela Profesional de Ingeniería de Sistemas
+1. Marco Normativo y Contexto Institucional
+* Ley Universitaria N° 30220:
+   * Artículos 124 y 125: La RSU como gestión ética y eficaz del impacto universitario. Asignación presupuestal obligatoria de un mínimo del 2% del presupuesto universitario para RSU.
+   * Artículo 130: Servicio Social Universitario (SSU) de carácter obligatorio para estudiantes.
+* Reglamento de Responsabilidad Social Universitaria de la UNDC (Res. CO N° 299-2026-UNDC/CO): Define la tipología de proyectos (SSU, PEP Financiados y Autofinanciados, Voluntariado Yanapay y Publicaciones Científicas).
+* Alcance del Sistema Interno de la Facultad: Actúa como un pre-filtro de pertinencia técnica y curricular para la Escuela Profesional de Ingeniería de Sistemas y la Facultad de Ingeniería, garantizando que todo proyecto responda a la carrera antes de elevarse a la DRSU Central.
+2. Matriz de Roles y Responsabilidades (Swimlanes del Sistema)
+Rol / Instancia
+	Responsabilidad en SSU
+	Responsabilidad en PEP
+	Carga / Límite
+ 
+	Estudiante (Líder / Integrante)
+	Formula propuesta (2 a 5 alumnos), define problemática, diagnóstico, ODS, cronograma (mín. 60h) y propone Asesor.
+	Explora catálogo de PEP y solicita adhesión a proyectos creados por docentes.
+	Obligatorio para egreso (SSU).
+	Docente (Asesor / Responsable)
+	Evalúa solicitud de asesoría. Si acepta, firma Compromiso (F-M03.01-RSU-016).
+	Diseña, formula y publica la propuesta de PEP (Autofinanciado o Financiado), evalúa postulaciones y lidera el proyecto.
+	Máx. 2 SSU por semestre. Máx. 3h/semana de carga no lectiva RSU.
+	Director de Escuela Profesional
+	Filtro académico de pertinencia técnica y no duplicidad. Emite Ficha F-M03.01-RSU-005.
+	Filtro de pertinencia curricular (articulación con sílabos y cursos del ciclo). Emite Proveído.
+	V°B° Académico de Escuela.
+	Dir. / Comité RS Facultad
+	Compila expediente, verifica no duplicidad geográfica en Cañete y gestiona la activación.
+	Valida techo presupuestal (2% RSU de Escuela para PEP Financiado) y gestiona la activación.
+	V°B° Técnico/Presupuestal de Facultad.
+	Decano de Facultad
+	Oficializa la aprobación a nivel Facultad y firma el Oficio de Elevación a la DRSU Central.
+	Oficializa la aprobación a nivel Facultad y firma el Oficio de Elevación a la DRSU Central.
+	Oficio de Elevación Institucional.
+	Director(a) de RSU Central (DRSU)
+	Evalúa y firma formalmente la Ficha de Aprobación del Proyecto SSU.
+	Emite Informe Técnico Favorable y eleva al Vicerrectorado Académico.
+	Emite Ficha de Aprobación (SSU).
+	Vicepresidencia Académica (VPA)
+	No interviene individualmente por cada SSU.
+	Emite la Resolución de Vicerrectorado Académico (Res. VRA) que formaliza la aprobación oficial y presupuesto.
+	Resolución de Vicerrectorado Académico (PEP).
+	3. Flujo Detallado: Servicio Social Universitario (SSU) - Fase de Apertura
+1. Formulación y Registro Inicial (Estudiante Líder): Ingresa al sistema (`estudiante@undc.edu.pe`), registra integrantes (2 a 5), diagnóstico, ODS, cronograma (60h mín.) y propone Docente Asesor. Genera el Formato F-M03.01-RSU-001. Estado: Enviado a Docente Asesor.
+2. Bucle de Aceptación del Docente Asesor:
+   * Rechazo: Pasa a Observado por Docente. La plataforma CONGELA los datos del proyecto y SOLO habilita el cambio de Docente Asesor. El bucle se repite hasta que un docente acepte.
+   * Aceptación: El sistema valida que el docente tenga menos de 2 SSU en el semestre. El docente firma el Compromiso F-M03.01-RSU-016. Estado: Aceptado por Asesor - Enviado a Escuela.
+3. Filtro de Pertinencia Técnica (Director de Escuela): Revisa alineación técnica y no duplicidad. Si observa, el estudiante tiene 10 días hábiles para corregir. Si aprueba, completa la Ficha F-M03.01-RSU-005 (15-18 pts). Estado: Aprobado por Escuela - Enviado a Facultad.
+4. Conformidad Institucional (Facultad): El Comité de RS valida el expediente y el Decano firma el Oficio de Elevación a la DRSU Central. Estado: Aprobado por Facultad - Elevado a DRSU Central.
+5. Aprobación Central (Director/a de RSU Central): La DRSU Central evalúa el proyecto y el/la Director(a) de Responsabilidad Social Universitaria de la UNDC firma formalmente la FICHA DE APROBACIÓN DEL PROYECTO SSU. Estado: Aprobado por DRSU - Pendiente de Carga de Ficha.
+6. Activación (Comité RS Facultad / Estudiante): Se registra/adjunta la Ficha de Aprobación firmada por la Dirección de RSU Central. Estado automático: EN EJECUCIÓN. Desbloquea carga de informes de avance, fotos GPS y control de horas.
+4. Flujo Detallado: Proyectos de Escuelas Profesionales (PEP) - Fase de Apertura
+1. Formulación (Docente Responsable / Comité RSU): Se registra el Esquema Inicial Anexo 3 / F-M03-RSU-001 en la plataforma.
+   * PEP Financiado: Se presenta mín. 15 días antes de clases con cuadro de presupuesto del 2% RSU de la Escuela de Sistemas.
+   * PEP Autofinanciado: Se presenta en cualquier momento con recursos propios/donaciones.
+2. Filtro de Pertinencia Curricular (Director de Escuela): Evalúa articulación con asignaturas y sílabos de la carrera. Emite Proveído de Conformidad. Estado: Conforme por Escuela - Enviado a Facultad.
+3. Filtro Presupuestal y Facultad (Decano / Dir. RS Facultad): Valida disponibilidad en centro de costos del 2% RSU (si es financiado) y el Decano firma Oficio de Elevación. Estado: Aprobado por Facultad - Elevado a DRSU Central.
+4. Aprobación Central y Acto Resolutivo (DRSU Central y VPA): La DRSU emite Informe Técnico y la Vicepresidencia Académica emite la Resolución VRA (ej. Res. VRA N° 0008-2026-UNDC/VRA). Estado: Aprobado por VPA - Pendiente de Activación.
+5. Activación de Convocatoria: Se registra la Resolución VRA en la plataforma. Estado automático: CONVOCATORIA ABIERTA.
+6. Adhesión de Estudiantes: El PEP se publica en el Catálogo de la Facultad. Los estudiantes solicitan inscripción, el docente los evalúa y acepta, generando el Padrón Oficial de Alumnos Adheridos. Estado: EN EJECUCIÓN.
+5. Matriz Resumen de Estados del Sistema
+Estado del Sistema
+	Proyecto SSU (Estudiantes)
+	Proyecto PEP (Docentes)
+ 
+	1. Inicial
+	Borrador / Enviado a Docente Asesor
+	Borrador / PEP Registrado
+	2. Bucle / Reintento
+	Observado por Docente (Congelado, solo cambia Asesor)
+	PEP Observado por Escuela (Permite edición al Docente)
+	3. Filtro Escuela
+	Aprobado por Escuela (Ficha F-M03.01-RSU-005)
+	Conforme por Escuela (Proveído Curricular)
+	4. Filtro Facultad
+	Aprobado por Facultad (Oficio del Decano)
+	Aprobado por Facultad (Oficio + Techo 2% RSU)
+	5. Aprobación Central
+	Ficha de Aprobación firmada por Director(a) de RSU Central
+	Resolución de Vicerrectorado Académico (Res. VRA)
+	6. Estado Final Activado
+	EN EJECUCIÓN (Al cargar Ficha RSU)
+	CONVOCATORIA ABIERTA / EN EJECUCIÓN (Al cargar Res. VRA)

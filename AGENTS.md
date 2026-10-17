@@ -72,7 +72,14 @@ internal/handler/           → un controller por entidad (facultad, escuela,
                               configuracion, auditoria)
 internal/auth/              → mock.go (OAuth presente/desactivado),
                               mock_provider.go (login rápido demo)
-internal/storage/           → storage.go (local activo + cloud stub)
+internal/storage/           → storage.go (local / b2 + AbrirArchivo/ExisteLocal),
+                              b2.go (Backblaze B2 API NATIVA: kothar/go-backblaze,
+                              bucket PRIVADO, verificación + reintentos + diagnóstico),
+                              validate.go (validación robusta + GuardarSeguro)
+internal/mail/              → mail.go (Resend: envío async best-effort),
+                              templates.go (HTML profesional email-safe:
+                              avance, devolución con motivo R26, cambio de líder,
+                              proyecto creado)
 internal/router/router.go   → /api/v1 routes (45+ endpoints)
 internal/middleware/        → CORS, Logger, Audit
 pkg/database, pkg/utils
@@ -124,6 +131,9 @@ src/
 | POST | `/api/v1/proyectos/:id/transicion` | BPMN validated against `RSU_Transicion_Estado` |
 | POST | `/api/v1/asignaciones/docente` | Validates carga no lectiva Art.86 |
 | POST | `/api/v1/encuestas/beneficiario` | Likert 1-5, promedio + deduplication |
+| POST | `/api/v1/proyectos/:id/lider` | HU-060 cambio de líder (notifica panel + correo) |
+| GET | `/api/v1/archivos?key=` | Descarga unificada (local o bucket B2 privado) |
+| GET | `/api/v1/storage/estado` | Diagnóstico: driver activo + si B2 responde |
 
 ## Testing / Linting
 - **Backend**: `go vet ./...` (no test files present)
@@ -134,4 +144,8 @@ src/
 - Frontend proxy in `vite.config.ts` redirects `/api` and `/uploads` to `http://localhost:8080`
 - Docker Compose uses `postgres` hostname; local dev needs `DB_HOST=127.0.0.1`
 - Uploads served statically at `/uploads` (backend) and proxied (frontend)
+- **Storage**: `STORAGE_DRIVER=b2` usa la API NATIVA de Backblaze (applicationKeyId
+  de 24+ chars + applicationKey + bucket ID). Con bucket privado las descargas
+  pasan por `GET /api/v1/archivos?key=...` (token requerido); si B2 falla la
+  subida responde 503 — nunca guarda en local silenciosamente.
 - JWT auth is mocked — `authH.Login` accepts any correo with password `123456` or `undc2026`

@@ -64,6 +64,16 @@ services:
       JWT_SECRET: ${JWT_SECRET:-undc-rsu-super-secret-2026}
       UPLOAD_DIR: /app/uploads
       TZ: America/Lima
+      # Almacenamiento: local (volumen) o b2 (Backblaze B2 nativo, bucket privado)
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-b2}
+      B2_ACCOUNT_ID: ${B2_ACCOUNT_ID:-}
+      B2_APPLICATION_KEY: ${B2_APPLICATION_KEY:-}
+      B2_BUCKET_ID: ${B2_BUCKET_ID:-}
+      # Correos transaccionales (Resend)
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-UNDC RSU <onboarding@resend.dev>}
+      EMAIL_REPLY_TO: ${EMAIL_REPLY_TO:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     volumes:

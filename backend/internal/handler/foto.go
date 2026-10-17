@@ -43,17 +43,10 @@ func (h *FotoHandler) Upload(c *gin.Context) {
 		return
 	}
 	// Validación robusta: 5MB (R13), jpg/jpeg/png con contenido verificado.
-	saved, err := storage.GuardarSeguro(file, storage.KindImagen, "evidencias")
+	// Carpeta por proyecto: proyectos/<id>/evidencias/.
+	saved, err := storage.GuardarSeguro(file, storage.KindImagen, storage.PrefijoProyecto(act.IDProyecto)+"/evidencias")
 	if err != nil {
-		if _, ok := err.(*storage.ErrorValidacion); ok {
-			utils.Fail(c, 400, err.Error(), nil)
-			return
-		}
-		if storage.New().Driver() == "cloud" {
-			utils.Fail(c, 501, "Almacenamiento cloud no habilitado", err.Error())
-			return
-		}
-		utils.Fail(c, 500, "No se pudo guardar", err.Error())
+		responderErrorGuardado(c, err)
 		return
 	}
 	desc := c.PostForm("descripcion")
@@ -139,6 +132,16 @@ func (h *FotoHandler) DelDia(c *gin.Context) {
 
 func (h *FotoHandler) ByActividad(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
+	var act domain.RSUActividadCampo
+	if err := h.db.Select("id_proyecto").First(&act, "id_actividad = ?", id).Error; err != nil {
+		utils.Fail(c, 404, "Actividad no encontrada", nil)
+		return
+	}
+	// OWASP A01: solo equipo/asesor/gestión ven las evidencias.
+	if !puedeVerProyecto(h.db, c, act.IDProyecto) {
+		utils.Fail(c, 403, "no tienes acceso a las evidencias de esta actividad", nil)
+		return
+	}
 	var fotos []domain.RSUActividadFoto
 	if err := h.db.Where("id_actividad = ?", id).Order("fecha_subida ASC").Find(&fotos).Error; err != nil {
 		utils.Fail(c, 500, "Error", err.Error())

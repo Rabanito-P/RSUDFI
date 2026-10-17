@@ -39,9 +39,87 @@ func UploadDir() string {
 	return "./uploads"
 }
 
-// New devuelve el driver según STORAGE_DRIVER (local por defecto).
+// New devuelve el driver según STORAGE_DRIVER:
+//   local (default) → disco en UPLOAD_DIR, URLs públicas /uploads/...
+//   b2               → Backblaze B2 API nativa (bucket PRIVADO). Las URLs
+//                      guardadas son keys lógicos servidos por
+//                      GET /api/v1/archivos?key=... (con token de cuenta).
 func New() Storage {
-	return &LocalStorage{Dir: UploadDir()}
+	switch strings.ToLower(Driver()) {
+	case "b2", "s3", "backblaze":
+		return &B2Bucket{}
+	default:
+		return &LocalStorage{Dir: UploadDir()}
+	}
+}
+
+// EsCloud reporta si el driver activo guarda en la nube (Backblaze B2). Los
+// handlers que antes servían /uploads estático deben resolver la descarga por
+// key cuando esto es true.
+func EsCloud() bool {
+	switch strings.ToLower(Driver()) {
+	case "b2", "s3", "backblaze":
+		return true
+	}
+	return false
+}
+
+// PrefijoProyecto devuelve la carpeta raíz de un proyecto en el bucket B2
+// (proyectos/<id>/). B2 no tiene carpetas reales: el "/" en el nombre del
+// objeto se muestra como carpeta en la consola, igual que en un disco.
+// Estructura del bucket:
+//   proyectos/<id_proyecto>/documentos/<archivo>   informes, entregables
+//   proyectos/<id_proyecto>/evidencias/<archivo>   fotos de campo
+//   proyectos/<id_proyecto>/firmas/<archivo>       firmas de asistencia
+//   formatos/<archivo>                             formatos RSU (admin)
+//   plantillas/<archivo>                           guías oficiales
+func PrefijoProyecto(idProyecto uint) string {
+	return fmt.Sprintf("proyectos/%d", idProyecto)
+}
+
+// AbrirArchivo resuelve un key/URL guardado en BD a un stream + content-type
+// para servir la descarga. Prioridad:
+//   1. Si la URL es /uploads/... y el archivo existe en disco → local (así
+//      los archivos que quedaron por fallback siguen descargando aunque el
+//      driver activo sea b2).
+//   2. Si no, se baja del bucket B2 con el token de la cuenta.
+func AbrirArchivo(url string) (io.ReadCloser, string, error) {
+	if url == "" {
+		return nil, "", fmt.Errorf("sin archivo asociado")
+	}
+	// Fallback local: URL antigua o subida guardada por respaldo.
+	if strings.HasPrefix(url, "/uploads/") {
+		ruta := filepath.Join(UploadDir(), strings.TrimPrefix(url, "/uploads/"))
+		if _, err := os.Stat(ruta); err == nil {
+			f, err := os.Open(ruta)
+			if err != nil {
+				return nil, "", err
+			}
+			return f, "", nil
+		}
+	}
+	if EsCloud() {
+		key := strings.TrimPrefix(url, "/")
+		if strings.HasPrefix(key, "uploads/") {
+			key = strings.TrimPrefix(key, "uploads/")
+		}
+		return (&B2Bucket{}).Descargar(key)
+	}
+	ruta := filepath.Join(UploadDir(), strings.TrimPrefix(url, "/uploads/"))
+	f, err := os.Open(ruta)
+	if err != nil {
+		return nil, "", err
+	}
+	return f, "", nil
+}
+
+// ExisteLocal reporta si una URL /uploads/... está en el disco local.
+func ExisteLocal(url string) bool {
+	if !strings.HasPrefix(url, "/uploads/") {
+		return false
+	}
+	_, err := os.Stat(filepath.Join(UploadDir(), strings.TrimPrefix(url, "/uploads/")))
+	return err == nil
 }
 
 // ── Local (activo) ────────────────────────────────────────────

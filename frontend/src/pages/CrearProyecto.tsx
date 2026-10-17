@@ -20,7 +20,8 @@ export default function CrearProyecto(){
   const [tipos,setTipos]=useState<any[]>([])
   const [lineas,setLineas]=useState<any[]>([])
   const [escuelas,setEscuelas]=useState<any[]>([])
-  const [form,setForm]=useState({titulo:'', id_tipo:'', modalidad:'SSU', id_linea:'', id_escuela:'', descripcion:'', objetivo_general:'', poblacion:'', lugar:'', fecha_inicio:'', fecha_fin:'', presupuesto:'', semestre:'', ciclo: ''})
+  const [docentes,setDocentes]=useState<any[]>([])
+  const [form,setForm]=useState({titulo:'', id_tipo:'', modalidad:'SSU', id_linea:'', id_escuela:'', descripcion:'', objetivo_general:'', poblacion:'', lugar:'', fecha_inicio:'', fecha_fin:'', presupuesto:'', semestre:'', ciclo: '', celular: '', docente: ''})
   const [file,setFile]=useState<File|null>(null)
   const [excel,setExcel]=useState<File|null>(null)
   const [catalogErr,setCatalogErr]=useState('')
@@ -55,6 +56,8 @@ export default function CrearProyecto(){
     api.get('/api/v1/catalogos/tipos-proyecto').then((r:any)=>setTipos(asArray(r.data))).catch((e:any)=>{ setTipos([]); setCatalogErr(prev=>prev||e?.message||'No se pudo cargar el catálogo de tipos de proyecto') })
     api.get('/api/v1/catalogos/lineas-accion').then((r:any)=>setLineas(asArray(r.data))).catch((e:any)=>{ setLineas([]); setCatalogErr(prev=>prev||e?.message||'No se pudo cargar el catálogo de líneas de acción') })
     api.get('/api/v1/escuelas').then((r:any)=>setEscuelas(asArray(r.data))).catch((e:any)=>{ setEscuelas([]); setCatalogErr(prev=>prev||e?.message||'No se pudo cargar el catálogo de escuelas') })
+    // HU-002: docente asesor obligatorio al crear. Máximo 2 equipos por docente.
+    api.get('/api/v1/docentes?limit=200').then((r:any)=>setDocentes(asArray(r.data))).catch(()=> setDocentes([]))
     api.get('/api/v1/ciclos').then((r:any)=>{
       const cs = asArray(r.data)
       const activo = cs.find((c:any)=> c.activo) || cs[0]
@@ -125,10 +128,16 @@ export default function CrearProyecto(){
       setErr('Como estudiante solo puedes crear SSU o Voluntariado. Los PEP los crea el docente responsable.'); return
     }
     if(!form.ciclo){ setErr('No hay ciclo académico activo. Crea uno en Estructura antes de continuar.'); return }
+    // HU-002: docente asesor obligatorio.
+    if(!form.docente){ setErr('Elige el docente asesor del proyecto (obligatorio).'); return }
     if(!file){ setErr('Adjunta tu Informe Inicial en PDF.'); return }
     if(!excel){ setErr('Adjunta la planificación de actividades en Excel (.xlsx).'); return }
     // Equipo mínimo: el líder + al menos 1 integrante (2 en total).
     if(equipo.length < 1){ setErr('Registra al menos 1 participante además de ti (el equipo necesita 2 estudiantes).'); return }
+    // HU-001 CA1: el líder declara su celular (9 dígitos, empieza en 9).
+    if(!/^9\d{8}$/.test(form.celular.trim())){
+      setErr('Escribe tu número de celular (9 dígitos, empieza con 9). El equipo y RSU lo usarán para contactarte.'); return
+    }
     const correoMal = equipo.find(m=> !/^[^\s@]+@undc\.edu\.pe$/i.test(m.correo.trim()))
     if(correoMal){ setErr(`El correo de ${correoMal.nombres || 'un participante'} no es institucional (@undc.edu.pe).`); return }
     const nombresMal = equipo.find(m=> m.nombres.trim().length < 2)
@@ -146,6 +155,7 @@ export default function CrearProyecto(){
         id_linea_accion: form.id_linea? Number(form.id_linea): null,
         id_ciclo_creacion: Number(form.ciclo),
         id_estudiante_lider: user?.persona_id,
+        id_docente_asesor: form.docente ? Number(form.docente) : null,
         descripcion: form.descripcion,
         objetivo_general: form.objetivo_general,
         poblacion_beneficiaria: form.poblacion,
@@ -153,6 +163,7 @@ export default function CrearProyecto(){
         fecha_inicio_plan: form.fecha_inicio || null,
         fecha_fin_plan: form.fecha_fin || null,
         presupuesto_solicitado: Number(form.presupuesto||0),
+        celular_lider: form.celular.trim(),
       }
       const r:any = await api.post('/api/v1/proyectos', body)
       const idProyecto = r?.data?.id_proyecto
@@ -277,10 +288,24 @@ export default function CrearProyecto(){
             )}
             <div>
               <Label>Escuela *</Label>
-              <select value={form.id_escuela} onChange={e=>setForm({...form,id_escuela:e.target.value})} className="input" required>
+              <select value={form.id_escuela} onChange={e=>setForm({...form, id_escuela:e.target.value})} className="input" required>
                 <option value="">-- seleccionar escuela --</option>
                 {escuelas.map(e=><option key={e.id_escuela} value={e.id_escuela}>{e.nombre} — {e.facultad?.nombre}</option>)}
               </select>
+            </div>
+            <div>
+              <Label required>Docente asesor *</Label>
+              <select value={form.docente} onChange={e=>setForm({...form, docente:e.target.value})} className="input" required>
+                <option value="">-- elegir docente --</option>
+                {docentes
+                  .filter((d:any)=> !form.id_escuela || String(d.id_escuela) === String(form.id_escuela))
+                  .map((d:any)=><option key={d.id_docente} value={d.id_docente}>
+                  {d.nombres} {d.apellidos}{d.codigo_docente ? ` — ${d.codigo_docente}` : ''}
+                </option>)}
+              </select>
+              <div className="text-[11px] text-slate-400 mt-0.5">
+                Obligatorio (HU-002). Un docente asesora como máximo <b>2 equipos</b> a la vez; el sistema te avisa si ya llegó al límite.
+              </div>
             </div>
             <div>
               <Label>Descripción</Label>
@@ -298,6 +323,19 @@ export default function CrearProyecto(){
               <div><Label>Fecha inicio plan</Label><Input type="date" value={form.fecha_inicio} onChange={e=>setForm({...form,fecha_inicio:e.target.value})}/></div>
               <div><Label>Fecha fin plan</Label><Input type="date" value={form.fecha_fin} onChange={e=>setForm({...form,fecha_fin:e.target.value})}/></div>
               <div><Label>Presupuesto solicitado (S/)</Label><Input type="number" min="0" step="0.01" value={form.presupuesto} onChange={e=>setForm({...form,presupuesto:e.target.value})} placeholder="12000"/></div>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <Label required>Tu celular (líder del equipo)</Label>
+                <Input
+                  value={form.celular}
+                  onChange={e=>setForm({...form, celular:e.target.value.replace(/[^0-9]/g,'').slice(0,9)})}
+                  placeholder="987654321"
+                  inputMode="numeric"
+                  maxLength={9}
+                  error={!!form.celular && !/^9\d{8}$/.test(form.celular)}/>
+                <div className="text-[11px] text-slate-400 mt-0.5">9 dígitos empezando en 9 — para que tu equipo y RSU facultad puedan contactarte.</div>
+              </div>
             </div>
             {/* ── Equipo de trabajo ──
                 El líder (quien crea) ya queda registrado; aquí se suman de 1 a 4

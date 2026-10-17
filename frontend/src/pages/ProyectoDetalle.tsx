@@ -13,7 +13,7 @@ import { useAuth } from '../context/AuthContext'
 import { canStudentEdit, canStudentUploadDocs, canStudentRegisterActivity } from '../lib/permisos'
 import { mensajeError } from '../lib/errores'
 import { useCatalogoBpmn } from '../hooks/useCatalogoBpmn'
-import { Download, FileText, Camera, Link2, Pencil, ClipboardCheck, Gavel, Upload, UserPlus, Check, X, Inbox, Users } from 'lucide-react'
+import { Download, FileText, Camera, Link2, Pencil, ClipboardCheck, Gavel, Upload, UserPlus, Check, X, Inbox, Users, Crown } from 'lucide-react'
 
 const RESULTADOS = ['APROBADO','OBSERVADO','RECHAZADO','DEVUELTO']
 const ORDENES = [1,2,3,4,5]
@@ -61,6 +61,13 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
   const [formAct,setFormAct]=useState({fecha: new Date().toISOString().slice(0,10), nombre:'', horas:0, minutos:0, horaInicio:'09:00', horaFin:'', descripcion:''})
   const [submitting,setSubmitting]=useState(false)
   const [actMsg,setActMsg]=useState<Msg>(null)
+
+  // ── HU-060: transferencia de liderazgo ──
+  const [liderOpen,setLiderOpen]=useState(false)
+  const [liderNuevo,setLiderNuevo]=useState('')
+  const [liderMotivo,setLiderMotivo]=useState('')
+  const [liderBusy,setLiderBusy]=useState(false)
+  const [liderMsg,setLiderMsg]=useState<Msg>(null)
 
   const [modal,setModal]=useState<''|'edit'|'monitoreo'|'transicion'|'entregable'|'vincular'|'fotos'>('')
   const [modalMsg,setModalMsg]=useState<Msg>(null)
@@ -188,6 +195,12 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
   const puedeRegistrarActividad = esMiembroEquipo && canStudentRegisterActivity(codigo, esMiembroEquipo)
   const isDocente = user?.rol==='DOCENTE'
   const isDirectivo = user?.rol==='DIRECTIVO' || user?.rol==='ADMIN'
+  // HU-060: puede transferir el liderazgo el líder actual o la gestión RSU.
+  const esLiderActual = esEstudiante && p.id_estudiante_lider===user?.persona_id
+  const puedeTransferirLider = !ESTADOS_FINALES.includes(codigo) &&
+    (esLiderActual || ['DIR_RS_FACULTAD','ADMIN','DIRECTIVO','DIR_ESCUELA'].includes(user?.rol||''))
+  // Candidatos: miembros del equipo (nunca el líder actual).
+  const candidatosLider = miembros.filter((m:any)=> m.id_estudiante !== p.id_estudiante_lider)
   const estadoInfo = estadosBpmn.find((e: any) => e.codigo === codigo)
 
   const totalEnt = entregables.length
@@ -201,6 +214,20 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
   const reloadHistorial = async ()=>{
     try{ const h:any = await api.get(`/api/v1/proyectos/${id}/historial`); setHistorial(asArray(h.data)); setHistorialError('') }
     catch(ex:any){ setHistorialError(ex?.message||'No se pudo cargar el historial') }
+  }
+
+  // HU-060: transferir el liderazgo — notifica por panel y correo a ambos.
+  const transferirLider = async ()=>{
+    if(!liderNuevo){ setLiderMsg({type:'err', text:'Elige al nuevo líder del equipo.'}); return }
+    if(liderMotivo.trim().length < 10){ setLiderMsg({type:'err', text:'Escribe el motivo del cambio (mínimo 10 caracteres).'}); return }
+    setLiderBusy(true); setLiderMsg(null)
+    try{
+      await api.post(`/api/v1/proyectos/${id}/lider`, { id_nuevo_lider: Number(liderNuevo), motivo: liderMotivo.trim() })
+      setLiderMsg({type:'ok', text:'Liderazgo transferido. Se avisó por correo al líder saliente y al nuevo líder. Actualizando...'})
+      setTimeout(()=> window.location.reload(), 2200)
+    }catch(ex:any){
+      setLiderMsg({type:'err', text: mensajeError(ex, 'No se pudo transferir el liderazgo')})
+    }finally{ setLiderBusy(false) }
   }
   const reloadBeneficiarios = async ()=>{
     try{ const b:any = await api.get(`/api/v1/proyectos/${id}/beneficiarios`); setBeneficiarios(asArray(b.data)); setBeneficiariosError('') }
@@ -564,9 +591,21 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
               <span className="text-xs bg-sky-50 border border-sky-200 text-sky-700 px-2 py-1 rounded-full font-semibold">Cupos {ocupados}/5</span>
             </div>
             <div className="grid md:grid-cols-2 gap-3 mt-3 text-sm">
-              <div className="bg-slate-50 rounded-xl p-3"><div className="text-xs text-slate-500">Líder</div><div className="font-semibold">{p.estudiante_lider ? `${p.estudiante_lider.nombres} ${p.estudiante_lider.apellidos}` : '—'}</div></div>
+              <div className="bg-slate-50 rounded-xl p-3">
+                <div className="text-xs text-slate-500">Líder</div>
+                <div className="font-semibold">{p.estudiante_lider ? `${p.estudiante_lider.nombres} ${p.estudiante_lider.apellidos}` : '—'}</div>
+                {p.estudiante_lider?.celular && <div className="text-xs text-slate-500 mt-0.5">Cel: <span className="font-mono">{p.estudiante_lider.celular}</span></div>}
+              </div>
               <div className="bg-slate-50 rounded-xl p-3"><div className="text-xs text-slate-500">Docente responsable / asesor</div><div className="font-semibold">{p.docente_asesor ? `${p.docente_asesor.nombres} ${p.docente_asesor.apellidos}` : '—'}</div></div>
             </div>
+            {puedeTransferirLider && (
+              <div className="mt-3 flex items-center gap-3 flex-wrap">
+                <Button variant="outline" size="sm" leftIcon={<Crown size={14}/>} onClick={()=>{ setLiderNuevo(''); setLiderMotivo(''); setLiderMsg(null); setLiderOpen(true) }}>
+                  Transferir liderazgo
+                </Button>
+                <span className="text-xs text-slate-400">Decide el equipo o la Dirección RSU de Facultad (HU-060). Se notifica por correo a los dos líderes.</span>
+              </div>
+            )}
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-sm border-collapse min-w-[560px]">
                 <thead><tr className="bg-slate-900 text-white text-xs">
@@ -895,6 +934,43 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
           {(puedeSubirDocs || editableByStudent || isDocente) && <Button className="mt-3" onClick={()=>openModal('vincular')} leftIcon={<Link2 size={14}/>}>Vincular beneficiario</Button>}
         </div>
       )}
+
+      {/* ── HU-060: transferir liderazgo ── */}
+      <Modal open={liderOpen} busy={liderBusy} onClose={()=>setLiderOpen(false)}
+             title="Transferir liderazgo" desc={`El nuevo líder dirigirá ${p?.codigo_proyecto||'el proyecto'}. Se notifica por correo al líder saliente y al entrante.`}>
+        {liderMsg && <Alert variant={liderMsg.type==='ok'?'success':'error'} className="text-xs mb-3">{liderMsg.text}</Alert>}
+        {candidatosLider.length===0 ? (
+          <Alert variant="warning">No hay otros miembros en el equipo: primero inscribe a un compañero para poder transferirle el liderazgo.</Alert>
+        ) : (
+          <div className="space-y-3">
+            <div>
+              <Label required>Nuevo líder (miembro del equipo)</Label>
+              <Select value={liderNuevo} onChange={e=>setLiderNuevo(e.target.value)}>
+                <option value="">-- elegir miembro --</option>
+                {candidatosLider.map((m:any)=>(
+                  <option key={m.id_estudiante} value={m.id_estudiante}>
+                    {m.estudiante ? `${m.estudiante.nombres} ${m.estudiante.apellidos}` : `#${m.id_estudiante}`}
+                    {m.estudiante?.codigo_estudiante ? ` — ${m.estudiante.codigo_estudiante}` : ''}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Label required>Motivo del cambio</Label>
+              <Textarea rows={3} value={liderMotivo} maxLength={500}
+                        onChange={e=>setLiderMotivo(e.target.value)}
+                        placeholder="Ej. Cambio de turno del coordinador; decisión del equipo en reunión del 12/10..."/>
+              <div className="text-xs text-slate-400 text-right">{liderMotivo.trim().length}/500</div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={()=>setLiderOpen(false)} disabled={liderBusy}>Cancelar</Button>
+              <Button onClick={transferirLider} disabled={liderBusy} leftIcon={<Crown size={14}/>}>
+                {liderBusy?'Transfiriendo...':'Transferir y notificar'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       <Modal open={modal==='edit'} busy={modalBusy} onClose={()=>setModal('')} title="Editar proyecto" desc="PATCH/PUT a /api/v1/proyectos/:id — solo campos editables por el equipo"
         footer={<>

@@ -73,6 +73,53 @@ func personaIDFromToken(db *gorm.DB, c *gin.Context) int {
 	return int(*u.IDPersona)
 	}
 
+// Roles de gestión: ven y actúan sobre cualquier proyecto de su ámbito.
+var rolesGestion = map[string]bool{
+	"ADMIN": true, "DIR_ESCUELA": true, "DIR_RS_FACULTAD": true, "DIR_CENTRAL_RS": true,
+	"CONSEJO_FACULTAD": true, "DIR_DEPTO": true, "COMITE_PS": true, "COMITE_CALIDAD": true,
+	"UNIDAD_ABAST": true,
+}
+
+// esGestion reporta si el token es de un rol de dirección/gestión.
+func esGestion(c *gin.Context) bool {
+	return rolesGestion[c.GetString("rol_actor")]
+}
+
+// puedeVerProyecto (control de acceso por objeto, OWASP A01): true si el
+// usuario puede ver los archivos del proyecto — miembros del equipo, docente
+// asesor o roles de gestión. Se usa en listados y descargas de archivos.
+func puedeVerProyecto(db *gorm.DB, c *gin.Context, idProyecto uint) bool {
+	if idProyecto == 0 {
+		return false
+	}
+	if esGestion(c) {
+		return true
+	}
+	u := usuarioDeToken(db, c)
+	if u == nil || !u.Activo {
+		return false
+	}
+	persona := personaIDFromToken(db, c)
+	switch u.TipoUsuario {
+	case "DOCENTE":
+		var n int64
+		db.Model(&domain.RSUProyecto{}).
+			Where("id_proyecto = ? AND id_docente_asesor = ?", idProyecto, persona).Count(&n)
+		return n > 0
+	case "ESTUDIANTE":
+		var n int64
+		db.Model(&domain.RSUProyecto{}).
+			Where("id_proyecto = ? AND id_estudiante_lider = ?", idProyecto, persona).Count(&n)
+		if n > 0 {
+			return true
+		}
+		db.Model(&domain.RSUParticipanteEstudiante{}).
+			Where("id_proyecto = ? AND id_estudiante = ? AND estado_participacion IN ('INSCRITO','ACTIVO','FINALIZADO')", idProyecto, persona).Count(&n)
+		return n > 0
+	}
+	return false
+}
+
 // isPDF valida la extensión del archivo recibido.
 func isPDF(name string) bool {
 	return len(name) > 4 && name[len(name)-4:] == ".pdf"

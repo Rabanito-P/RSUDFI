@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"io"
 	"strconv"
 	"strings"
 
@@ -52,16 +53,11 @@ func (h *DocumentoHandler) Upload(c *gin.Context) {
 	file, err := c.FormFile("archivo")
 	if err != nil { utils.Fail(c, 400, "archivo requerido", err.Error()); return }
 	// Validación robusta (tamaño, extensión y contenido) + guardado seguro.
-	saved, err := storage.GuardarSeguro(file, storage.KindMixto, "")
+	// En B2 queda en proyectos/<id>/documentos/ (carpeta por proyecto).
+	saved, err := storage.GuardarSeguro(file, storage.KindMixto, storage.PrefijoProyecto(uint(idProj))+"/documentos")
 	if err != nil {
-		if _, ok := err.(*storage.ErrorValidacion); ok {
-			utils.Fail(c, 400, err.Error(), nil); return
-		}
-		// Si el driver cloud no está configurado, error 501 controlado.
-		if storage.New().Driver() == "cloud" {
-			utils.Fail(c, 501, "Almacenamiento cloud no habilitado en este MVP; sigue activo el local", err.Error()); return
-		}
-		utils.Fail(c, 500, "No se pudo guardar", err.Error()); return
+		responderErrorGuardado(c, err)
+		return
 	}
 	filename := saved.Filename
 	sz := saved.Size
@@ -89,11 +85,13 @@ func (h *DocumentoHandler) Upload(c *gin.Context) {
 	}
 	utils.Created(c, doc, "Documento subido")
 }
-// Archivo redirige a la URL pública del documento (archivo servido en /uploads).
+// Archivo entrega el archivo del documento. En local redirige a /uploads; con
+// el driver B2 (bucket privado) transmite el stream desde el bucket.
 // @Tags		Documentos
-// @Produce	json
+// @Produce		octet-stream
 // @Param		id path int true "ID documento"
-// @Success	302 {string} string "Redirección al archivo"
+// @Success	302 {string} string "Redirección al archivo (local)"
+// @Success	200 {file} file "Archivo (B2)"
 // @Failure	404 "Documento no encontrado"
 // @Router		/api/v1/documentos/{id}/archivo [get]
 func (h *DocumentoHandler) Archivo(c *gin.Context) {
@@ -102,10 +100,27 @@ func (h *DocumentoHandler) Archivo(c *gin.Context) {
 	if err := h.db.First(&doc, "id_documento = ?", id).Error; err != nil {
 		utils.Fail(c, 404, "Documento no encontrado", nil); return
 	}
+	// OWASP A01: solo equipo/asesor/gestión descargan documentos del proyecto.
+	if !puedeVerProyecto(h.db, c, doc.IDProyecto) {
+		utils.Fail(c, 403, "no tienes acceso a este documento", nil); return
+	}
 	if doc.URLArchivo == "" {
 		utils.Fail(c, 404, "Documento sin archivo asociado", nil); return
 	}
-	c.Redirect(302, doc.URLArchivo)
+	// Local (o respaldo local guardado por fallback): redirige al estático.
+	if !storage.EsCloud() || storage.ExisteLocal(doc.URLArchivo) {
+		c.Redirect(302, doc.URLArchivo)
+		return
+	}
+	body, ct, err := storage.AbrirArchivo(doc.URLArchivo)
+	if err != nil {
+		utils.Fail(c, 404, "Archivo no encontrado en el bucket", err.Error()); return
+	}
+	defer body.Close()
+	c.Header("Content-Type", ct)
+	c.Header("Content-Disposition", "attachment; filename=\""+doc.NombreArchivo+"\"")
+	c.Header("Cache-Control", "private, max-age=300")
+	_, _ = io.Copy(c.Writer, body)
 }
 
 // Documentos del proyecto
@@ -119,6 +134,11 @@ func (h *DocumentoHandler) Archivo(c *gin.Context) {
 // @Router		/api/v1/proyectos/{id}/documentos [get]
 func (h *DocumentoHandler) ByProyecto(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
+	// OWASP A01: solo miembros del equipo, asesor o gestión ven los documentos.
+	if !puedeVerProyecto(h.db, c, uint(id)) {
+		utils.Fail(c, 403, "no tienes acceso a los documentos de este proyecto", nil)
+		return
+	}
 	list, err := h.repo.FindByProyecto(uint(id))
 	if err != nil { utils.Fail(c, 500, "Error", err.Error()); return }
 	utils.Success(c, list, "OK")

@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
+	"unicode"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -79,8 +81,7 @@ func NewUsuarioAdminHandler(db *gorm.DB) *UsuarioAdminHandler {
 	return &UsuarioAdminHandler{repo: repository.NewUsuarioRepo(db), db: db}
 }
 
-// esAdmin comprueba el rol de negocio del token (claim user_id → RSU_Usuario.rol).
-// El middleware pone rol_actor (CODIGO como DIR_ESCUELA, ADMIN...), no "rol".
+// esAdmin comprueba el rol de negocio del token (claim user_id → RSU_Usuario.rol).// El middleware pone rol_actor (CODIGO como DIR_ESCUELA, ADMIN...), no "rol".
 func esAdmin(c *gin.Context) bool {
 	v, ok := c.Get("rol_actor")
 	return ok && v == "ADMIN"
@@ -138,6 +139,11 @@ func (h *UsuarioAdminHandler) Crear(c *gin.Context) {
 	}
 	if !rolValido(req.RolActor) {
 		utils.Fail(c, 400, "rol_actor inválido para el sistema UNDC", nil)
+		return
+	}
+	// OWASP A07: política de contraseña (mínimo 8, mayúscula, minúscula y número).
+	if err := validarPassword(req.Password); err != nil {
+		utils.Fail(c, 400, err.Error(), nil)
 		return
 	}
 	if _, err := h.repo.FindByCorreo(req.Correo); err == nil {
@@ -206,8 +212,8 @@ func (h *UsuarioAdminHandler) Actualizar(c *gin.Context) {
 		u.Activo = *req.Activo
 	}
 	if req.Password != nil && *req.Password != "" {
-		if len(*req.Password) < 6 {
-			utils.Fail(c, 400, "La contraseña debe tener al menos 6 caracteres", nil)
+		if err := validarPassword(*req.Password); err != nil {
+			utils.Fail(c, 400, err.Error(), nil)
 			return
 		}
 		hash, err := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
@@ -331,3 +337,26 @@ func moduloValido(mod string) bool {
  	}
  	return false
  }
+
+// validarPassword exige la política OWASP A07: 8+ caracteres, mayúscula,
+// minúscula y número. Se aplica al crear y al cambiar contraseñas.
+func validarPassword(p string) error {
+	if len(p) < 8 {
+		return errors.New("la contraseña debe tener al menos 8 caracteres")
+	}
+	var mayus, minus, num bool
+	for _, r := range p {
+		switch {
+		case unicode.IsUpper(r):
+			mayus = true
+		case unicode.IsLower(r):
+			minus = true
+		case unicode.IsDigit(r):
+			num = true
+		}
+	}
+	if !mayus || !minus || !num {
+		return errors.New("la contraseña debe combinar mayúsculas, minúsculas y números")
+	}
+	return nil
+}

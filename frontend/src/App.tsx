@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { LayoutProvider } from './context/LayoutContext'
 import { RoleSidebar } from './components/layout/RoleSidebar'
 import { Header } from './components/layout/Header'
-import { RequireAuth } from './components/RoleGuard'
+import { RequireAuth, RequireRole } from './components/RoleGuard'
 import { Skeleton } from './components/ui/Skeleton'
 import Login from './pages/Login'
 import EstudianteDashboard from './pages/roles/EstudianteDashboard'
@@ -82,34 +82,34 @@ function AppShell(){
               <Route path="/" element={<HomeRouter/>}/>
               <Route path="/mis-proyectos" element={<Proyectos/>}/>
               <Route path="/proyectos" element={<Proyectos/>}/>
-              <Route path="/proyectos/nuevo" element={<CrearProyecto/>}/>
+              <Route path="/proyectos/nuevo" element={<RequireRole roles={['ESTUDIANTE']}><CrearProyecto/></RequireRole>}/>
               <Route path="/proyectos/:id" element={<ProyectoDetalle/>}/>
-              <Route path="/fases" element={<Fases/>}/>
-              <Route path="/ejecucion" element={<Ejecucion/>}/>
-              <Route path="/evidencias" element={<Evidencias/>}/>
-              <Route path="/modificar-informe" element={<ModificarInforme/>}/>
-              <Route path="/justificacion" element={<Justificacion/>}/>
-              <Route path="/encuesta-docente" element={<EncuestaDocente/>}/>
-              <Route path="/autorizacion-imagen" element={<AutorizacionImagen/>}/>
-              <Route path="/solicitud-constancia" element={<EstudianteConstancias/>}/>
-              <Route path="/bandeja" element={<Bandeja/>}/>
+              <Route path="/fases" element={<RequireRole roles={['ESTUDIANTE']}><Fases/></RequireRole>}/>
+              <Route path="/ejecucion" element={<RequireRole roles={['ESTUDIANTE']}><Ejecucion/></RequireRole>}/>
+              <Route path="/evidencias" element={<RequireRole roles={['ESTUDIANTE']}><Evidencias/></RequireRole>}/>
+              <Route path="/modificar-informe" element={<RequireRole roles={['ESTUDIANTE']}><ModificarInforme/></RequireRole>}/>
+              <Route path="/justificacion" element={<RequireRole roles={['ESTUDIANTE']}><Justificacion/></RequireRole>}/>
+              <Route path="/encuesta-docente" element={<RequireRole roles={['ESTUDIANTE']}><EncuestaDocente/></RequireRole>}/>
+              <Route path="/autorizacion-imagen" element={<RequireRole roles={['ESTUDIANTE']}><AutorizacionImagen/></RequireRole>}/>
+              <Route path="/solicitud-constancia" element={<RequireRole roles={['ESTUDIANTE']}><EstudianteConstancias/></RequireRole>}/>
+              <Route path="/bandeja" element={<RequireRole roles={['DIRECTIVO']}><Bandeja/></RequireRole>}/>
               <Route path="/beneficiarios" element={<Beneficiarios/>}/>
-              <Route path="/estructura" element={<Estructura/>}/>
-              <Route path="/personas" element={<Personas/>}/>
+              <Route path="/estructura" element={<RequireRole roles={['DIRECTIVO']}><Estructura/></RequireRole>}/>
+              <Route path="/personas" element={<RequireRole roles={['DIRECTIVO']}><Personas/></RequireRole>}/>
               <Route path="/actividades" element={<Actividades/>}/>
-              <Route path="/docente/carga" element={<DocenteCarga/>}/>
-              <Route path="/docente/proyectos" element={<Proyectos/>}/>
-              <Route path="/docente/entregables" element={<DocenteEntregables/>}/>
-              <Route path="/facultad/entregables" element={<DocenteEntregables/>}/>
-              <Route path="/estudiante/horas" element={<EstudianteHoras/>}/>
-              <Route path="/estudiante/constancias" element={<EstudianteConstancias/>}/>
-              <Route path="/monitoreo" element={<Monitoreo/>}/>
+              <Route path="/docente/carga" element={<RequireRole roles={['DOCENTE']}><DocenteCarga/></RequireRole>}/>
+              <Route path="/docente/proyectos" element={<RequireRole roles={['DOCENTE']}><Proyectos/></RequireRole>}/>
+              <Route path="/docente/entregables" element={<RequireRole roles={['DOCENTE']}><DocenteEntregables/></RequireRole>}/>
+              <Route path="/facultad/entregables" element={<RequireRole roles={['DIRECTIVO']}><DocenteEntregables/></RequireRole>}/>
+              <Route path="/estudiante/horas" element={<RequireRole roles={['ESTUDIANTE']}><EstudianteHoras/></RequireRole>}/>
+              <Route path="/estudiante/constancias" element={<RequireRole roles={['ESTUDIANTE']}><EstudianteConstancias/></RequireRole>}/>
+              <Route path="/monitoreo" element={<RequireRole roles={['DOCENTE','DIRECTIVO']}><Monitoreo/></RequireRole>}/>
               <Route path="/presupuesto" element={<Presupuesto/>}/>
               <Route path="/encuestas" element={<Encuestas/>}/>
               <Route path="/reportes" element={<Reportes/>}/>
               <Route path="/documentos" element={<Documentos/>}/>
-              <Route path="/catalogos" element={<Catalogos/>}/>
-            <Route path="/administracion" element={<Administracion/>}/>
+              <Route path="/catalogos" element={<RequireRole roles={['DIRECTIVO']}><Catalogos/></RequireRole>}/>
+            <Route path="/administracion" element={<RequireRole roles={['ADMIN']}><Administracion/></RequireRole>}/>
               <Route path="*" element={<Placeholder title="404" desc="Página no encontrada"/>}/>
             </Routes>
           </Suspense>

@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 	"undc-rsu/backend/internal/domain"
 	"undc-rsu/backend/internal/dto"
+	"undc-rsu/backend/internal/mail"
 	"undc-rsu/backend/internal/repository"
 )
 
@@ -102,6 +103,25 @@ func (s *ProyectoService) Create(req dto.CreateProyectoReq) (*domain.RSUProyecto
 	if req.IDEstudianteLider != nil && (modalidad == "PEP_FINANCIADO" || modalidad == "PEP_AUTOFINANCIADO") {
 		return nil, errors.New("los proyectos PEP los crea el docente responsable o el Comité; el estudiante solo crea SSU o Voluntariado")
 	}
+	// HU-002: el estudiante debe asignar su docente asesor al crear el proyecto
+	// (antes quedaba vacío y se asignaba después, fuera del informe inicial).
+	if (modalidad == "SSU" || modalidad == "VOLUNTARIADO") && req.IDDocenteAsesor == nil {
+		return nil, errors.New("debes indicar el docente asesor del proyecto (obligatoria al crear, HU-002)")
+	}
+	// Norma institucional (Art. 86): un docente no asesora más de 2 equipos a la vez.
+	if req.IDDocenteAsesor != nil {
+		max := maxProyectosDocente(s.db)
+		if n, err := s.docenteRepo.ProyectosAsesoradosActivos(*req.IDDocenteAsesor); err == nil && n >= max {
+			return nil, fmt.Errorf("el docente ya asesora %d equipo(s): la norma permite como máximo %d a la vez. Elige otro asesor", n, max)
+		}
+	}
+	// HU-001 + HU-060: el líder declara su celular al crear (valida formato 9XXXXXXXX).
+	// Se valida ANTES de las reglas de proyecto activo para que el error sea claro.
+	if req.IDEstudianteLider != nil && strings.TrimSpace(req.CelularLider) != "" {
+		if err := s.GuardarCelularLider(*req.IDEstudianteLider, req.CelularLider); err != nil {
+			return nil, err
+		}
+	}
 	// Regla V4: estudiante solo 1 proyecto activo a la vez (lider o participante INSCRITO/ACTIVO). Si lo retiran (RETIRADO/FINALIZADO) queda libre.
 	if req.IDEstudianteLider != nil {
 		var cnt int64
@@ -193,10 +213,21 @@ func (s *ProyectoService) Create(req dto.CreateProyectoReq) (*domain.RSUProyecto
 			idLider := s.idUsuarioDePersona("ESTUDIANTE", req.IDEstudianteLider)
 			s.pushNotificacion("ESTUDIANTE_PROP", "PROYECTO_CREADO", "Proyecto creado en BORRADOR — "+cod, &msg, &projCreado.ID, idLider)
 			s.pushNotificacion("ESTUDIANTE_EJEC", "PROYECTO_CREADO", "Nuevo proyecto en tu equipo — "+cod, &msg, &projCreado.ID, idLider)
+			// Correo de confirmación al líder (Resend).
+			if dest, ok := s.correoDeUsuarioID(idLider); ok {
+				d := mail.DatosProyecto{Codigo: cod, Titulo: tit, EstadoNuevo: "BORRADOR"}
+				s.enviarCorreos([]destCorreo{dest}, d, mail.CorreoProyectoCreado)
+			}
 		}
 		if req.IDDocenteAsesor != nil {
 			msg2 := fmt.Sprintf("Has sido asignado como asesor en %s «%s». Valida ciclo mínimo y carga no lectiva.", cod, tit)
-			s.pushNotificacion("DOCENTE_RESP", "ASIGNACION", "Asignación como asesor — "+cod, &msg2, &projCreado.ID, s.idUsuarioDePersona("DOCENTE", req.IDDocenteAsesor))
+			idDoc := s.idUsuarioDePersona("DOCENTE", req.IDDocenteAsesor)
+			s.pushNotificacion("DOCENTE_RESP", "ASIGNACION", "Asignación como asesor — "+cod, &msg2, &projCreado.ID, idDoc)
+			// Correo al asesor: mismo cuerpo de proyecto creado.
+			if dest, ok := s.correoDeUsuarioID(idDoc); ok {
+				d := mail.DatosProyecto{Codigo: cod, Titulo: tit, EstadoNuevo: "BORRADOR"}
+				s.enviarCorreos([]destCorreo{dest}, d, mail.CorreoProyectoCreado)
+			}
 		}
 	}
 	return projCreado, nil
@@ -329,11 +360,17 @@ func (s *ProyectoService) Transicion(idProyecto uint, req dto.TransicionReq) err
 		titulo := proj.Titulo
 		cod := proj.CodigoProyecto
 		nombreRolActor := s.nombreRolActor(req.IDRolActor)
+		base := mail.DatosProyecto{Codigo: cod, Titulo: titulo, Actor: nombreRolActor}
 		if req.Resultado == "APROBADO" {
 			if rolDestino := s.rolDestinoPorEstado(estadoDest.Codigo); rolDestino != "" {
 				msg := fmt.Sprintf("El proyecto %s «%s» avanzó a %s. Te toca revisarlo en tu bandeja.", cod, titulo, estadoDest.Nombre)
 				tituloNotif := fmt.Sprintf("%s — %s", estadoDest.Nombre, cod)
 				s.pushNotificacion(rolDestino, "TRANSICION", tituloNotif, &msg, &idProyecto, nil)
+				// Correo al lane destino (cada usuario con ese rol).
+				d := base
+				d.EstadoNuevo = estadoDest.Nombre
+				d.RolLector = s.nombreRolLegible(rolDestino)
+				s.enviarCorreos(s.correosDeRol(rolDestino), d, mail.CorreoAvance)
 			}
 			teamMsg := fmt.Sprintf("Avance! %s cambió a %s. El equipo puede seguir subiendo evidencias.", cod, estadoDest.Nombre)
 			s.pushNotificacion("ESTUDIANTE_EJEC", "AVANCE_EQUIPO", teamMsg, &teamMsg, &idProyecto, nil)
@@ -352,6 +389,13 @@ func (s *ProyectoService) Transicion(idProyecto uint, req dto.TransicionReq) err
 					nombreRolActor, cod, titulo, proj.EstadoActual.Nombre, motivo)
 				tituloNotif := fmt.Sprintf("Devuelto: %s — %s", proj.EstadoActual.Nombre, cod)
 				s.pushNotificacion(rolEmisor, "TRANSICION_DEVUELTA", tituloNotif, &msg, &idProyecto, nil)
+				// Correo al emisor con el motivo destacado (R26).
+				d := base
+				d.Accion = "devolvió"
+				d.EstadoAnt = proj.EstadoActual.Nombre
+				d.EstadoNuevo = estadoDest.Nombre
+				d.Motivo = motivo
+				s.enviarCorreos(s.correosDeRol(rolEmisor), d, mail.CorreoDevolucion)
 			}
 		}
 	}
@@ -367,26 +411,6 @@ func (s *ProyectoService) nombreRolActor(idRol uint) string {
 	return "El revisor"
 }
 
-// rolEmisorPorEstado devuelve el rol que ENVIÓ el proyecto desde ese estado
-// (quien tiene una transición de salida hacia la revisión): es quien debe
-// recibir la devolución cuando el revisor rechaza u observa.
-func (s *ProyectoService) rolEmisorPorEstado(estadoCodigo string) string {
-	var codigo string
-	// Salida "hacia adelante" (no a RECHAZADO): el emisor original.
-	err := s.db.Model(&domain.RSUTransicionEstado{}).
-		Select(`r."codigo"`).
-		Joins(`JOIN "RSU_Estado_Proyecto" e ON e."id_estado" = "RSU_Transicion_Estado"."estado_origen"`).
-		Joins(`JOIN "RSU_Estado_Proyecto" d ON d."id_estado" = "RSU_Transicion_Estado"."estado_destino"`).
-		Joins(`JOIN "RSU_Rol_Actor" r ON r."id_rol_actor" = "RSU_Transicion_Estado"."id_rol_actor"`).
-		Where(`e."codigo" = ? AND d."codigo" <> 'RECHAZADO'`, estadoCodigo).
-		Order(`"RSU_Transicion_Estado"."id_transicion" ASC`).
-		Limit(1).
-		Scan(&codigo).Error
-	if err == nil && codigo != "" {
-		return codigo
-	}
-	return ""
-}
 func (s *ProyectoService) Historial(id uint) ([]domain.RSUFlujoAprobacion, error) {
 	return s.flujoRepo.History(id)
 }

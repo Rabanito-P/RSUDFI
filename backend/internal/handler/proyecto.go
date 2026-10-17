@@ -197,6 +197,41 @@ func (h *ProyectoHandler) Transicion(c *gin.Context) {
 	if err := h.svc.Transicion(uint(id), req); err != nil { utils.Fail(c, 400, err.Error(), nil); return }
 	utils.Success(c, nil, "Transición registrada")
 }
+
+// CambiarLider transfiere el liderazgo a otro miembro del equipo (HU-060).
+// Lo autoriza el líder actual del proyecto (estudiante con token) o un rol de
+// gestión (Dirección RSU de Facultad, Director de Escuela o ADMIN).
+// @Tags		Proyectos
+// @Accept		json
+// @Produce	json
+// @Param		id path int true "ID proyecto"
+// @Param		body body dto.CambioLiderReq true "Nuevo líder y motivo"
+// @Success	200 {object} map[string]any "OK"
+// @Failure	403 "Sin permisos para transferir el liderazgo"
+// @Router		/api/v1/proyectos/{id}/lider [post]
+func (h *ProyectoHandler) CambiarLider(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	var req dto.CambioLiderReq
+	if err := c.ShouldBindJSON(&req); err != nil { utils.ValidationFail(c, err.Error()); return }
+
+	proj, err := h.svc.Get(uint(id))
+	if err != nil { utils.Fail(c, 404, "Proyecto no encontrado", err.Error()); return }
+
+	// Permiso: líder actual (el usuario del token es el estudiante líder) o
+	// roles de gestión RSU. NUNCA se acepta el líder desde el body.
+	rol := c.GetString("rol_actor")
+	gestion := rol == "DIR_RS_FACULTAD" || rol == "ADMIN" || rol == "DIR_ESCUELA"
+	esLiderActual := esEstudianteToken(h.db, c) &&
+		proj.IDEstudianteLider != nil &&
+		uint(personaIDFromToken(h.db, c)) == *proj.IDEstudianteLider
+	if !gestion && !esLiderActual {
+		utils.Fail(c, 403, "solo el líder actual o la Dirección de RSU de Facultad pueden transferir el liderazgo", nil)
+		return
+	}
+	updated, err := h.svc.CambiarLider(uint(id), req)
+	if err != nil { utils.Fail(c, 400, err.Error(), nil); return }
+	utils.Success(c, updated, "Liderazgo transferido; se notificó al líder saliente y al nuevo")
+}
 // Trazabilidad del flujo de aprobación del proyecto
 // @Tags		Proyectos
 // @Accept		json

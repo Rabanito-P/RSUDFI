@@ -38,6 +38,7 @@ func Setup(db *gorm.DB) *gin.Engine {
 	encH := handler.NewEncuestaHandler(db)
 	presH := handler.NewPresupuestoHandler(db)
 	documH := handler.NewDocumentoHandler(db)
+	archivoH := handler.NewArchivoHandler(db)
 	catH := handler.NewCatalogoHandler(db)
 	dashH := handler.NewDashboardHandler(db)
 	indH := handler.NewIndicadorHandler(db)
@@ -93,25 +94,26 @@ func Setup(db *gorm.DB) *gin.Engine {
 		api.GET("/catalogos/transiciones", catH.Transiciones)
 		api.GET("/catalogos/preguntas-encuesta", catH.PreguntasEncuesta)
 
-		// estructura
-		api.POST("/facultades", facH.Create)
+		// estructura (crear/editar: solo dirección y administración)
+		gestion := middleware.RequiereRol("DIR_ESCUELA", "DIR_RS_FACULTAD", "DIR_CENTRAL_RS", "DIR_DEPTO")
+		api.POST("/facultades", gestion, facH.Create)
 		api.GET("/facultades", facH.List)
 		api.GET("/facultades/:id", facH.Get)
-		api.PUT("/facultades/:id", facH.Update)
-		api.DELETE("/facultades/:id", facH.Delete)
+		api.PUT("/facultades/:id", gestion, facH.Update)
+		api.DELETE("/facultades/:id", gestion, facH.Delete)
 
-		api.POST("/escuelas", escH.Create)
+		api.POST("/escuelas", gestion, escH.Create)
 		api.GET("/escuelas", escH.List)
 		api.GET("/escuelas/:id", escH.Get)
 
-		api.POST("/ciclos", cicloH.Create)
+		api.POST("/ciclos", gestion, cicloH.Create)
 		api.GET("/ciclos", cicloH.List)
 
-		api.POST("/docentes", docH.Create)
+		api.POST("/docentes", gestion, docH.Create)
 		api.GET("/docentes", docH.List)
 		api.GET("/docentes/:id", docH.Get)
 
-		api.POST("/estudiantes", estH.Create)
+		api.POST("/estudiantes", gestion, estH.Create)
 		api.GET("/estudiantes", estH.List)
 		api.GET("/estudiantes/:id", estH.Get)
 		api.GET("/estudiantes/:id/constancias", constH.ByEstudiante)
@@ -122,7 +124,9 @@ func Setup(db *gorm.DB) *gin.Engine {
 		api.GET("/proyectos/resumen", projH.ResumenVw) // vista vw_rsu_proyectos_resumen
 		api.GET("/proyectos/:id", projH.Get)
 		api.PUT("/proyectos/:id", projH.Update)
-		api.POST("/proyectos/:id/transicion", projH.Transicion)
+		// Transición BPMN con límite: 20/min (evita spam de cambios de estado)
+		api.POST("/proyectos/:id/transicion", middleware.RateLimit(20, time.Minute), projH.Transicion)
+		api.POST("/proyectos/:id/lider", projH.CambiarLider) // HU-060 cambio de líder
 		api.GET("/proyectos/:id/historial", projH.Historial)
 		// HU: estudiante ve su proyecto sea líder o miembro equipo; docente solo sus asesorados
 		api.GET("/estudiantes/:id/proyectos", projH.ListByEstudiante)
@@ -152,11 +156,11 @@ func Setup(db *gorm.DB) *gin.Engine {
 		api.POST("/beneficiarios/vincular", benH.Vincular)
 		api.GET("/proyectos/:id/beneficiarios", benH.ByProyecto)
 
-		// actividades campo
+		// actividades campo — fotos y planificación con límite razonable
 		api.POST("/actividades", actH.Create)
 		api.GET("/proyectos/:id/actividades", actH.ByProyecto)
 		api.PATCH("/actividades/:id/estado", actH.UpdateEstado)
-		api.POST("/actividades/fotos", fotoH.Upload)
+		api.POST("/actividades/fotos", middleware.RateLimit(30, time.Minute), fotoH.Upload)
 		api.GET("/actividades/:id/fotos", fotoH.ByActividad)
 		api.GET("/actividades/del-dia", fotoH.DelDia)
 
@@ -164,10 +168,15 @@ func Setup(db *gorm.DB) *gin.Engine {
 		api.POST("/monitoreos", monH.Create)
 		api.GET("/proyectos/:id/monitoreos", monH.ByProyecto)
 
-		// documentos
-		api.POST("/documentos/upload", documH.Upload)
+		// documentos — subidas con límite: 30/min por IP (abuso/DoS OWASP A04)
+		api.POST("/documentos/upload", middleware.RateLimit(30, time.Minute), documH.Upload)
 		api.GET("/proyectos/:id/documentos", documH.ByProyecto)
 		api.GET("/documentos/:id/archivo", documH.Archivo)
+
+		// archivos unificados (local /uploads o bucket B2 privado via stream)
+		api.GET("/archivos", archivoH.Descargar)
+		api.GET("/storage/estado", archivoH.Estado)
+		api.PUT("/storage/b2", archivoH.GuardarB2) // ADMIN: credenciales Backblaze en caliente
 
 		// presupuesto
 		api.POST("/presupuesto/movimientos", presH.CreateMov)
@@ -205,11 +214,11 @@ func Setup(db *gorm.DB) *gin.Engine {
 		// ── Configuración (M11) ──
 		api.GET("/configuracion", configH.List)
 		api.GET("/configuracion/clave/:clave", configH.Get)
-		api.PUT("/configuracion/clave/:clave", configH.Upsert)
-		api.DELETE("/configuracion/:id", configH.Delete)
+		api.PUT("/configuracion/clave/:clave", middleware.RequiereRol("ADMIN"), configH.Upsert)
+		api.DELETE("/configuracion/:id", middleware.RequiereRol("ADMIN"), configH.Delete)
 
 		// ── Auditoría (M09) — solo lectura, acceso admin ──
-		api.GET("/auditoria", auditH.List)
+		api.GET("/auditoria", middleware.RequiereRol("ADMIN"), auditH.List)
 
 		// ── Constancias (RSU_Solicitud_Constancia) ──
 		api.POST("/constancias", constH.Create)
@@ -226,8 +235,9 @@ func Setup(db *gorm.DB) *gin.Engine {
 		api.PATCH("/modificaciones-informe/:id", modH.Update)
 
 		// ── Planificación de actividades desde Excel (HU-010) ──
-		api.POST("/actividades/planificacion", planH.Guardar)
-		api.POST("/actividades/planificacion/preview", planH.Previsualizar)
+		// Límite 10/min: interpretar Excels es costoso (proceso Python).
+		api.POST("/actividades/planificacion", middleware.RateLimit(10, time.Minute), planH.Guardar)
+		api.POST("/actividades/planificacion/preview", middleware.RateLimit(20, time.Minute), planH.Previsualizar)
 		api.GET("/actividades/plantilla-planificacion", planH.Plantilla)
 		api.GET("/plantillas/:archivo", planH.PlantillaDeDescarga)
 

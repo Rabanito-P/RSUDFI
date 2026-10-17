@@ -10,7 +10,7 @@ import { Input, Select } from '../components/ui/Input'
 import { Alert } from '../components/ui/Alert'
 import { Skeleton } from '../components/ui/Skeleton'
 import { Empty } from '../components/ui/Empty'
-import { UserCog, Power, KeyRound, Trash2, ShieldCheck, FileText, Upload, Download, RotateCcw, FileSpreadsheet } from 'lucide-react'
+import { UserCog, Power, KeyRound, Trash2, ShieldCheck, FileText, Upload, Download, RotateCcw, FileSpreadsheet, Database } from 'lucide-react'
 
 type Usuario = {
   id_usuario:number
@@ -59,6 +59,12 @@ export default function Administracion(){
   const [subiendo,setSubiendo]=useState<string|null>(null)
   const inputFormato=useRef<HTMLInputElement>(null)
   const [codigoActivo,setCodigoActivo]=useState<string|null>(null)
+
+  // ── Almacenamiento Backblaze B2 ──
+  const [b2Estado,setB2Estado]=useState<any>(null)
+  const [b2Form,setB2Form]=useState({account_id:'', app_key:'', bucket_id:'f64c72b539a346e19bfd0a1d'})
+  const [b2Msg,setB2Msg]=useState<{tipo:'ok'|'err',texto:string}|null>(null)
+  const [b2Busy,setB2Busy]=useState(false)
 
   const cargar = async()=>{
     setLoading(true); setError('')
@@ -122,6 +128,30 @@ export default function Administracion(){
       setMsg({tipo:'err', texto:ex?.message || 'No se pudo restaurar el formato'})
     }finally{ setSubiendo(null) }
   }
+
+  const cargarEstadoB2 = async ()=>{
+    try{
+      const r:any = await api.get('/api/v1/storage/estado')
+      setB2Estado(r.data)
+    }catch{ /* silencioso: el estado se reintenta */ }
+  }
+  const guardarB2 = async ()=>{
+    setB2Busy(true); setB2Msg(null)
+    try{
+      await api.put('/api/v1/storage/b2', {
+        b2_account_id: b2Form.account_id,
+        b2_application_key: b2Form.app_key,
+        b2_bucket_id: b2Form.bucket_id,
+      })
+      setB2Msg({tipo:'ok', texto:'¡Backblaze B2 conectado! Las subidas ya se guardan en el bucket privado.'})
+      setB2Form({...b2Form, app_key:''})
+      await cargarEstadoB2()
+    }catch(ex:any){
+      setB2Msg({tipo:'err', texto: ex?.message || 'No se pudo conectar con Backblaze B2'})
+      await cargarEstadoB2()
+    }finally{ setB2Busy(false) }
+  }
+  useEffect(()=>{ cargarEstadoB2() },[])
 
   const probarFormato = async (codigo:string)=>{
     // La descarga necesita el token: se pide como blob y se abre con una URL temporal.
@@ -536,6 +566,62 @@ export default function Administracion(){
           </div>
         </div>
       )}
+
+      {/* ── Almacenamiento Backblaze B2 (solo ADMIN) ── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Database size={16}/> Almacenamiento Backblaze B2</CardTitle>
+          <p className="text-xs text-slate-500">
+            Los documentos, fotos y entregables se guardan en el bucket privado de Backblaze.
+            Pega aquí las credenciales de tu consola B2: se validan al instante y quedan activas sin reiniciar.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {b2Estado === null ? (
+            <Skeleton className="h-16 w-full" />
+          ) : (
+            <div className={`rounded-xl border p-3 text-sm ${b2Estado.cloud ? (b2Estado.b2_ok ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200') : 'bg-slate-50 border-slate-200'}`}>
+              <div className="font-bold flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${b2Estado.cloud ? (b2Estado.b2_ok ? 'bg-emerald-500' : 'bg-amber-500') : 'bg-slate-400'}`} />
+                Driver: <span className="font-mono">{b2Estado.driver}</span>
+                {b2Estado.cloud && <span className={b2Estado.b2_ok ? 'text-emerald-700' : 'text-amber-700'}>{b2Estado.b2_ok ? '· B2 conectado' : '· B2 no responde'}</span>}
+              </div>
+              {b2Estado.b2_error && <div className="text-xs text-amber-800 mt-1">{b2Estado.b2_error}</div>}
+            </div>
+          )}
+          <div>
+            <label className="text-[11px] font-semibold text-slate-600">Application Key ID (accountId) *</label>
+            <Input value={b2Form.account_id} onChange={e=>setB2Form({...b2Form, account_id:e.target.value.trim()})}
+                   placeholder="005..." className="font-mono text-xs"/>
+            <div className="text-[11px] text-slate-400 mt-0.5">
+              Backblaze → App Keys → tu clave. Debe tener 24+ caracteres y empezar con 003/005.
+              Si solo ves unos pocos caracteres, ábrela en la consola y cópiala completa.
+            </div>
+          </div>
+          <div>
+            <label className="text-[11px] font-semibold text-slate-600">Application Key *</label>
+            <Input value={b2Form.app_key} onChange={e=>setB2Form({...b2Form, app_key:e.target.value.trim()})}
+                   placeholder="K00..." className="font-mono text-xs" type="password"/>
+            <div className="text-[11px] text-slate-400 mt-0.5">El secreto largo que aparece al crear la clave (solo se muestra una vez: guárdalo).</div>
+          </div>
+          <div>
+            <label className="text-[11px] font-semibold text-slate-600">Bucket ID *</label>
+            <Input value={b2Form.bucket_id} onChange={e=>setB2Form({...b2Form, bucket_id:e.target.value.trim()})}
+                   placeholder="f64c..." className="font-mono text-xs"/>
+          </div>
+          {b2Msg && <Alert variant={b2Msg.tipo==='ok'?'success':'error'} className="text-xs">{b2Msg.texto}</Alert>}
+          <div className="flex items-center gap-2">
+            <Button onClick={guardarB2} disabled={b2Busy || !b2Form.account_id || !b2Form.app_key || !b2Form.bucket_id}
+                    leftIcon={<Database size={14}/>}>
+              {b2Busy ? 'Verificando…' : 'Verificar y conectar'}
+            </Button>
+            <Button variant="outline" onClick={cargarEstadoB2} disabled={b2Busy}>Actualizar estado</Button>
+          </div>
+          <div className="text-[11px] text-slate-400">
+            Mientras B2 no esté conectado, las subidas devuelven error visible (no se guardan archivos a medias).
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

@@ -333,3 +333,28 @@ func extractProyectoID(c *gin.Context) *uint {
 	uid := uint(id)
 	return &uid
 }
+
+// RequiereRol restringe una ruta a los roles BPMN indicados (claim rol_actor).
+// ADMIN pasa siempre. Sin el rol exigido responde 403 y aborta la cadena.
+// Se usa en rutas de escritura sensibles: estructura, personas, configuración,
+// comité RSU y auditoría — antes cualquier usuario autenticado podía usarlas.
+func RequiereRol(codigos ...string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		rol := c.GetString("rol_actor")
+		if rol == "ADMIN" {
+			c.Next()
+			return
+		}
+		for _, x := range codigos {
+			if rol == x {
+				c.Next()
+				return
+			}
+		}
+		c.JSON(http.StatusForbidden, gin.H{
+			"success": false,
+			"message": "tu rol no tiene permiso para esta acción",
+		})
+		c.Abort()
+	}
+}

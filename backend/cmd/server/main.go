@@ -6,7 +6,9 @@ import (
 
 	"undc-rsu/backend/internal/config"
 	"undc-rsu/backend/internal/middleware"
+	"undc-rsu/backend/internal/repository"
 	"undc-rsu/backend/internal/router"
+	"undc-rsu/backend/internal/storage"
 	"undc-rsu/backend/pkg/database"
 
 	"github.com/gin-gonic/gin"
@@ -39,6 +41,27 @@ func main() {
 
 	db := database.Connect(config.DSN(cfg))
 	r := router.Setup(db)
+
+	// Diagnóstico del almacenamiento al arrancar: si B2 no responde se ve en
+	// el log de inmediato (credenciales, bucket o red), no al primer usuario.
+	log.Printf("[storage] driver=%s", storage.Driver())
+	if storage.EsCloud() {
+		// Las credenciales también pueden venir de RSU_Configuracion
+		// (las guarda el administrador desde el panel, sin editar .env).
+		cfgRepo := repository.NewConfiguracionRepo(db)
+		storage.ConfigurarLectorBD(func(clave, defecto string) string {
+			if v, err := cfgRepo.Valor(clave); err == nil && v != "" {
+				return v
+			}
+			return defecto
+		})
+		if err := storage.Verificar(); err != nil {
+			log.Printf("[storage] AVISO: Backblaze B2 NO responde: %v", err)
+			log.Printf("[storage] Revisa las credenciales en el panel (Administración → Almacenamiento) o en backend/.env")
+		} else {
+			log.Printf("[storage] Backblaze B2 OK (bucket %s)", storage.DatosB2Diagnostico())
+		}
+	}
 
 	addr := ":" + cfg.Port
 	log.Printf("🚀 UNDC RSU API escuchando en http://localhost%s  (env: %s)", addr, cfg.GinMode)

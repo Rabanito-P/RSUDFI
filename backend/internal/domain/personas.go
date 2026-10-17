@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"strings"
 	"time"
 )
 
@@ -33,6 +34,7 @@ type Estudiante struct {
 	Nombres       string   `gorm:"column:nombres" json:"nombres"`
 	Apellidos     string   `gorm:"column:apellidos" json:"apellidos"`
 	Correo        string   `gorm:"column:correo_institucional" json:"correo_institucional"`
+	Celular       *string  `gorm:"column:celular" json:"celular"`
 	IDEscuela     uint     `gorm:"column:id_escuela" json:"id_escuela"`
 	Escuela       *Escuela `gorm:"foreignKey:IDEscuela" json:"escuela,omitempty"`
 	Estado        string   `gorm:"column:estado" json:"estado"`
@@ -40,6 +42,14 @@ type Estudiante struct {
 }
 
 func (Estudiante) TableName() string { return "Estudiante" }
+
+// CelularFormateado devuelve el celular o "—" para vistas.
+func (e *Estudiante) CelularFormateado() string {
+	if e.Celular != nil && strings.TrimSpace(*e.Celular) != "" {
+		return *e.Celular
+	}
+	return "—"
+}
 
 type EstudianteCiclo struct {
 	IDEstudiante         uint   `gorm:"primaryKey;column:id_estudiante" json:"id_estudiante"`

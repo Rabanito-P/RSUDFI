@@ -596,3 +596,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_solicitud_union_pendiente
   WHERE ("estado" = 'PENDIENTE');
 CREATE INDEX IF NOT EXISTS idx_sol_union_proyecto ON "RSU_Solicitud_Union"("id_proyecto", "estado");
 CREATE INDEX IF NOT EXISTS idx_sol_union_estudiante ON "RSU_Solicitud_Union"("id_estudiante", "estado");
+
+-- ── Migraciones idempotentes (post-deploy) ─────────────────────
+-- Columnas agregadas después del schema inicial. IF NOT EXISTS mantiene el
+-- archivo re-ejecutable (Docker lo corre solo en volumen nuevo, pero los
+-- entornos ya inicializados reciben estos ALTER en el arranque del backend).
+ALTER TABLE "Estudiante" ADD COLUMN IF NOT EXISTS "celular" VARCHAR(15);

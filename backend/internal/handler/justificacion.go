@@ -75,7 +75,8 @@ func (h *JustificacionHandler) Create(c *gin.Context) {
 			utils.Fail(c, http.StatusBadRequest, "la actividad indicada no existe", err.Error())
 			return
 		}
-		saved, err := storage.New().Save(file, "evidencias")
+		// Evidencia de la falta: proyectos/<id>/evidencias/.
+		saved, err := storage.New().Save(file, storage.PrefijoProyecto(act.IDProyecto)+"/evidencias")
 		if err != nil {
 			utils.Fail(c, http.StatusInternalServerError, "No se pudo guardar la evidencia", err.Error())
 			return
