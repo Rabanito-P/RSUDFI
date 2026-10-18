@@ -539,6 +539,17 @@ func (h *EntregableHandler) Update(c *gin.Context) {
 		utils.ValidationFail(c, err.Error())
 		return
 	}
+
+	// P0 (autorización): verificar un entregable es del docente asesor del
+	// proyecto o de un rol de gestión. Antes cualquier usuario autenticado
+	// podía aprobar u observar el entregable de otro equipo.
+	if !puedeVerificarEntregable(h.db, c, e.IDProyecto) {
+		utils.Fail(c, 404, "Recurso no encontrado", nil)
+		return
+	}
+	// El verificador es siempre el del token, nunca el que venga en el cuerpo.
+	body.IDVerificador = uintPtrU(personaIDFromToken(h.db, c))
+
 	actual := normEstEnt(e.Estado)
 	if body.Horas != nil {
 		e.HorasAsignadas = *body.Horas

@@ -405,11 +405,13 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
   const guardarTransicion = async ()=>{
     setModalBusy(true); setModalMsg(null)
     if(!transForm.estado_destino || !transForm.id_rol_actor){ setModalMsg({type:'err', text:'Selecciona la transición'}); setModalBusy(false); return }
+    // El rol actor y el usuario los resuelve el backend desde el token. El
+    // id_rol_actor que se muestra en el selector es solo para encuadrar la
+    // transición elegida, no para autorizar: mandarlo sería permitir que el
+    // cliente aprobara en nombre de otro rol.
     try{
       await api.post(`/api/v1/proyectos/${id}/transicion`, {
         estado_destino: String(transForm.estado_destino),
-        id_rol_actor: Number(transForm.id_rol_actor),
-        id_usuario: Number(user?.id),
         resultado: transForm.resultado,
         comentarios: transForm.comentarios || undefined
       })

@@ -505,10 +505,47 @@ Rutas de interfaz: `/docente/asesorias` (asesor) y `/formatos-drsu` (todos los r
 | 4 | El conteo de asesorías no filtraba por ciclo, lo que rompía la regla R43 | Nuevo `ProyectosAsesoradosActivosEnCiclo` |
 | 5 | `minimo_horas_ssu` estaba sembrado pero era **código muerto** | Ahora lo lee `minimoHorasSSU` |
 
-### 7.5 Pendientes que no se cerraron en esta fase
+### 7.5 Autorización en dos capas
 
-| # | Vacío detectado | Fase |
+Decisión del usuario, aplicada sobre todo el API:
+
+| Capa | Controla | Fuente | Si no lo tiene |
+|---|---|---|---|
+| **1 · VER** | Lectura de un módulo | `RSU_Usuario_Permiso.activo` | **404** |
+| **2 · INTERACTUAR** | Crear, aprobar, subir | `rol_actor` del token + `RSU_Transicion_Estado` | **404** |
+
+Habilitar un módulo a un estudiante le deja **entrar y ver**; no le concede
+ninguna escritura, porque eso lo otorga el rol. Los roles dinámicos por
+proyecto (`RSU_Proyecto_Rol`) se suman a la capa 2.
+
+- **111 rutas** quedaron con control de módulo o de rol.
+- El estudiante ya **no** tiene `reportes`, `presupuesto`, `monitoreo`,
+  `beneficiarios`, `estructura`, `personas`, `bandeja`, `configuracion` ni
+  `auditoria`. Conserva `catalogos` porque el formulario necesita el
+  selector de ODS, tipo de proyecto y línea de acción.
+- `RequireRole` en el frontend muestra la pantalla 404 en vez de redirigir.
+
+### 7.6 Dos escaladas de privilegios corregidas (P0)
+
+| Hallazgo | Corrección |
+|---|---|
+| `POST /proyectos/:id/transicion` tomaba `id_rol_actor` e `id_usuario` **del cuerpo**: un estudiante podía aprobar como Director de Escuela | El rol y el usuario se resuelven **siempre desde el token**; el cliente ya no los manda (`Bandeja.tsx`, `ProyectoDetalle.tsx`) |
+| `PATCH /entregables/:id` no tenía control de rol: cualquiera podía aprobar el entregable de otro equipo | Solo el asesor del proyecto, un docente con rol dinámico o un rol de gestión |
+
+### 7.7 Verificación
+
+- `go test ./...` y `go vet ./...` sin errores.
+- **E2E de autorización (28 aserciones)**: 404 en todo lo que el estudiante no
+  debe ver; 200 en lo que sí; el caso de ejemplo del módulo habilitado
+  (entra y ve, pero no interactúa); y las dos attempted escaladas de P0.
+- **E2E de Fase 1 (26 aserciones)**: flujo completo verde.
+- **E2E de alta de estudiante**: el alta exige ciclo, crea la matrícula y el
+  estudiante registrado ya puede proponer su SSU.
+
+### 7.8 Pendientes que no se cerraron
+
+| # | Vacío | Fase |
 |---|---|---|
-| A | **El registro público de estudiantes no crea la fila en `Estudiante_Ciclo`**, así que un estudiante registrado no puede crear un SSU (falla la validación de ciclo mínimo) | Fase 2 |
+| A | El registro público ya crea la matrícula — **cerrado en este lote** | — |
 | B | No existe temporizador para el archivado automático por vencimiento (E5) | Fase 2 |
-| C | El estudiante no tiene botón "Enviar al asesor" en su panel; el endpoint existe pero la pantalla `Fases.tsx` no lo expone | Fase 2 |
+| C | El estudiante no tiene botón "Enviar al asesor" en su panel; el endpoint existe pero `Fases.tsx` no lo expone | Fase 2 |

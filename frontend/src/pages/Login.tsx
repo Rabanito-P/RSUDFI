@@ -18,18 +18,29 @@ const PASSWORD = 'undc2026'
 // Accesos rápidos: cada tarjeta corresponde a un usuario de RSU_Usuario (db/seed_demo.sql).
 // Los roles de negocio (estados y lanes) NO viven aquí: se leen de /api/v1/catalogos/*.
 //
-// El sistema opera con 6 funciones: Estudiante, Docente, Dir. Escuela Profesional,
-// Dir. RS Facultad, Consejo de Facultad y Administrador. Las cuentas de Docente
-// Colaborador, Comité PS, Dir. Departamento, Dir. Central RS, Unidad de
-// Abastecimiento y Comité de Calidad quedaron fuera del alcance y no se ofrecen.
+// El sistema opera por función: Estudiante, Docente, Dir. Escuela Profesional,
+// Dir. RS Facultad, Decano y Administración.
+//
+// Alineado con rules "fase de propuesta-aprobacion-cierre" §2, la matriz de
+// roles incluye al Decano de la Facultad y NO incluye al Consejo de Facultad:
+// según las rules, quien valida el expediente en la Facultad es el Comité RSU
+// junto al Decano, y el elevate se hace con el Oficio de Elevación.
+//
+// La DRSU Central y la Vicepresidencia Académica NO tienen tarjeta: no operan
+// el sistema (ver NOTA_USUARIO_OCULTO más abajo).
 const presets: Preset[] = [
   { correo: 'estudiante@undc.edu.pe', label: 'Estudiante', rol: 'ESTUDIANTE', color: 'bg-sky-600', desc: 'Crea borrador · ejecuta · reporta horas', icon: <GraduationCap size={16} /> },
-  { correo: 'docente@undc.edu.pe', label: 'Docente Responsable', rol: 'DOCENTE', color: 'bg-emerald-600', desc: 'Asesora · monitorea · verifica entregables', icon: <Users size={16} /> },
+  { correo: 'ejecutor@undc.edu.pe', label: 'Estudiante ejecutor', rol: 'ESTUDIANTE', color: 'bg-sky-600', desc: 'Integra el equipo y sube evidencias', icon: <Users size={16} /> },
+  { correo: 'docente@undc.edu.pe', label: 'Docente Asesor', rol: 'DOCENTE', color: 'bg-emerald-600', desc: 'Asesora · acepta el SSU · verifica', icon: <Users size={16} /> },
+  { correo: 'colaborador@undc.edu.pe', label: 'Docente Responsable (PEP)', rol: 'DOCENTE', color: 'bg-emerald-600', desc: 'Crea el PEP · elige el equipo', icon: <Users size={16} /> },
   { correo: 'escuela@undc.edu.pe', label: 'Dir. Escuela Profesional', rol: 'DIRECTIVO', color: 'bg-amber-600', desc: 'Revisa → V°B° Escuela → conformidad', icon: <Shield size={16} /> },
-  { correo: 'rsfacultad@undc.edu.pe', label: 'Dir. RS Facultad', rol: 'DIRECTIVO', color: 'bg-violet-600', desc: 'Prioriza banco · presupuesto · monitorea', icon: <BarChart3 size={16} /> },
-  { correo: 'consejo@undc.edu.pe', label: 'Consejo Facultad', rol: 'DIRECTIVO', color: 'bg-indigo-600', desc: 'Dictamina → emite Resoluciones', icon: <Vote size={16} /> },
-  { correo: 'admin@undc.edu.pe', label: 'Administrador', rol: 'ADMIN', color: 'bg-slate-900', desc: 'Control total · usuarios y módulos', icon: <UserCog size={16} /> },
+  { correo: 'rsfacultad@undc.edu.pe', label: 'Dir. RS Facultad', rol: 'DIRECTIVO', color: 'bg-violet-600', desc: 'Prioriza banco · registra lo de la DRSU', icon: <BarChart3 size={16} /> },
+  { correo: 'decano@undc.edu.pe', label: 'Decano de Facultad', rol: 'DIRECTIVO', color: 'bg-indigo-600', desc: 'Comité RSU · Aprobar y Elevar', icon: <Vote size={16} /> },
+  { correo: 'admin@undc.edu.pe', label: 'Administrador', rol: 'ADMIN', color: 'bg-slate-900', desc: 'Usuarios, módulos y permisos', icon: <UserCog size={16} /> },
 ]
+
+// Cuenta que existe para testear un paso del flujo, no como acceso rápido.
+const NOTA_USUARIO_OCULTO = 'rsu.central@undc.edu.pe'
 
 const grupos: { titulo: string; roles: Preset['rol'][] }[] = [
   { titulo: 'Estudiante', roles: ['ESTUDIANTE'] },
@@ -57,7 +68,8 @@ export default function Login() {
   // Registro de estudiante desde la pantalla de ingreso (acceso temporal).
   const [creando, setCreando] = useState(false)
   const [escuelas, setEscuelas] = useState<any[]>([])
-  const [nuevoEst, setNuevoEst] = useState({ dni: '', nombres: '', apellidos: '', correo: '', escuela: '' })
+  const [ciclos, setCiclos] = useState<any[]>([])
+  const [nuevoEst, setNuevoEst] = useState({ dni: '', nombres: '', apellidos: '', correo: '', escuela: '', ciclo: '', cicloNum: '' })
   const [creandoBusy, setCreandoBusy] = useState(false)
   const [creandoMsg, setCreandoMsg] = useState<{ ok: boolean; texto: string } | null>(null)
 
@@ -76,14 +88,22 @@ export default function Login() {
       .catch(() => setMeta({ estados: 0, transiciones: 0, roles: 0 }))
   }, [])
 
-  // Al abrir el registro se cargan las escuelas para el selector.
+  // Al abrir el registro se cargan las escuelas y los ciclos para los selectores.
   useEffect(() => {
     if (!creando) return
     setCreandoMsg(null)
-    if (escuelas.length) return
     api.get('/api/v1/escuelas')
       .then((r: any) => setEscuelas(Array.isArray(r.data) ? r.data : []))
       .catch(() => setEscuelas([]))
+    api.get('/api/v1/ciclos')
+      .then((r: any) => {
+        const lista = Array.isArray(r.data) ? r.data : []
+        setCiclos(lista)
+        // Se preselecciona el ciclo activo: es el que usan los formularios.
+        const activo = lista.find((c: any) => c.activo) || lista[0]
+        if (activo?.id_ciclo) setNuevoEst(n => ({ ...n, ciclo: String(activo.id_ciclo) }))
+      })
+      .catch(() => setCiclos([]))
   }, [creando])
 
   // Crea la persona y su cuenta de acceso. Endpoint público de registro
@@ -94,6 +114,11 @@ export default function Login() {
     if (!/^\d{8}$/.test(nuevoEst.dni)) { setCreandoMsg({ ok: false, texto: 'El DNI debe tener 8 dígitos.' }); return }
     if (nuevoEst.nombres.trim().length < 2) { setCreandoMsg({ ok: false, texto: 'Escribe los nombres.' }); return }
     if (nuevoEst.correo.trim().length < 5) { setCreandoMsg({ ok: false, texto: 'Escribe el correo.' }); return }
+    if (!nuevoEst.ciclo) { setCreandoMsg({ ok: false, texto: 'Selecciona el ciclo académico.' }); return }
+    const cicloNum = Number(nuevoEst.cicloNum)
+    if (!Number.isInteger(cicloNum) || cicloNum < 1 || cicloNum > 12) {
+      setCreandoMsg({ ok: false, texto: 'Indica el ciclo que cursas (entre 1 y 12). Para proponer un SSU el mínimo es el 5.' }); return
+    }
     setCreandoBusy(true)
     try {
       // Se genera un código provisional: el backend exige uno y luego el
@@ -106,9 +131,11 @@ export default function Login() {
         apellidos: nuevoEst.apellidos.trim() || '—',
         correo_institucional: nuevoEst.correo.trim(),
         id_escuela: nuevoEst.escuela ? Number(nuevoEst.escuela) : undefined,
+        id_ciclo: Number(nuevoEst.ciclo),
+        ciclo_numerico: cicloNum,
       })
-      setCreandoMsg({ ok: true, texto: 'Perfil creado. Ya puedes ingresar con tu correo y la contraseña ' + PASSWORD + '.' })
-      setNuevoEst({ dni: '', nombres: '', apellidos: '', correo: '', escuela: '' })
+      setCreandoMsg({ ok: true, texto: 'Perfil creado con su matrícula en el ciclo. Ya puedes ingresar con tu correo y la contraseña ' + PASSWORD + '.' })
+      setNuevoEst({ dni: '', nombres: '', apellidos: '', correo: '', escuela: '', ciclo: nuevoEst.ciclo, cicloNum: '' })
     } catch (ex: any) {
       setCreandoMsg({ ok: false, texto: String(ex?.message || 'No se pudo crear el perfil').replace(/^HTTP \d+: /, '') })
     } finally {
@@ -282,10 +309,21 @@ export default function Login() {
             <div className="bg-white/10 rounded-2xl p-4 border border-white/10">
               <div className="font-bold flex items-center gap-2"><Shield size={16} /> Directivo / Supervisor</div>
               <div className="text-sm opacity-80 mt-1">
-                Bandeja por estado: Escuela V°B°, priorización Facultad, dictamen Consejo, presupuesto y reportes
-                SUNEDU.
+                Bandeja por estado: Escuela V°B°, priorización Facultad, expedientey presupuesto, reportes SUNEDU.
               </div>
             </div>
+          </div>
+
+          {/* ── Nota de prueba: cuenta oculta ── */}
+          <div className="mt-5 bg-amber-400/10 border border-amber-300/30 rounded-2xl p-4">
+            <div className="font-bold text-xs uppercase tracking-wide text-amber-200">Nota de prueba</div>
+            <p className="text-[13px] opacity-90 mt-1.5 leading-relaxed">
+              Existe la cuenta oculta <b className="font-mono">{NOTA_USUARIO_OCULTO}</b> (rol <i>RSU Central / VRA</i>).
+              No aparece como acceso rápido porque, según las normas del RSU, la DRSU Central y la Vicepresidencia
+              Académica <b>no operan el sistema</b>: expiden sus documentos fuera de la plataforma, por Mesa de Partes.
+              Quien los <b>sube y registra</b> es el encargado, la Dirección de RSU de la Facultad, para que el
+              proyecto pase a ejecución. Esta cuenta existe solo para testear ese paso de la subida de documentos.
+            </p>
           </div>
         </div>
       </div>
@@ -344,6 +382,29 @@ export default function Login() {
                   <option value="">-- opcional --</option>
                   {escuelas.map(s => <option key={s.id_escuela} value={String(s.id_escuela)}>{s.nombre}</option>)}
                 </select>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-700">Ciclo académico *</label>
+                  <select value={nuevoEst.ciclo} onChange={e => setNuevoEst({ ...nuevoEst, ciclo: e.target.value })}
+                          className="mt-1 w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm outline-none focus:border-undc-600 bg-white">
+                    <option value="">-- seleccionar --</option>
+                    {ciclos.map(c => <option key={c.id_ciclo} value={String(c.id_ciclo)}>
+                      {c.nombre}{c.activo ? ' (activo)' : ''}
+                    </option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-700">Ciclo que cursa *</label>
+                  <input inputMode="numeric" maxLength={2} value={nuevoEst.cicloNum}
+                         onChange={e => setNuevoEst({ ...nuevoEst, cicloNum: e.target.value.replace(/\D/g, '') })}
+                         className="mt-1 w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm outline-none focus:border-undc-600"
+                         placeholder="5"/>
+                  <div className="text-[11px] text-slate-500 mt-1">
+                    Para proponer un SSU el mínimo es el <b>ciclo 5</b>.
+                  </div>
+                </div>
               </div>
 
               {creandoMsg && (

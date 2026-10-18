@@ -335,9 +335,12 @@ func extractProyectoID(c *gin.Context) *uint {
 }
 
 // RequiereRol restringe una ruta a los roles BPMN indicados (claim rol_actor).
-// ADMIN pasa siempre. Sin el rol exigido responde 403 y aborta la cadena.
-// Se usa en rutas de escritura sensibles: estructura, personas, configuración,
-// comité RSU y auditoría — antes cualquier usuario autenticado podía usarlas.
+// ADMIN pasa siempre.
+//
+// Responde 404 y no 403: la segunda capa no debe revelar que la ruta existe ni
+// qué roles la habilitan. Un estudiante al que el Administrador le haya
+// abierto el módulo sigue recibiendo 404 en las escrituras, porque lo que no
+// le corresponde no es el permiso sino el rol.
 func RequiereRol(codigos ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		rol := c.GetString("rol_actor")
@@ -351,10 +354,78 @@ func RequiereRol(codigos ...string) gin.HandlerFunc {
 				return
 			}
 		}
-		c.JSON(http.StatusForbidden, gin.H{
+		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
-			"message": "tu rol no tiene permiso para esta acción",
+			"message": "Recurso no encontrado",
 		})
 		c.Abort()
 	}
 }
+
+// ─────────────────────────────────────────────────────────────────
+// Capa 1 de la autorización: VER (RSU_Usuario_Permiso)
+// ─────────────────────────────────────────────────────────────────
+//
+// PermiteModulo deja leer la ruta si el usuario tiene activo CUALQUIERA de
+// los módulos indicados. Es la capa 1 del modelo de dos capas:
+//
+//   - Sin el módulo → 404, para no revelar siquiera que la ruta existe.
+//   - Con el módulo → la lectura pasa. Habilitar un módulo a un estudiante
+//     le deja entrar y VER, pero eso NO le da ningún poder de escritura:
+//     las escrituras se validan aparte por rol (RequiereRol y el actor BPMN).
+//
+// Se admiten varios módulos porque algunas lecturas alimentan varias
+// pantallas: /dashboard/kpis lo usan Reportes, Presupuesto y el Dashboard.
+//
+// ADMIN pasa siempre: administra usuarios y módulos, incluido este.
+func PermiteModulo(modulos ...string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.GetString("rol_actor") == "ADMIN" {
+			c.Next()
+			return
+		}
+		db := dbPermisos()
+		uid := tokenID(c)
+		var n int64
+		if db != nil && uid > 0 {
+			if err := db.Table("RSU_Usuario_Permiso").
+				Where("id_usuario = ? AND activo = true AND modulo IN ?", uid, modulos).
+				Count(&n).Error; err == nil && n > 0 {
+				c.Next()
+				return
+			}
+		}
+		// Módulo no habilitado: 404 en vez de 403 para no filtrar la existencia
+		// de la ruta ni el catálogo de módulos.
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"message": "Recurso no encontrado",
+		})
+		c.Abort()
+	}
+}
+
+// tokenID lee el claim user_id que deja AuthMiddleware en el contexto.
+func tokenID(c *gin.Context) int {
+	if v, ok := c.Get("user_id"); ok {
+		switch t := v.(type) {
+		case int:
+			return t
+		case int64:
+			return int(t)
+		case uint:
+			return int(t)
+		case float64:
+			return int(t)
+		}
+	}
+	return 0
+}
+
+// SetDBPermisos registra la base de datos que usan los middlewares de
+// permisos. Lo llama router.Setup antes de registrar rutas.
+var permisosDB *gorm.DB
+
+func SetDBPermisos(db *gorm.DB) { permisosDB = db }
+
+func dbPermisos() *gorm.DB { return permisosDB }

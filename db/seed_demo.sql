@@ -190,6 +190,26 @@ INSERT INTO public."RSU_Usuario" VALUES (8, 'consejo@undc.edu.pe', 'Andrés Các
 INSERT INTO public."RSU_Usuario" VALUES (12, 'admin@undc.edu.pe', 'Administrador RSU', '', 'ADMIN', 'ADMINISTRATIVO', NULL, true, NULL, '2026-10-09 10:28:02.024151-05');
 INSERT INTO public."RSU_Usuario" VALUES (1, 'estudiante@undc.edu.pe', 'Ana Quispe', '', 'ESTUDIANTE_PROP', 'ESTUDIANTE', 1, true, '2026-10-09 10:29:04.335586-05', '2026-10-09 10:28:02.024151-05');
 
+-- ── Rol Decano (rules fase de propuesta-aprobacion-cierre §2) ──
+-- El Decano representa a la Facultad: valida el expediente en el Comité RSU y
+-- presiona "Aprobar y Elevar" (exporta el Oficio de Elevación a DRSU Central).
+-- Es una autoridad de la Facultad, no de la DRSU.
+INSERT INTO public."Docente" VALUES (6, 'DOC006', '10000006', 'Carlos', 'Almidon', 'decano@undc.edu.pe', 1, NULL, 'ORDINARIO_TC', 'PRINCIPAL', 0.00, 10.00, true);
+INSERT INTO public."RSU_Usuario" VALUES (14, 'decano@undc.edu.pe', 'Carlos Alcides Almidon Carrion', '', 'DECANO', 'DOCENTE', 6, true, NULL, '2026-10-09 10:28:02.024151-05');
+UPDATE public."RSU_Usuario" SET password_hash = '$2a$10$6as1j3fRrRguoNVZjssnFuwY4UzDW0K4mIbcI.gpy8tdYp1WX9nOG' WHERE correo = 'decano@undc.edu.pe';
+-- El Decano queda registrado como titular de la facultad.
+UPDATE public."Facultad" SET decano_id = 6 WHERE codigo = 'FIA';
+
+-- ── Usuario oculto de prueba: RSU Central / VRA ──
+-- NO aparece como acceso rápido en la pantalla de ingreso. Según las rules,
+-- la DRSU Central y la Vicepresidencia Académica no operan el sistema:
+-- expiden sus documentos fuera de la plataforma (Mesa de Partes) y quien los
+-- sube y registra es el encargado, la Dirección de RSU de la Facultad.
+-- Esta cuenta existe solo para testear ese paso: el rol DIR_CENTRAL_RS es el
+-- que registra lo emitido por la DRSU/VPA y activa el proyecto.
+INSERT INTO public."RSU_Usuario" VALUES (15, 'rsu.central@undc.edu.pe', 'RSU Central / VRA (prueba)', '', 'DIR_CENTRAL_RS', 'ADMINISTRATIVO', NULL, true, NULL, '2026-10-09 10:28:02.024151-05');
+UPDATE public."RSU_Usuario" SET password_hash = '$2a$10$6as1j3fRrRguoNVZjssnFuwY4UzDW0K4mIbcI.gpy8tdYp1WX9nOG' WHERE correo = 'rsu.central@undc.edu.pe';
+
 -- --- RSU_Notificacion ---
 INSERT INTO public."RSU_Notificacion" ("id_usuario", "rol_destino", "tipo", "titulo", "mensaje", "id_proyecto", "leido", "created_at") VALUES (NULL, 'DIR_ESCUELA', 'TRANSICION', 'Nuevo proyecto en revisión', 'RSU-2026-011 Campaña anemia requiere tu V°B° como Director de Escuela', NULL, false, '2026-10-09 10:27:58.543515-05');
 INSERT INTO public."RSU_Notificacion" ("id_usuario", "rol_destino", "tipo", "titulo", "mensaje", "id_proyecto", "leido", "created_at") VALUES (NULL, 'CONSEJO_FACULTAD', 'TRANSICION', 'Aprobación pendiente', 'RSU-2026-014 Reciclaje Quilmaná aprobado por Director de Escuela, pendiente tu revisión', NULL, false, '2026-10-09 10:27:58.543515-05');
@@ -240,38 +260,96 @@ UPDATE public."RSU_Usuario" SET password_hash = '$2a$10$UQNtAX8Oab9F7CBYLAQ09ufW
 UPDATE public."RSU_Usuario" SET password_hash = '$2a$10$uEBf9azxH9gRlmfZ2VJKzOYoKBsmZ0XVJfZq5WcY7e2AsuXqM1NrS' WHERE id_usuario = 13;
 UPDATE public."RSU_Usuario" SET password_hash = '$2a$10$Szf6Ekq3VGex0Ryzq55zYeuZX5EZLxYYEJNtaqZklV2ndcvIi.ZEa' WHERE id_usuario = 9;
 
--- ── MÓDULO ADMIN: permisos por usuario ──
--- Los usuarios demo arrancan con todos los módulos activos: el sistema debe
--- verse completo al iniciar y el administrador puede restringirlos después.
+-- ── MÓDULO ADMIN: permisos por usuario (módulos que puede VER) ──
+--
+-- Autorización en dos capas (decisión del usuario):
+--   Capa 1 · VER          → este permiso (RSU_Usuario_Permiso). Sin el módulo
+--                            activo la ruta responde 404.
+--   Capa 2 · INTERACTUAR  → el rol actor del token (RSU_Transicion_Estado).
+--                            Un estudiante al que se le habilite un módulo
+--                            entra y lo LEE, pero ninguna escritura le es
+--                            permitida por su rol.
+--
+-- Antes esta tabla daba los 14 módulos a todos los usuarios: por eso un
+-- estudiante podía entrar a Reportes. Ahora cada rol arranca solo con lo
+-- que le corresponde y el Administrador puede ampliarlo desde /administracion.
+--
+--   proyectos    → sus proyectos, el expediente, el equipo y el cronograma
+--   evidencias   → registro de actividades y fotos de campo
+--   entregables  → los cinco entregables del proyecto
+--   encuestas    → encuestas a beneficiarios y consolidated de impacto
+--   documentos   → documentos y plantillas (incluye el catálogo DRSU)
+--   catalogos    → tipos de proyecto, líneas de acción, ODS, estados y roles
+--   bandeja      → cola de revisión/aprobación del rol
+--   monitoreo    → registro y seguimiento de monitoreos
+--   beneficiarios→ padrón de beneficiarios
+--   presupuesto  → movimientos y ejecución presupuestal
+--   reportes     → KPIs SUNEDU/SINEACE y memoria anual
+--   estructura   → facultad, escuelas, ciclos, comité RSU
+--   personas     → docentes y estudiantes
+--   configuracion→ parámetros del sistema (solo lectura para dirección)
+--   auditoria    → registro de auditoría (solo ADMIN)
+
+-- Direcciones y órganos de gobierno: ven todo salvo auditoría y usuarios.
 INSERT INTO "RSU_Usuario_Permiso" (id_usuario, modulo)
 SELECT u.id_usuario, m.clave
 FROM "RSU_Usuario" u
 CROSS JOIN (VALUES
     ('proyectos'),('bandeja'),('entregables'),('evidencias'),('beneficiarios'),
     ('presupuesto'),('encuestas'),('monitoreo'),('reportes'),('personas'),
-    ('estructura'),('catalogos'),('documentos'),('auditoria')
+    ('estructura'),('catalogos'),('documentos'),('configuracion')
 ) AS m(clave)
-WHERE NOT EXISTS (SELECT 1 FROM "RSU_Usuario_Permiso" p WHERE p.id_usuario = u.id_usuario);
+WHERE u.rol IN ('DIR_ESCUELA','DIR_RS_FACULTAD','CONSEJO_FACULTAD','DIR_DEPTO',
+                'DIR_CENTRAL_RS','COMITE_PS','COMITE_CALIDAD','UNIDAD_ABAST','DECANO')
+  AND NOT EXISTS (SELECT 1 FROM "RSU_Usuario_Permiso" p WHERE p.id_usuario = u.id_usuario);
+
+-- Docentes: asesoría, verificación de entregables, monitoreos y su carga.
+INSERT INTO "RSU_Usuario_Permiso" (id_usuario, modulo)
+SELECT u.id_usuario, m.clave
+FROM "RSU_Usuario" u
+CROSS JOIN (VALUES
+    ('proyectos'),('bandeja'),('entregables'),('evidencias'),('beneficiarios'),
+    ('encuestas'),('monitoreo'),('catalogos'),('documentos')
+) AS m(clave)
+WHERE u.rol IN ('DOCENTE_RESP','DOCENTE_COLAB')
+  AND NOT EXISTS (SELECT 1 FROM "RSU_Usuario_Permiso" p WHERE p.id_usuario = u.id_usuario);
+
+-- Estudiantes: solo lo del proyecto y sus trámites.
+-- SIN reportes, presupuesto, monitoreo, beneficiarios, estructura, personas,
+-- bandeja, configuracion ni auditoria: esos son de otros roles.
+-- Conserva 'catalogos' porque el formulario de creación necesita el selector
+-- de ODS, el tipo de proyecto y la línea de acción.
+INSERT INTO "RSU_Usuario_Permiso" (id_usuario, modulo)
+SELECT u.id_usuario, m.clave
+FROM "RSU_Usuario" u
+CROSS JOIN (VALUES
+    ('proyectos'),('evidencias'),('entregables'),('encuestas'),
+    ('documentos'),('catalogos')
+) AS m(clave)
+WHERE u.tipo_usuario = 'ESTUDIANTE'
+  AND NOT EXISTS (SELECT 1 FROM "RSU_Usuario_Permiso" p WHERE p.id_usuario = u.id_usuario);
+
+-- Administrador: control total, incluida la auditoría.
+INSERT INTO "RSU_Usuario_Permiso" (id_usuario, modulo)
+SELECT u.id_usuario, m.clave
+FROM "RSU_Usuario" u
+CROSS JOIN (VALUES
+    ('proyectos'),('bandeja'),('entregables'),('evidencias'),('beneficiarios'),
+    ('presupuesto'),('encuestas'),('monitoreo'),('reportes'),('personas'),
+    ('estructura'),('catalogos'),('documentos'),('auditoria'),('configuracion')
+) AS m(clave)
+WHERE u.rol = 'ADMIN'
+  AND NOT EXISTS (SELECT 1 FROM "RSU_Usuario_Permiso" p WHERE p.id_usuario = u.id_usuario);
 
 -- ── MÓDULO: cuenta de Pedro Flores (Docente 2) ──
 -- Responsable (asesor) de los PEP 2 y 5: sin usuario no puede entrar ni
 -- resolver solicitudes de unión. Hash = clave inicial undc2026.
+-- Sus módulos se conceden arriba, junto al resto de docentes.
 INSERT INTO "RSU_Usuario" (correo, nombre, password_hash, rol, tipo_usuario, id_persona, activo)
 VALUES ('colaborador@undc.edu.pe', 'Pedro Flores',
         '$2a$10$6as1j3fRrRguoNVZjssnFuwY4UzDW0K4mIbcI.gpy8tdYp1WX9nOG',
         'DOCENTE_RESP', 'DOCENTE', 2, true)
 ON CONFLICT (correo) DO NOTHING;
-
-INSERT INTO "RSU_Usuario_Permiso" (id_usuario, modulo)
-SELECT u.id_usuario, m.clave
-FROM "RSU_Usuario" u
-CROSS JOIN (VALUES
-    ('proyectos'),('bandeja'),('entregables'),('evidencias'),('beneficiarios'),
-    ('presupuesto'),('encuestas'),('monitoreo'),('reportes'),('personas'),
-    ('estructura'),('catalogos'),('documentos'),('auditoria')
-) AS m(clave)
-WHERE u.correo = 'colaborador@undc.edu.pe'
-ON CONFLICT (id_usuario, modulo) DO NOTHING;
 
 SELECT setval(pg_get_serial_sequence('"RSU_Usuario"', 'id_usuario'),
               (SELECT COALESCE(MAX(id_usuario), 0) + 1 FROM "RSU_Usuario"), false);

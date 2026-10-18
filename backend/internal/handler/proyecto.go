@@ -198,6 +198,24 @@ func (h *ProyectoHandler) Transicion(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	var req dto.TransicionReq
 	if err := c.ShouldBindJSON(&req); err != nil { utils.ValidationFail(c, err.Error()); return }
+
+	// P0 (autorización): el rol actor y el usuario SIEMPRE salen del token.
+	//
+	// Antes se tomaban del cuerpo de la petición y solo se comprobaba que la
+	// tupla (origen, destino, rol) existiera en RSU_Transicion_Estado. Eso
+	// permitía que un estudiante enviara id_rol_actor de una autoridad y
+	// aprobara el proyecto en su nombre. El cliente NUNCA decide quién aprueba.
+	rol := c.GetString("rol_actor")
+	var idRol int
+	if err := h.db.Model(&domain.RSURolActor{}).
+		Select("id_rol_actor").Where("codigo = ?", rol).Scan(&idRol).Error; err != nil || idRol == 0 {
+		// El rol del token no es un rol actor del flujo: no puede transicionar.
+		utils.Fail(c, 404, "Recurso no encontrado", nil)
+		return
+	}
+	req.IDRolActor = uint(idRol)
+	req.IDUsuario = uint(tokenUserID(c))
+
 	if err := h.svc.Transicion(uint(id), req); err != nil { utils.Fail(c, 400, err.Error(), nil); return }
 	utils.Success(c, nil, "Transición registrada")
 }

@@ -396,6 +396,7 @@ INSERT INTO "RSU_Rol_Actor" ("codigo","nombre","tipo") VALUES
 ('DIR_CENTRAL_RS','Director Central RS / VRA','AUTORIDAD'),
 ('UNIDAD_ABAST','Unidad de Abastecimiento','ADMINISTRATIVO'),
 ('COMITE_CALIDAD','Comité de Calidad','COMITE'),
+('DECANO','Decano de Facultad','AUTORIDAD'),
 ('ADMIN','Administrador','ADMINISTRATIVO');
 
 -- Tipos de proyecto = 5 modalidades (V1.1 §7). `modalidad` en RSU_Proyecto es la clasificación autoritativa.
@@ -417,7 +418,13 @@ INSERT INTO "RSU_Tipo_Documento" ("nombre","etapa","obligatorio") VALUES ('Infor
 -- universidad quedan fuera del alcance del sistema).
 INSERT INTO "Facultad" ("codigo","nombre") VALUES ('FIA','Facultad de Ingeniería y Arquitectura');
 INSERT INTO "Escuela" ("id_facultad","codigo","nombre") VALUES (1,'EPIS','Ing. de Sistemas'),(1,'EPIC','Ing. Civil');
-INSERT INTO "Ciclo_Academico" ("nombre","fecha_inicio","fecha_fin","activo") VALUES ('2026-I','2026-03-01','2026-07-31',true),('2026-II','2026-08-01','2026-12-15',false);
+-- Ciclos académicos. Solo uno puede estar activo: es el que toman los
+-- formularios al crear un proyecto. El ciclo vigente es 2026-II y 2027-I
+-- queda disponible para pruebas.
+INSERT INTO "Ciclo_Academico" ("nombre","fecha_inicio","fecha_fin","activo") VALUES
+  ('2026-I','2026-03-01','2026-07-31',false),
+  ('2026-II','2026-08-01','2026-12-15',true),
+  ('2027-I','2027-03-01','2027-07-31',false);
 -- Docente/Estudiante demo para login (IDs alineados con demoUsers: 1=Laura/Anas, 2=Pedro/Carlos)
 -- Personas, proyectos y datos de demostración → db/seed_demo.sql
 -- Notificaciones seed por rol (bandeja + campana) — 12 roles V3

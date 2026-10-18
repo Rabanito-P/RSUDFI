@@ -85,6 +85,20 @@ func (h *RegistroHandler) Estudiante(c *gin.Context) {
 		}
 	}
 
+	// La matrícula del ciclo es obligatoria: sin la fila en Estudiante_Ciclo la
+	// regla de ciclo mínimo (R01) rechaza cualquier SSU del estudiante, así que
+	// un alta sin ciclo quedaba inservible para proponer su proyecto.
+	if req.IDCiclo == nil || *req.IDCiclo == 0 {
+		utils.Fail(c, http.StatusBadRequest,
+			"Indica el ciclo académico en el que se matricula el estudiante", nil)
+		return
+	}
+	if req.CicloNumerico == nil || *req.CicloNumerico < 1 || *req.CicloNumerico > 12 {
+		utils.Fail(c, http.StatusBadRequest,
+			"Indica el ciclo que cursa el estudiante (entre 1 y 12)", nil)
+		return
+	}
+
 	est := &domain.Estudiante{
 		Codigo:   codigo,
 		DNI:      req.DNI,
@@ -94,7 +108,29 @@ func (h *RegistroHandler) Estudiante(c *gin.Context) {
 		IDEscuela: idEscuela,
 		Estado:   "ACTIVO",
 	}
-	if err := h.db.Create(est).Error; err != nil {
+
+	// Persona + matrícula + cuenta se crean en una sola transacción: si algo
+	// falla no queda un estudiante a medias ni una cuenta sin persona.
+	if err := h.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(est).Error; err != nil {
+			return err
+		}
+		// Matrícula del ciclo: sin ella la regla de ciclo mínimo (R01) rechaza
+		// cualquier proyecto SSU del estudiante.
+		if req.IDCiclo != nil && *req.IDCiclo != 0 && req.CicloNumerico != nil {
+			matricula := &domain.EstudianteCiclo{
+				IDEstudiante:  est.ID,
+				IDCiclo:       *req.IDCiclo,
+				CicloNumerico: *req.CicloNumerico,
+				// La tabla exige estado (CHECK): el alta es una matrícula activa.
+				Estado: "MATRICULADO",
+			}
+			if err := tx.Create(matricula).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
 		utils.Fail(c, http.StatusBadRequest, "No se pudo registrar el estudiante", err.Error())
 		return
 	}

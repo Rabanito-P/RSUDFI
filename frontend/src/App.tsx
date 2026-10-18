@@ -96,10 +96,10 @@ function AppShell(){
               <Route path="/autorizacion-imagen" element={<RequireRole roles={['ESTUDIANTE']}><AutorizacionImagen/></RequireRole>}/>
               <Route path="/solicitud-constancia" element={<RequireRole roles={['ESTUDIANTE']}><EstudianteConstancias/></RequireRole>}/>
               <Route path="/bandeja" element={<RequireRole roles={['DIRECTIVO']}><Bandeja/></RequireRole>}/>
-              <Route path="/beneficiarios" element={<Beneficiarios/>}/>
+              <Route path="/beneficiarios" element={<RequireRole roles={['DOCENTE','DIRECTIVO']}><Beneficiarios/></RequireRole>}/>
               <Route path="/estructura" element={<RequireRole roles={['DIRECTIVO']}><Estructura/></RequireRole>}/>
               <Route path="/personas" element={<RequireRole roles={['DIRECTIVO']}><Personas/></RequireRole>}/>
-              <Route path="/actividades" element={<Actividades/>}/>
+              <Route path="/actividades" element={<RequireRole roles={['DOCENTE','DIRECTIVO']}><Actividades/></RequireRole>}/>
               <Route path="/docente/carga" element={<RequireRole roles={['DOCENTE']}><DocenteCarga/></RequireRole>}/>
               {/* HU-F1-04: bucle de aceptación/rechazo del docente asesor */}
               <Route path="/docente/asesorias" element={<RequireRole roles={['DOCENTE']}><BucleAsesor/></RequireRole>}/>
@@ -111,10 +111,10 @@ function AppShell(){
               <Route path="/estudiante/horas" element={<RequireRole roles={['ESTUDIANTE']}><EstudianteHoras/></RequireRole>}/>
               <Route path="/estudiante/constancias" element={<RequireRole roles={['ESTUDIANTE']}><EstudianteConstancias/></RequireRole>}/>
               <Route path="/monitoreo" element={<RequireRole roles={['DOCENTE','DIRECTIVO']}><Monitoreo/></RequireRole>}/>
-              <Route path="/presupuesto" element={<Presupuesto/>}/>
-              <Route path="/encuestas" element={<Encuestas/>}/>
-              <Route path="/reportes" element={<Reportes/>}/>
-              <Route path="/documentos" element={<Documentos/>}/>
+              <Route path="/presupuesto" element={<RequireRole roles={['DOCENTE','DIRECTIVO']}><Presupuesto/></RequireRole>}/>
+              <Route path="/encuestas" element={<RequireRole roles={['DOCENTE','DIRECTIVO']}><Encuestas/></RequireRole>}/>
+              <Route path="/reportes" element={<RequireRole roles={['DIRECTIVO']}><Reportes/></RequireRole>}/>
+              <Route path="/documentos" element={<RequireRole roles={['ESTUDIANTE','DOCENTE','DIRECTIVO']}><Documentos/></RequireRole>}/>
               <Route path="/catalogos" element={<RequireRole roles={['DIRECTIVO']}><Catalogos/></RequireRole>}/>
             <Route path="/administracion" element={<RequireRole roles={['ADMIN']}><Administracion/></RequireRole>}/>
               <Route path="*" element={<Placeholder title="404" desc="Página no encontrada"/>}/>

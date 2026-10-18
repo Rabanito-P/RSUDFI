@@ -22,11 +22,7 @@ type fase1Handler struct {
 	svc *service.ProyectoService
 }
 
-// esDocenteToken indica si el token corresponde a un docente.
-func esDocenteToken(db *gorm.DB, c *gin.Context) bool {
-	u := usuarioDeToken(db, c)
-	return u != nil && u.TipoUsuario == "DOCENTE"
-}
+// esDocenteToken vive en permisos.go (autorización en dos capas).
 
 // RegisterFase1 registra los endpoints de la Fase 1 (Creación) sobre el
 // grupo de rutas ya autenticado.
@@ -225,5 +221,3 @@ func (h *fase1Handler) DetalleFormatoDRSU(c *gin.Context) {
 	}
 	utils.Success(c, f, "OK")
 }
-
-// esDocenteToken indica si el token corresponde a un docente.

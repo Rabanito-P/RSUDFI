@@ -153,10 +153,10 @@ export default function Bandeja() {
         setSustentoFile(null)
         return
       }
+      // El rol actor y el usuario los toma el backend del token: mandarlos aquí
+      // sería dejar que el cliente decida quién aprueba.
       await api.post(`/api/v1/proyectos/${proyecto.id_proyecto}/transicion`, {
         estado_destino: elegida.destino,
-        id_rol_actor: user?.rol_actor_id,
-        id_usuario: user?.id,
         resultado,
         comentarios: comentarios || undefined,
         id_documento_sustento: idDocumento || undefined,
