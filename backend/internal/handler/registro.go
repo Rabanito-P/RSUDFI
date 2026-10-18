@@ -163,8 +163,13 @@ func (h *RegistroHandler) Estudiante(c *gin.Context) {
 		return
 	}
 
-	// Se habilita el acceso a los módulos básicos del estudiante.
-	for _, m := range []string{"proyectos", "evidencias", "encuestas", "documentos"} {
+	// Se habilita el acceso a los mismos módulos que el seed concede al rol
+// estudiante. Deben coincidir: si se omite 'catalogos' el formulario de
+// creación se queda sin selector de ODS, tipo de proyecto y línea de acción,
+// y si falta 'entregables' el estudiante no ve sus cinco entregas.
+for _, m := range []string{
+		"proyectos", "evidencias", "entregables", "encuestas", "documentos", "catalogos",
+	} {
 		_ = h.db.Create(&domain.RSUUsuarioPermiso{IDUsuario: usr.ID, Modulo: m, Activo: true}).Error
 	}
 

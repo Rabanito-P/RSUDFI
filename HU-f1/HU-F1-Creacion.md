@@ -542,10 +542,52 @@ proyecto (`RSU_Proyecto_Rol`) se suman a la capa 2.
 - **E2E de alta de estudiante**: el alta exige ciclo, crea la matrícula y el
   estudiante registrado ya puede proponer su SSU.
 
-### 7.8 Pendientes que no se cerraron
+### 7.9 Pertenencia de las notificaciones (CA-7.6)
+
+Una bandera de rol entrega el aviso a **todos** los usuarios de ese rol, así
+que un docente recibía notificaciones de proyectos que no asesoraba y, al
+abrirlas, el expediente no cargaba ("No se pudo cargar el expediente · 404").
+
+Dos correcciones:
+
+| Capa | Corrección |
+|---|---|
+| **Emisión** | El aviso del líder y el del asesor van dirigidos a **esa persona** (`id_usuario`), no a la bandera de rol. A las autoridades de la Facultad sí les corresponde la bandera: por su ámbito les toca ver todos los proyectos |
+| **Lectura** | `GET /notificaciones` descarta todo aviso cuyo proyecto el receptor no puede ver. Los avisos sin proyecto (mantenimiento, configuración) se conservan |
+
+### 7.10 Selector de asesor del formulario de creación
+
+El formulario pedía `/docentes` y `/escuelas`, rutas que exigen los módulos
+`personas` y `estructura`: el estudiante no los tiene (le corresponde proponer
+su proyecto, no ver el padrón completo), así que ambos selectores salían
+vacíos.
+
+Se añadió `GET /api/v1/docentes/asesores`, que devuelve **por API** los
+docentes activos que pueden asesorar, con su carga no lectiva, y admite
+`?escuela=` y `?search=`. Las escuelas llegan por el catálogo público. Al
+cambiar de escuela se recargan los docentes y, si el asesor elegido no está en
+la lista, se limpia.
+
+### 7.11 Dos defectos de datos en el seed
+
+| Defecto | Causa | Corrección |
+|---|---|---|
+| `colaborador@undc.edu.pe` (Pedro Flores) quedaba con **0 módulos** | Su alta estaba **después** del bloque que concede permisos por rol | El bloque de permisos se ejecuta al final, cuando todas las cuentas existen |
+| Los estudiantes del alta pública recibían **4 de 6** módulos | La lista estaba fija en el handler y no coincidía con la matriz | El alta concede los mismos 6 módulos del rol estudiante |
+
+### 7.12 Verificación
+
+- `go test ./...`, `go vet ./...` y `tsc --noEmit` sin errores.
+- **E2E de los tres reparos (19 aserciones)**: avisos que solo abren
+  expedientes propios y no se cruzan entre docentes; selectores de escuela y
+  asesor por API con filtro y búsqueda; módulos del estudiante del alta.
+- **E2E de autorización (28)**, **E2E de Fase 1 (26)** y **E2E de alta (5)**
+  siguen en verde tras los cambios.
+
+### 7.13 Pendientes que no se cerraron
 
 | # | Vacío | Fase |
 |---|---|---|
-| A | El registro público ya crea la matrícula — **cerrado en este lote** | — |
+| A | El registro público ya crea la matrícula — **cerrado** | — |
 | B | No existe temporizador para el archivado automático por vencimiento (E5) | Fase 2 |
 | C | El estudiante no tiene botón "Enviar al asesor" en su panel; el endpoint existe pero `Fases.tsx` no lo expone | Fase 2 |

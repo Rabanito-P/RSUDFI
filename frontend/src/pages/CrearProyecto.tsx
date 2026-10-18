@@ -66,12 +66,24 @@ export default function CrearProyecto(){
     if(esEstudiante){ setForm(f=> ({...f, id_tipo:'1', modalidad:'SSU', id_linea:''})) }
   },[esEstudiante])
 
+  // Las escuelas y los docentes que puede asesorar NO se piden por /escuelas ni
+  // /docentes: esas rutas exigen el módulo 'personas'/'estructura', que el
+  // estudiante no tiene (le corresponde proponer su proyecto, no ver el padrón
+  // completo). El selector de asesor usa /docentes/asesores y las escuelas
+  // llegan por el catálogo público. Todo viene por API.
   useEffect(()=>{
     api.get('/api/v1/catalogos/tipos-proyecto').then((r:any)=>setTipos(asArray(r.data))).catch((e:any)=>{ setTipos([]); setCatalogErr(prev=>prev||e?.message||'No se pudo cargar el catálogo de tipos de proyecto') })
     api.get('/api/v1/catalogos/lineas-accion').then((r:any)=>setLineas(asArray(r.data))).catch((e:any)=>{ setLineas([]); setCatalogErr(prev=>prev||e?.message||'No se pudo cargar el catálogo de líneas de acción') })
-    api.get('/api/v1/escuelas').then((r:any)=>setEscuelas(asArray(r.data))).catch((e:any)=>{ setEscuelas([]); setCatalogErr(prev=>prev||e?.message||'No se pudo cargar el catálogo de escuelas') })
+    api.get('/api/v1/public/escuelas').then((r:any)=>setEscuelas(asArray(r.data))).catch((e:any)=>{ setEscuelas([]); setCatalogErr(prev=>prev||e?.message||'No se pudo cargar el catálogo de escuelas') })
     // HU-002: docente asesor obligatorio al crear. Máximo 2 equipos por docente.
-    api.get('/api/v1/docentes?limit=200').then((r:any)=>setDocentes(asArray(r.data))).catch(()=> setDocentes([]))
+    const cargarDocentes = (escuela?: string)=>{
+      const q = new URLSearchParams({ limit: '200' })
+      if (escuela) q.set('escuela', escuela)
+      api.get('/api/v1/docentes/asesores?'+q.toString())
+        .then((r:any)=>setDocentes(asArray(r.data)))
+        .catch((e:any)=>{ setDocentes([]); setCatalogErr(prev=>prev||e?.message||'No se pudo cargar el catálogo de docentes') })
+    }
+    cargarDocentes()
     api.get('/api/v1/ciclos').then((r:any)=>{
       const cs = asArray(r.data)
       const activo = cs.find((c:any)=> c.activo) || cs[0]
@@ -95,6 +107,28 @@ export default function CrearProyecto(){
       setPepsCupos(cupos)
     }).catch((e:any)=> setPepsError(mensajeError(e, 'No se pudieron cargar los PEPs abiertos.')))
   },[])
+
+  // Al elegir escuela se recargan los docentes de esa escuela: el asesor se
+  // propone dentro de la misma escuela. Si el asesor ya elegido no está en la
+  // nueva lista, se limpia para no enviar una combinación inválida.
+  useEffect(()=>{
+    if (!form.id_escuela) return
+    const q = new URLSearchParams({ limit: '200', escuela: form.id_escuela })
+    let vivo = true
+    api.get('/api/v1/docentes/asesores?'+q.toString())
+      .then((r:any)=>{
+        if (!vivo) return
+        const lista = asArray(r.data)
+        setDocentes(lista)
+        setForm(f=>{
+          if (!f.docente) return f
+          const sigue = lista.some((d:any)=>String(d.id_docente)===String(f.docente))
+          return sigue ? f : { ...f, docente: '' }
+        })
+      })
+      .catch(()=>{ if (vivo) setDocentes([]) })
+    return ()=>{ vivo = false }
+  },[form.id_escuela])
 
   // Descarga de un formato por su código del catálogo (PROPUESTA,
   // PLANIFICACION, ENCUESTA...). El backend devuelve el archivo que tenga
@@ -329,8 +363,18 @@ export default function CrearProyecto(){
                 </option>)}
               </select>
               <div className="text-[11px] text-slate-400 mt-0.5">
-                Obligatorio (HU-002). Un docente asesora como máximo <b>2 equipos</b> a la vez; el sistema te avisa si ya llegó al límite.
+                Obligatorio (HU-002). Solo se listan docentes activos de la escuela elegida, y
+                un docente asesora como máximo <b>2 equipos</b> por ciclo.
               </div>
+              {form.id_escuela && docentes.length === 0 && (
+                <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5 mt-1">
+                  La escuela seleccionada no tiene docentes activos para asesorar. Elige otra
+                  escuela o pide al Director de Escuela que designe un docente.
+                </div>
+              )}
+              {docentes.length > 0 && (
+                <div className="text-[11px] text-slate-500 mt-1">{docentes.length} docente(s) disponibles en esta escuela.</div>
+              )}
             </div>
             <div>
               <Label>Descripción</Label>

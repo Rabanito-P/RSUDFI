@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -87,6 +88,44 @@ func (h *DocenteHandler) Get(c *gin.Context) {
 		return
 	}
 	utils.Success(c, h.conCarga(c, d), "OK")
+}
+
+// DocentesAsesores lista los docentes que se pueden proponer como asesor,
+// con su carga disponible. Es lo que necesita el formulario de creación de
+// proyecto, que no debe depender del módulo 'personas' (el estudiante no lo
+// tiene: ver laFaculty completa no le corresponde, pero sí elegir quién le
+// asesora). Todo llega por API y admite búsqueda, no hay lista fija.
+//
+//	?escuela=ID   filtra por escuela
+//	?search=texto busca por nombre, apellido o código
+//
+// @Tags		Personas
+// @Accept		json
+// @Produce	json
+// @Param		escuela query int false "ID de escuela"
+// @Param		search query string false "Texto a buscar"
+// @Success	200 {object} map[string]any "Docentes aptos para asesorar"
+// @Router		/api/v1/docentes/asesores [get]
+func (h *DocenteHandler) Asesores(c *gin.Context) {
+	q := h.db.Model(&domain.Docente{}).Where("activo = ?", true)
+	if v, err := strconv.Atoi(c.Query("escuela")); err == nil && v > 0 {
+		q = q.Where("id_escuela = ?", v)
+	}
+	if s := strings.TrimSpace(c.Query("search")); s != "" {
+		like := "%" + strings.ReplaceAll(strings.ReplaceAll(s, "%", "\\%"), "_", "\\_") + "%"
+		q = q.Where("nombres LIKE ? OR apellidos LIKE ? OR codigo_docente LIKE ?", like, like, like)
+	}
+	var items []domain.Docente
+	if err := q.Order("apellidos ASC, nombres ASC").Limit(200).Find(&items).Error; err != nil {
+		utils.Fail(c, 500, "Error listando docentes", err.Error())
+		return
+	}
+	// El selector necesita la carga para no proponer a quien ya llegó al tope.
+	out := make([]map[string]any, 0, len(items))
+	for i := range items {
+		out = append(out, h.conCarga(c, &items[i]))
+	}
+	utils.Success(c, out, "OK")
 }
 
 // conCarga agrega el consumo real de carga no lectiva (Art.79/86 Ley 30220):

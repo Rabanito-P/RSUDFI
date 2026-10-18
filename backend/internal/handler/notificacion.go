@@ -38,9 +38,36 @@ func (h *NotificacionHandler) List(c *gin.Context) {
 	onlyUnread := c.Query("only_unread") == "true" || c.Query("unread") == "true"
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 	if limit < 1 || limit > 100 { limit = 20 }
-	items, total, err := h.repo.List(rolPtr, idUsuario, onlyUnread, limit)
+	items, _, err := h.repo.List(rolPtr, idUsuario, onlyUnread, limit)
 	if err != nil { utils.Fail(c, 500, "Error listando notificaciones", err.Error()); return }
-	utils.Paginated(c, items, utils.BuildMeta(1, limit, total), "OK")
+
+	// Pertenencia de la notificación: una bandera de rol entrega a todos los
+	// usuarios de ese rol, así que un docente recibía avisos de proyectos que no
+	// asesora y, al abrirlos, el expediente no cargaba (404 en el frontend).
+	// Aquí se descarta todo aviso cuyo proyecto el usuario no puede ver.
+	items = h.filtrarAccesibles(c, items)
+
+	utils.Success(c, items, "OK")
+}
+
+// filtrarAccesibles deja solo las notificaciones cuyo proyecto —si lo tiene— es
+// visible para quien las recibe. Los avisos sin proyecto (mantenimiento,
+// configuración) se conservan.
+func (h *NotificacionHandler) filtrarAccesibles(c *gin.Context, items []domain.RSUNotificacion) []domain.RSUNotificacion {
+	if h.db == nil {
+		return items
+	}
+	visibles := make([]domain.RSUNotificacion, 0, len(items))
+	for _, n := range items {
+		if n.IDProyecto == nil || *n.IDProyecto == 0 {
+			visibles = append(visibles, n)
+			continue
+		}
+		if puedeVerProyecto(h.db, c, *n.IDProyecto) {
+			visibles = append(visibles, n)
+		}
+	}
+	return visibles
 }
 // Contador de no leídas por rol
 // @Tags		Notificaciones

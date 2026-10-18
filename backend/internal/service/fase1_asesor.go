@@ -148,7 +148,16 @@ func (s *ProyectoService) transicionarFase1(proj *domain.RSUProyecto, destino, r
 }
 
 // notificarCambioEstadoFase1 cumple CA-7.6: todo cambio de estado de
-// Fase 1 notifica al lider, al asesor, a la Escuela y a la Dir. RS.
+// Fase 1 notifica a las partes involucradas.
+//
+// La pertenencia importa: el aviso del estudiante líder y el del docente
+// asesor van dirigidos a ESA persona (id_usuario), no a una bandera de rol.
+// Con bandera de rol todos los docentes veían los avisos de proyectos que
+// no asesoran y el expediente no les cargaba.
+//
+// A los actores institucionales (Dirección de Escuela y Dir. RS de la
+// Facultad) sí les corresponde la bandera de rol: por su ámbito les toca ver
+// todos los proyectos de la Facultad.
 func (s *ProyectoService) notificarCambioEstadoFase1(proj *domain.RSUProyecto, destino string, comentarios *string) {
 	var conComments string
 	if comentarios != nil {
@@ -162,7 +171,18 @@ func (s *ProyectoService) notificarCambioEstadoFase1(proj *domain.RSUProyecto, d
 		proj.CodigoProyecto, proj.Titulo, destino, aviso)
 	titulo := fmt.Sprintf("%s — %s", destino, proj.CodigoProyecto)
 
-	for _, rol := range []string{"ESTUDIANTE_PROP", "DOCENTE_RESP", "DIR_ESCUELA", "DIR_RS_FACULTAD"} {
+	// Dirigidos a la persona concreta del proyecto.
+	if proj.IDEstudianteLider != nil {
+		s.pushNotificacion("ESTUDIANTE_PROP", "TRANSICION", titulo, &mensaje, &proj.ID,
+			s.idUsuarioDePersona("ESTUDIANTE", proj.IDEstudianteLider))
+	}
+	if proj.IDDocenteAsesor != nil {
+		s.pushNotificacion("DOCENTE_RESP", "TRANSICION", titulo, &mensaje, &proj.ID,
+			s.idUsuarioDePersona("DOCENTE", proj.IDDocenteAsesor))
+	}
+
+	// Autoridades de la Facultad: por su ámbito les corresponde verlos todos.
+	for _, rol := range []string{"DIR_ESCUELA", "DIR_RS_FACULTAD"} {
 		s.pushNotificacion(rol, "TRANSICION", titulo, &mensaje, &proj.ID, nil)
 	}
 }

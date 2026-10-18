@@ -149,6 +149,7 @@ func Setup(db *gorm.DB) *gin.Engine {
 
 		api.POST("/docentes", esGestion, esGestion, gestion, docH.Create)
 		api.GET("/docentes", verPersonas, docH.List)
+		api.GET("/docentes/asesores", verProyectos, docH.Asesores) // para el formulario de creación
 		api.GET("/docentes/:id", verPersonas, docH.Get)
 
 		api.POST("/estudiantes", esGestion, esGestion, gestion, estH.Create)

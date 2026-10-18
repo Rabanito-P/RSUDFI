@@ -260,6 +260,16 @@ UPDATE public."RSU_Usuario" SET password_hash = '$2a$10$UQNtAX8Oab9F7CBYLAQ09ufW
 UPDATE public."RSU_Usuario" SET password_hash = '$2a$10$uEBf9azxH9gRlmfZ2VJKzOYoKBsmZ0XVJfZq5WcY7e2AsuXqM1NrS' WHERE id_usuario = 13;
 UPDATE public."RSU_Usuario" SET password_hash = '$2a$10$Szf6Ekq3VGex0Ryzq55zYeuZX5EZLxYYEJNtaqZklV2ndcvIi.ZEa' WHERE id_usuario = 9;
 
+-- ── MÓDULO: cuenta de Pedro Flores (Docente 2) ──
+-- Responsable (asesor) de los PEP 2 y 5: sin usuario no puede entrar ni
+-- resolver solicitudes de unión. Hash = clave inicial undc2026.
+-- Sus módulos se conceden arriba, junto al resto de docentes.
+INSERT INTO "RSU_Usuario" (correo, nombre, password_hash, rol, tipo_usuario, id_persona, activo)
+VALUES ('colaborador@undc.edu.pe', 'Pedro Flores',
+        '$2a$10$6as1j3fRrRguoNVZjssnFuwY4UzDW0K4mIbcI.gpy8tdYp1WX9nOG',
+        'DOCENTE_RESP', 'DOCENTE', 2, true)
+ON CONFLICT (correo) DO NOTHING;
+
 -- ── MÓDULO ADMIN: permisos por usuario (módulos que puede VER) ──
 --
 -- Autorización en dos capas (decisión del usuario):
@@ -341,15 +351,6 @@ CROSS JOIN (VALUES
 WHERE u.rol = 'ADMIN'
   AND NOT EXISTS (SELECT 1 FROM "RSU_Usuario_Permiso" p WHERE p.id_usuario = u.id_usuario);
 
--- ── MÓDULO: cuenta de Pedro Flores (Docente 2) ──
--- Responsable (asesor) de los PEP 2 y 5: sin usuario no puede entrar ni
--- resolver solicitudes de unión. Hash = clave inicial undc2026.
--- Sus módulos se conceden arriba, junto al resto de docentes.
-INSERT INTO "RSU_Usuario" (correo, nombre, password_hash, rol, tipo_usuario, id_persona, activo)
-VALUES ('colaborador@undc.edu.pe', 'Pedro Flores',
-        '$2a$10$6as1j3fRrRguoNVZjssnFuwY4UzDW0K4mIbcI.gpy8tdYp1WX9nOG',
-        'DOCENTE_RESP', 'DOCENTE', 2, true)
-ON CONFLICT (correo) DO NOTHING;
 
 SELECT setval(pg_get_serial_sequence('"RSU_Usuario"', 'id_usuario'),
               (SELECT COALESCE(MAX(id_usuario), 0) + 1 FROM "RSU_Usuario"), false);
