@@ -89,13 +89,16 @@ export default function Login() {
   }, [])
 
   // Al abrir el registro se cargan las escuelas y los ciclos para los selectores.
+// Se piden por las rutas públicas: esta pantalla es anónima y /escuelas o
+// /ciclos exigen sesión, por lo que responderían 401 y los selectores
+// quedarían vacíos.
   useEffect(() => {
     if (!creando) return
     setCreandoMsg(null)
-    api.get('/api/v1/escuelas')
+    api.get('/api/v1/public/escuelas')
       .then((r: any) => setEscuelas(Array.isArray(r.data) ? r.data : []))
       .catch(() => setEscuelas([]))
-    api.get('/api/v1/ciclos')
+    api.get('/api/v1/public/ciclos')
       .then((r: any) => {
         const lista = Array.isArray(r.data) ? r.data : []
         setCiclos(lista)

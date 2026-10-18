@@ -76,6 +76,13 @@ func Setup(db *gorm.DB) *gin.Engine {
 	// Se limita a 5 altas por minuto por IP para evitar cuentas masivas.
 	r.POST("/api/v1/registro/estudiante", middleware.RateLimit(5, time.Minute), regH.Estudiante)
 
+	// Catálogos públicos para el alta de estudiante. La pantalla de ingreso es
+	// anónima: no puede pedir /escuelas ni /ciclos, que exigen sesión y el
+	// módulo correspondiente. Ambas son información no sensible (escuelas de la
+	// Facultad y ciclos académicos), así que se exponen solo para el registro.
+	r.GET("/api/v1/public/escuelas", escH.List)
+	r.GET("/api/v1/public/ciclos", cicloH.List)
+
 	api := r.Group("/api/v1")
 	api.Use(middleware.AuthMiddleware())
 	{
