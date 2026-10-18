@@ -28,8 +28,8 @@ import (
 var (
 	b2Mu      sync.Mutex
 	b2Bucket  *backblaze.Bucket
-	b2Activas b2Cred  // credenciales activas (env, BD o las que guardó el admin)
-	b2Err     error   // último error de conexión (memorizado hasta reintentar)
+	b2Activas b2Cred // credenciales activas (env, BD o las que guardó el admin)
+	b2Err     error  // último error de conexión (memorizado hasta reintentar)
 	b2Lector  func(clave, defecto string) string
 )
 
@@ -170,13 +170,47 @@ type B2Bucket struct{}
 
 func (b *B2Bucket) Driver() string { return "b2" }
 
+// subir sube bytes al bucket con reintentos para errores transitorios de red.
+// Los errores de credenciales no se reintentan: son de configuración.
+func (b *B2Bucket) subir(key, contentType string, data []byte) error {
+	bucket, err := clienteB2()
+	if err != nil {
+		return err
+	}
+	var lastErr error
+	for intento := 1; intento <= 3; intento++ {
+		_, err = bucket.UploadTypedFile(key, contentType, nil, bytes.NewReader(data))
+		if err == nil {
+			return nil
+		}
+		lastErr = err
+		msg := strings.ToLower(err.Error())
+		if strings.Contains(msg, "unauthorized") || strings.Contains(msg, "bad_auth_token") || strings.Contains(msg, "auth_token_expired") {
+			break
+		}
+		if intento < 3 {
+			time.Sleep(time.Duration(intento) * 400 * time.Millisecond)
+		}
+	}
+	return fmt.Errorf("B2 subir archivo: %w", lastErr)
+}
+
+// subirBytes guarda un documento generado por el sistema en el bucket.
+func (b *B2Bucket) subirBytes(datos []byte, safe, subdir string) (*Saved, error) {
+	key := safe
+	if subdir != "" {
+		key = path.Join(SaveName(subdir), safe)
+	}
+	if err := b.subir(key, contentTypeDe(key), datos); err != nil {
+		return nil, err
+	}
+	h := sha256.Sum256(datos)
+	return &Saved{URL: key, Hash: hex.EncodeToString(h[:]), Size: len(datos), Filename: safe}, nil
+}
+
 // Save sube el archivo al bucket con reintentos para errores transitorios de
 // red (los 401/authorization fallan de inmediato: no tiene sentido reintentos).
 func (b *B2Bucket) Save(file *multipart.FileHeader, subdir string) (*Saved, error) {
-	bucket, err := clienteB2()
-	if err != nil {
-		return nil, err
-	}
 	src, err := file.Open()
 	if err != nil {
 		return nil, err
@@ -190,24 +224,11 @@ func (b *B2Bucket) Save(file *multipart.FileHeader, subdir string) (*Saved, erro
 	if subdir != "" {
 		key = path.Join(SaveName(subdir), key)
 	}
-	h := sha256.Sum256(data)
-	var lastErr error
-	for intento := 1; intento <= 3; intento++ {
-		_, err = bucket.UploadTypedFile(key, contentTypeDe(key), nil, bytes.NewReader(data))
-		if err == nil {
-			return &Saved{URL: key, Hash: hex.EncodeToString(h[:]), Size: len(data), Filename: SaveName(file.Filename)}, nil
-		}
-		lastErr = err
-		// Error de credenciales: no reintentar, es de configuración.
-		msg := strings.ToLower(err.Error())
-		if strings.Contains(msg, "unauthorized") || strings.Contains(msg, "bad_auth_token") || strings.Contains(msg, "auth_token_expired") {
-			break
-		}
-		if intento < 3 {
-			time.Sleep(time.Duration(intento) * 400 * time.Millisecond)
-		}
+	if err := b.subir(key, contentTypeDe(key), data); err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("B2 subir archivo: %w", lastErr)
+	h := sha256.Sum256(data)
+	return &Saved{URL: key, Hash: hex.EncodeToString(h[:]), Size: len(data), Filename: SaveName(file.Filename)}, nil
 }
 
 // Descargar baja el objeto desde el bucket privado (stream). Si el token de

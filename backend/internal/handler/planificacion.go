@@ -43,11 +43,11 @@ type actividadPlan struct {
 }
 
 type resultadoPlan struct {
-	OK                bool            `json:"ok"`
-	Error             string          `json:"error"`
-	Total             int             `json:"total"`
-	Actividades       []actividadPlan `json:"actividades"`
-	OmitidasSinFecha  []int           `json:"omitidas_sin_fecha"`
+	OK               bool            `json:"ok"`
+	Error            string          `json:"error"`
+	Total            int             `json:"total"`
+	Actividades      []actividadPlan `json:"actividades"`
+	OmitidasSinFecha []int           `json:"omitidas_sin_fecha"`
 }
 
 // rutaPython localiza el módulo lector dentro del contenedor o en desarrollo.

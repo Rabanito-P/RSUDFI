@@ -42,9 +42,9 @@ func TestValidarHorasCronograma_BloqueaDebajoDelMinimo(t *testing.T) {
 // CA-2.6: entre 45 y 60 horas NO bloquea, solo advierte.
 func TestValidarHorasCronograma_AdvertenciaEntre45y60(t *testing.T) {
 	casos := []struct {
-		nombre    string
-		horas     float64
-		advierte  bool
+		nombre   string
+		horas    float64
+		advierte bool
 	}{
 		{"44 horas sin advertencia", 44, false},
 		{"45 horas con advertencia", 45, true},
@@ -79,9 +79,9 @@ func TestValidarHorasCronograma_ErrorInformaFaltantes(t *testing.T) {
 
 func TestValidarTamanioEquipo_Min2Max5(t *testing.T) {
 	casos := []struct {
-		nombre  string
-		tamano  int
-		ok      bool
+		nombre string
+		tamano int
+		ok     bool
 	}{
 		{"cero", 0, false},
 		{"uno (solo el líder)", 1, false},

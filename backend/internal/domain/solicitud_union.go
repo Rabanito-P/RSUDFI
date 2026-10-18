@@ -11,18 +11,18 @@ import (
 // estado PENDIENTE hasta resolución (R36–R41).
 
 type RSUSolicitudUnion struct {
-	ID               uint       `gorm:"primaryKey;column:id_solicitud" json:"id_solicitud"`
-	IDProyecto       uint       `gorm:"column:id_proyecto" json:"id_proyecto"`
+	ID               uint         `gorm:"primaryKey;column:id_solicitud" json:"id_solicitud"`
+	IDProyecto       uint         `gorm:"column:id_proyecto" json:"id_proyecto"`
 	Proyecto         *RSUProyecto `gorm:"foreignKey:IDProyecto" json:"proyecto,omitempty"`
-	IDEstudiante     uint       `gorm:"column:id_estudiante" json:"id_estudiante"`
-	Estudiante       *Estudiante `gorm:"foreignKey:IDEstudiante" json:"estudiante,omitempty"`
-	MensajeSolicitud *string    `gorm:"column:mensaje_solicitud" json:"mensaje_solicitud"`
-	Estado           string     `gorm:"column:estado" json:"estado"` // PENDIENTE|ACEPTADA|RECHAZADA|CANCELADA
-	MotivoRapido     *string    `gorm:"column:motivo_rapido" json:"motivo_rapido"`
-	MotivoRechazo    *string    `gorm:"column:motivo_rechazo" json:"motivo_rechazo"`
-	IDRevisor        *uint      `gorm:"column:id_revisor" json:"id_revisor"`
-	FechaSolicitud   time.Time  `gorm:"column:fecha_solicitud" json:"fecha_solicitud"`
-	FechaResolucion  *time.Time `gorm:"column:fecha_resolucion" json:"fecha_resolucion"`
+	IDEstudiante     uint         `gorm:"column:id_estudiante" json:"id_estudiante"`
+	Estudiante       *Estudiante  `gorm:"foreignKey:IDEstudiante" json:"estudiante,omitempty"`
+	MensajeSolicitud *string      `gorm:"column:mensaje_solicitud" json:"mensaje_solicitud"`
+	Estado           string       `gorm:"column:estado" json:"estado"` // PENDIENTE|ACEPTADA|RECHAZADA|CANCELADA
+	MotivoRapido     *string      `gorm:"column:motivo_rapido" json:"motivo_rapido"`
+	MotivoRechazo    *string      `gorm:"column:motivo_rechazo" json:"motivo_rechazo"`
+	IDRevisor        *uint        `gorm:"column:id_revisor" json:"id_revisor"`
+	FechaSolicitud   time.Time    `gorm:"column:fecha_solicitud" json:"fecha_solicitud"`
+	FechaResolucion  *time.Time   `gorm:"column:fecha_resolucion" json:"fecha_resolucion"`
 }
 
 func (RSUSolicitudUnion) TableName() string { return "RSU_Solicitud_Union" }

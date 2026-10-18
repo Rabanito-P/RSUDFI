@@ -1,11 +1,12 @@
 package repository
 
 import (
-	"undc-rsu/backend/internal/domain"
 	"gorm.io/gorm"
+	"undc-rsu/backend/internal/domain"
 )
 
 type NotificacionRepo struct{ db *gorm.DB }
+
 func NewNotificacionRepo(db *gorm.DB) *NotificacionRepo { return &NotificacionRepo{db} }
 
 func (r *NotificacionRepo) Create(n *domain.RSUNotificacion) error {
@@ -39,16 +40,22 @@ func (r *NotificacionRepo) CountUnread(rolDestino string, idUsuario *uint) (int6
 	return c, err
 }
 func (r *NotificacionRepo) CountUnreadByRoles(roles []string) (map[string]int64, error) {
-	type row struct{ RolDestino string; Total int64 }
+	type row struct {
+		RolDestino string
+		Total      int64
+	}
 	var rows []row
 	err := r.db.Model(&domain.RSUNotificacion{}).Select("rol_destino, COUNT(*) as total").Where("rol_destino IN ? AND leido = false", roles).Group("rol_destino").Scan(&rows).Error
 	m := map[string]int64{}
-	for _, v := range rows { m[v.RolDestino] = v.Total }
+	for _, v := range rows {
+		m[v.RolDestino] = v.Total
+	}
 	return m, err
 }
 func (r *NotificacionRepo) MarkRead(id uint) error {
 	return r.db.Model(&domain.RSUNotificacion{}).Where("id_notificacion = ?", id).Update("leido", true).Error
 }
+
 // MarkAllRead marca las no leídas del usuario (las suyas + las bandera de su
 // rol). Sin idUsuario marca todas las del rol — comportamiento legacy.
 func (r *NotificacionRepo) MarkAllRead(rolDestino string, idUsuario *uint) error {

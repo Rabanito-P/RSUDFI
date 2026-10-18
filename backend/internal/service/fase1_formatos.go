@@ -22,9 +22,9 @@ import (
 // FormatoDRSU describe un formato oficial de la DRSU disponible como
 // plantilla descargable dentro del Mini-RSU.
 type FormatoDRSU struct {
-	Codigo           string `json:"codigo"`
-	Nombre           string `json:"nombre"`
-	Modalidad        string `json:"modalidad"`
+	Codigo            string `json:"codigo"`
+	Nombre            string `json:"nombre"`
+	Modalidad         string `json:"modalidad"`
 	CodigoEquivalente string `json:"codigo_equivalente"`
 }
 

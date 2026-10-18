@@ -21,10 +21,10 @@ import (
 type Kind string
 
 const (
-	KindPDF     Kind = "pdf"     // %PDF — 32MB (R13)
-	KindImagen  Kind = "imagen"  // JPEG/PNG — 5MB (R13, HU-012)
-	KindOffice  Kind = "office"  // docx/xlsx (ZIP) — 32MB
-	KindMixto   Kind = "mixto"   // pdf/docx/xlsx — 32MB (documentos del proyecto)
+	KindPDF    Kind = "pdf"    // %PDF — 32MB (R13)
+	KindImagen Kind = "imagen" // JPEG/PNG — 5MB (R13, HU-012)
+	KindOffice Kind = "office" // docx/xlsx (ZIP) — 32MB
+	KindMixto  Kind = "mixto"  // pdf/docx/xlsx — 32MB (documentos del proyecto)
 )
 
 var tamanos = map[Kind]int64{

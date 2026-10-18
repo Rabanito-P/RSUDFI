@@ -33,9 +33,12 @@ type EnviarAsesorReq struct {
 // ResolverDecisionAsesor aplica la respuesta del docente asesor.
 //
 // CAMINO BUENO (ACEPTAR): valida el cupo del ciclo, pasa a ACEPTADO_ASESOR
-//   y notifica al lider (CA-4.3 a CA-4.7).
+//
+//	y notifica al lider (CA-4.3 a CA-4.7).
+//
 // CAMINO 1 (RECHAZAR): pasa a OBSERVADO_ASESOR con motivo obligatorio y
-//   congela el contenido tecnico para el reintento (CA-4.8 a CA-4.11).
+//
+//	congela el contenido tecnico para el reintento (CA-4.8 a CA-4.11).
 func (s *ProyectoService) ResolverDecisionAsesor(req DecisionAsesorReq, idUsuario uint) error {
 	proj, err := s.proyectoRepo.FindByID(req.ProyectoID)
 	if err != nil {
@@ -128,13 +131,13 @@ func (s *ProyectoService) transicionarFase1(proj *domain.RSUProyecto, destino, r
 		return fmt.Errorf("transición no permitida: revise el flujo BPMN y el rol actor")
 	}
 	flujo := &domain.RSUFlujoAprobacion{
-		IDProyecto:    proj.ID,
-		IDEstadoOrigen: proj.IDEstadoActual,
+		IDProyecto:      proj.ID,
+		IDEstadoOrigen:  proj.IDEstadoActual,
 		IDEstadoDestino: destinoID,
-		IDRolActor:    uint(idRolActor),
-		IDUsuario:     idUsuario,
-		Comentarios:   comentarios,
-		Resultado:     resultado,
+		IDRolActor:      uint(idRolActor),
+		IDUsuario:       idUsuario,
+		Comentarios:     comentarios,
+		Resultado:       resultado,
 		FechaTransicion: time.Now(),
 	}
 	if err := s.flujoRepo.Create(flujo); err != nil {

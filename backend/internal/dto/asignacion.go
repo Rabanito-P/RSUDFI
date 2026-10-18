@@ -10,18 +10,18 @@ type AsignarDocenteReq struct {
 	IDCiclo        uint    `json:"id_ciclo" binding:"required"`
 }
 type InscribirEstudianteReq struct {
-	IDProyecto    uint   `json:"id_proyecto" binding:"required"`
-	IDEstudiante  uint   `json:"id_estudiante" binding:"required"`
-	IDRolProyecto uint   `json:"id_rol_proyecto" binding:"required"`
+	IDProyecto    uint `json:"id_proyecto" binding:"required"`
+	IDEstudiante  uint `json:"id_estudiante" binding:"required"`
+	IDRolProyecto uint `json:"id_rol_proyecto" binding:"required"`
 }
 
 // InscribirPorDatosReq permite sumar un compañero al equipo escribiendo su
 // nombre y correo, sin conocer su id. Si la persona no existe, se crea.
 type InscribirPorDatosReq struct {
-	Nombres      string `json:"nombres" binding:"required"`
-	Apellidos    string `json:"apellidos"`
-	Correo       string `json:"correo" binding:"required,email"`
+	Nombres   string `json:"nombres" binding:"required"`
+	Apellidos string `json:"apellidos"`
+	Correo    string `json:"correo" binding:"required,email"`
 	// DNI es obligatorio solo si la persona aún no existe.
-	DNI          string `json:"dni"`
-	IDRolProyecto uint  `json:"id_rol_proyecto" binding:"required"`
+	DNI           string `json:"dni"`
+	IDRolProyecto uint   `json:"id_rol_proyecto" binding:"required"`
 }

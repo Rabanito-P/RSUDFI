@@ -10,10 +10,10 @@ import "testing"
 
 func TestValidarCupoAsesor_PermiteHastaElMaximo(t *testing.T) {
 	casos := []struct {
-		nombre      string
-		asesorados  int
-		maximo      int
-		ok          bool
+		nombre     string
+		asesorados int
+		maximo     int
+		ok         bool
 	}{
 		{"sin proyectos, acepta", 0, 2, true},
 		{"1 de 2, acepta", 1, 2, true},
@@ -53,9 +53,9 @@ func TestValidarCupoAsesor_ErrorMencionaElTope(t *testing.T) {
 
 func TestValidarReactivacion_ArchivadoExigeCupoLibre(t *testing.T) {
 	casos := []struct {
-		nombre     string
-		cupoLibre  bool
-		ok         bool
+		nombre    string
+		cupoLibre bool
+		ok        bool
 	}{
 		{"docente con cupo libre, permite reactivar", true, true},
 		{"docente en su tope, bloquea la reactivación", false, false},
@@ -130,12 +130,12 @@ func TestContarAsesoradosParaCupo_NoCuentaPEP(t *testing.T) {
 // queda habilitado el selector de nuevo asesor.
 func TestCamposEditablesPorEstado(t *testing.T) {
 	casos := []struct {
-		estado    string
-		editable  bool
+		estado   string
+		editable bool
 	}{
 		{"BORRADOR", true},
 		{"OBSERVADO_ASESOR", false}, // congelado: solo puede cambiar de asesor
-		{"ENVIADO_ASESOR", false},  // esperando aceptación del asesor
+		{"ENVIADO_ASESOR", false},   // esperando aceptación del asesor
 		{"ACEPTADO_ASESOR", false},
 		{"ARCHIVADO_VENCIMIENTO", false},
 	}

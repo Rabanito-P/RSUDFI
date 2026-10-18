@@ -16,6 +16,7 @@ import (
 type BeneficiarioService struct {
 	repo *repository.BeneficiarioRepo
 }
+
 func NewBeneficiarioService(db *gorm.DB) *BeneficiarioService {
 	return &BeneficiarioService{repo: repository.NewBeneficiarioRepo(db)}
 }
@@ -28,7 +29,7 @@ func (s *BeneficiarioService) Create(req dto.CreateBeneficiarioReq) (*domain.RSU
 	}
 	b := &domain.RSUBeneficiario{
 		TipoBeneficiario: req.TipoBeneficiario,
-		DNI: req.DNI, Nombres: req.Nombres, Apellidos: req.Apellidos,
+		DNI:              req.DNI, Nombres: req.Nombres, Apellidos: req.Apellidos,
 		RUC: req.RUC, RazonSocial: req.RazonSocial,
 		Celular: req.Celular, CorreoElectronico: req.Correo,
 		Direccion: req.Direccion, Distrito: req.Distrito,
@@ -47,7 +48,9 @@ func (s *BeneficiarioService) Create(req dto.CreateBeneficiarioReq) (*domain.RSU
 func (s *BeneficiarioService) List(page, limit int, search string) ([]domain.RSUBeneficiario, int64, error) {
 	return s.repo.FindAll(page, limit, search)
 }
-func (s *BeneficiarioService) Get(id uint) (*domain.RSUBeneficiario, error) { return s.repo.FindByID(id) }
+func (s *BeneficiarioService) Get(id uint) (*domain.RSUBeneficiario, error) {
+	return s.repo.FindByID(id)
+}
 func (s *BeneficiarioService) Vincular(req dto.VincularBeneficiarioReq) error {
 	if s.repo.ExistsVinculo(req.IDProyecto, req.IDBeneficiario) {
 		return errors.New("beneficiario ya vinculado al proyecto")
@@ -61,4 +64,3 @@ func (s *BeneficiarioService) Vincular(req dto.VincularBeneficiarioReq) error {
 func (s *BeneficiarioService) ListByProyecto(idProyecto uint) ([]domain.RSUProyectoBeneficiario, error) {
 	return s.repo.ListByProyecto(idProyecto)
 }
-

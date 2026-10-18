@@ -22,22 +22,22 @@ type LoginResp struct {
 // CrearUsuarioReq da de alta un usuario de acceso al sistema.
 // La contraseña se guarda hasheada con bcrypt.
 type CrearUsuarioReq struct {
-	Correo       string `json:"correo" binding:"required,email"`
-	Nombre       string `json:"nombre" binding:"required,min=3"`
-	Password     string `json:"password" binding:"required,min=6"`
-	RolActor     string `json:"rol_actor" binding:"required"`
-	IDPersona    *uint  `json:"id_persona"`
-	Activo       *bool  `json:"activo"`
-	Modulos      []string `json:"modulos"`
+	Correo    string   `json:"correo" binding:"required,email"`
+	Nombre    string   `json:"nombre" binding:"required,min=3"`
+	Password  string   `json:"password" binding:"required,min=6"`
+	RolActor  string   `json:"rol_actor" binding:"required"`
+	IDPersona *uint    `json:"id_persona"`
+	Activo    *bool    `json:"activo"`
+	Modulos   []string `json:"modulos"`
 }
 
 // ActualizarUsuarioReq edita datos y estado. La contraseña es opcional.
 type ActualizarUsuarioReq struct {
-	Nombre    *string `json:"nombre"`
-	RolActor  *string `json:"rol_actor"`
-	IDPersona *uint   `json:"id_persona"`
-	Activo    *bool   `json:"activo"`
-	Password  *string `json:"password"`
+	Nombre    *string  `json:"nombre"`
+	RolActor  *string  `json:"rol_actor"`
+	IDPersona *uint    `json:"id_persona"`
+	Activo    *bool    `json:"activo"`
+	Password  *string  `json:"password"`
 	Modulos   []string `json:"modulos"`
 }
 
@@ -49,16 +49,16 @@ type PermisoReq struct {
 
 // UsuarioConPermisos es la vista que consume el panel de administración.
 type UsuarioConPermisos struct {
-	ID          uint      `json:"id_usuario"`
-	Correo      string    `json:"correo"`
-	Nombre      string    `json:"nombre"`
-	Rol         string    `json:"rol"`
-	RolActor    string    `json:"rol_actor"`
-	TipoUsuario string    `json:"tipo_usuario"`
-	IDPersona   *uint     `json:"id_persona"`
-	Activo      bool      `json:"activo"`
+	ID          uint        `json:"id_usuario"`
+	Correo      string      `json:"correo"`
+	Nombre      string      `json:"nombre"`
+	Rol         string      `json:"rol"`
+	RolActor    string      `json:"rol_actor"`
+	TipoUsuario string      `json:"tipo_usuario"`
+	IDPersona   *uint       `json:"id_persona"`
+	Activo      bool        `json:"activo"`
 	UltimoLogin interface{} `json:"ultimo_login"`
-	Modulos     []string  `json:"modulos"`
+	Modulos     []string    `json:"modulos"`
 }
 
 // ModuloInfo describe un módulo activable del sistema.

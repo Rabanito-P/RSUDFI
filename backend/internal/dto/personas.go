@@ -14,13 +14,13 @@ type CreateDocenteReq struct {
 	CargaNoLectivaMax float64 `json:"carga_no_lectiva_max"`
 }
 type CreateEstudianteReq struct {
-	Codigo        string  `json:"codigo_estudiante" binding:"required"`
-	DNI           string  `json:"dni" binding:"required,len=8"`
-	Nombres       string  `json:"nombres" binding:"required"`
-	Apellidos     string  `json:"apellidos" binding:"required"`
-	Correo        string  `json:"correo_institucional" binding:"required,email"`
-	IDEscuela     uint    `json:"id_escuela" binding:"required"`
-	FechaIngreso  *string `json:"fecha_ingreso"`
+	Codigo       string  `json:"codigo_estudiante" binding:"required"`
+	DNI          string  `json:"dni" binding:"required,len=8"`
+	Nombres      string  `json:"nombres" binding:"required"`
+	Apellidos    string  `json:"apellidos" binding:"required"`
+	Correo       string  `json:"correo_institucional" binding:"required,email"`
+	IDEscuela    uint    `json:"id_escuela" binding:"required"`
+	FechaIngreso *string `json:"fecha_ingreso"`
 	// CrearUsuario: además de la persona, da de alta la cuenta de acceso para
 	// que el estudiante pueda iniciar sesión (perfil completo).
 	CrearUsuario bool   `json:"crear_usuario"`
@@ -42,7 +42,6 @@ type RegistroEstudianteReq struct {
 	// la regla de ciclo mínimo (R01) consulta el ciclo numérico del líder
 	// contra RSU_Tipo_Proyecto.ciclo_minimo_estudiante. Antes el registro
 	// público no la creaba y toda alta quedaba sin poder proponer proyecto.
-	IDCiclo         *uint `json:"id_ciclo"`
-	CicloNumerico   *int  `json:"ciclo_numerico" binding:"omitempty,min=1,max=12"`
+	IDCiclo       *uint `json:"id_ciclo"`
+	CicloNumerico *int  `json:"ciclo_numerico" binding:"omitempty,min=1,max=12"`
 }
-

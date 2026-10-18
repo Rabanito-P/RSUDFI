@@ -8,6 +8,7 @@ import (
 // ── Solicitudes de constancia (RSU_Solicitud_Constancia) ──────
 
 type ConstanciaRepo struct{ db *gorm.DB }
+
 func NewConstanciaRepo(db *gorm.DB) *ConstanciaRepo { return &ConstanciaRepo{db} }
 
 func (r *ConstanciaRepo) Create(s *domain.RSUSolicitudConstancia) error { return r.db.Create(s).Error }

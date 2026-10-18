@@ -191,11 +191,11 @@ func AuditMiddleware(db *gorm.DB) gin.HandlerFunc {
 		accion := accionDe(method, c)
 		entidad := entidadDe(path)
 		log := &domain.RSUAuditoriaLog{
-			IDUsuario:  usuarioID,
-			IDProyecto: idProyecto,
-			Accion:     accion,
+			IDUsuario:     usuarioID,
+			IDProyecto:    idProyecto,
+			Accion:        accion,
 			TablaAfectada: &entidad,
-			IPOrigen:   &ip,
+			IPOrigen:      &ip,
 		}
 		_ = db.Create(log).Error
 	}

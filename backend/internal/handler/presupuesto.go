@@ -13,10 +13,14 @@ import (
 
 // ── Presupuesto Handler ──────────────────────────────────────
 
-type PresupuestoHandler struct{
+type PresupuestoHandler struct {
 	repo *repository.PresupuestoRepo
 }
-func NewPresupuestoHandler(db *gorm.DB) *PresupuestoHandler { return &PresupuestoHandler{repo: repository.NewPresupuestoRepo(db)} }
+
+func NewPresupuestoHandler(db *gorm.DB) *PresupuestoHandler {
+	return &PresupuestoHandler{repo: repository.NewPresupuestoRepo(db)}
+}
+
 // Registrar movimiento (ASIGNACION/EJECUCION/TRANSFERENCIA/DEVOLUCION)
 // @Tags		Presupuesto
 // @Accept		json
@@ -28,18 +32,33 @@ func NewPresupuestoHandler(db *gorm.DB) *PresupuestoHandler { return &Presupuest
 // @Router		/api/v1/presupuesto/movimientos [post]
 func (h *PresupuestoHandler) CreateMov(c *gin.Context) {
 	var req dto.CreateMovimientoReq
-	if err := c.ShouldBindJSON(&req); err != nil { utils.ValidationFail(c, err.Error()); return }
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ValidationFail(c, err.Error())
+		return
+	}
 	fecha, err := utils.ParseDate(req.Fecha)
-	if err != nil { utils.Fail(c, 400, "fecha inválida", err.Error()); return }
+	if err != nil {
+		utils.Fail(c, 400, "fecha inválida", err.Error())
+		return
+	}
 	m := &domain.RSUPresupuestoMovimiento{IDProyecto: req.IDProyecto, IDFacultad: req.IDFacultad, Tipo: req.Tipo, Monto: req.Monto, Fecha: fecha, Observaciones: req.Observaciones}
 	// Auditoría: id_usuario_registro es NOT NULL en BD; sale del token, nunca del body.
 	if v, ok := c.Get("user_id"); ok {
-		if uid, ok := v.(uint); ok && uid > 0 { m.IDUsuarioRegistro = &uid }
+		if uid, ok := v.(uint); ok && uid > 0 {
+			m.IDUsuarioRegistro = &uid
+		}
 	}
-	if m.IDUsuarioRegistro == nil { utils.Fail(c, 401, "sesión no identificada", nil); return }
-	if err := h.repo.CreateMov(m); err != nil { utils.Fail(c, 400, "Error", err.Error()); return }
+	if m.IDUsuarioRegistro == nil {
+		utils.Fail(c, 401, "sesión no identificada", nil)
+		return
+	}
+	if err := h.repo.CreateMov(m); err != nil {
+		utils.Fail(c, 400, "Error", err.Error())
+		return
+	}
 	utils.Created(c, m, "Movimiento registrado")
 }
+
 // Movimientos de presupuesto del proyecto
 // @Tags		Presupuesto
 // @Accept		json
@@ -52,7 +71,9 @@ func (h *PresupuestoHandler) CreateMov(c *gin.Context) {
 func (h *PresupuestoHandler) ByProyecto(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	list, err := h.repo.FindByProyecto(uint(id))
-	if err != nil { utils.Fail(c, 500, "Error", err.Error()); return }
+	if err != nil {
+		utils.Fail(c, 500, "Error", err.Error())
+		return
+	}
 	utils.Success(c, list, "OK")
 }
-

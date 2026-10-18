@@ -8,6 +8,7 @@ import (
 // ── Roles dinámicos por proyecto (V1.1 §1) ──────────────
 
 type ProyectoRolRepo struct{ db *gorm.DB }
+
 func NewProyectoRolRepo(db *gorm.DB) *ProyectoRolRepo { return &ProyectoRolRepo{db} }
 
 func (r *ProyectoRolRepo) Create(pr *domain.RSUProyectoRol) error { return r.db.Create(pr).Error }
@@ -39,4 +40,3 @@ func (r *ProyectoRolRepo) Existe(idProyecto uint, tipoUsuario string, idUsuario 
 		Count(&c)
 	return c > 0
 }
-

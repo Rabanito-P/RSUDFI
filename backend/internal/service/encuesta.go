@@ -18,26 +18,38 @@ type EncuestaService struct {
 	pregRepo     *repository.CatalogoRepo
 	db           *gorm.DB
 }
+
 func NewEncuestaService(db *gorm.DB) *EncuestaService {
 	return &EncuestaService{encuestaRepo: repository.NewEncuestaRepo(db), pregRepo: repository.NewCatalogoRepo(db), db: db}
 }
 func cualitativo(v int) string {
 	switch v {
-	case 1: return "MUY_MALO"
-	case 2: return "MALO"
-	case 3: return "REGULAR"
-	case 4: return "BUENO"
-	case 5: return "MUY_BUENO"
-	default: return "REGULAR"
+	case 1:
+		return "MUY_MALO"
+	case 2:
+		return "MALO"
+	case 3:
+		return "REGULAR"
+	case 4:
+		return "BUENO"
+	case 5:
+		return "MUY_BUENO"
+	default:
+		return "REGULAR"
 	}
 }
 func escalaGlobal(avg float64) string {
 	switch {
-	case avg >= 4.5: return "MUY_BUENO"
-	case avg >= 3.5: return "BUENO"
-	case avg >= 2.5: return "REGULAR"
-	case avg >= 1.5: return "MALO"
-	default: return "MUY_MALO"
+	case avg >= 4.5:
+		return "MUY_BUENO"
+	case avg >= 3.5:
+		return "BUENO"
+	case avg >= 2.5:
+		return "REGULAR"
+	case avg >= 1.5:
+		return "MALO"
+	default:
+		return "MUY_MALO"
 	}
 }
 func (s *EncuestaService) CrearEncuestaBeneficiario(req dto.CreateEncuestaBenefReq) (*domain.RSUEncuestaBeneficiario, error) {
@@ -54,14 +66,18 @@ func (s *EncuestaService) CrearEncuestaBeneficiario(req dto.CreateEncuestaBenefR
 		return nil, errors.New("ya existe encuesta para este beneficiario en el proyecto")
 	}
 	fecha, _ := time.Parse("2006-01-02", req.FechaAplicacion)
-	if fecha.IsZero() { fecha = time.Now() }
+	if fecha.IsZero() {
+		fecha = time.Now()
+	}
 
 	if len(req.Respuestas) == 0 {
 		return nil, errors.New("la encuesta debe tener al menos una respuesta")
 	}
 	// Calcular promedio
 	sum := 0
-	for _, r := range req.Respuestas { sum += r.ValorNumerico }
+	for _, r := range req.Respuestas {
+		sum += r.ValorNumerico
+	}
 	avg := float64(sum) / float64(len(req.Respuestas))
 	calif := escalaGlobal(avg)
 
@@ -99,4 +115,3 @@ func (s *EncuestaService) CrearEncuestaBeneficiario(req dto.CreateEncuestaBenefR
 func (s *EncuestaService) ListByProyecto(idProyecto uint) ([]domain.RSUEncuestaBeneficiario, error) {
 	return s.encuestaRepo.FindByProyecto(idProyecto)
 }
-

@@ -10,6 +10,7 @@ import (
 	"undc-rsu/backend/internal/domain"
 	"undc-rsu/backend/internal/dto"
 	"undc-rsu/backend/internal/mail"
+	"undc-rsu/backend/internal/pdf"
 	"undc-rsu/backend/internal/repository"
 )
 
@@ -22,6 +23,9 @@ type ProyectoService struct {
 	catalogoRepo   *repository.CatalogoRepo
 	flujoRepo      *repository.FlujoRepo
 	db             *gorm.DB
+	// pdfGen produce los documentos oficiales (Oficio de Elevación). Se inyecta
+	// por constructor y se aisló detrás de la interfaz pdf.Generador (HU-F2-T3).
+	pdfGen pdf.Generador
 }
 
 func NewProyectoService(db *gorm.DB) *ProyectoService {
@@ -31,7 +35,8 @@ func NewProyectoService(db *gorm.DB) *ProyectoService {
 		estudianteRepo: repository.NewEstudianteRepo(db),
 		catalogoRepo:   repository.NewCatalogoRepo(db),
 		flujoRepo:      repository.NewFlujoRepo(db),
-		db: db,
+		db:             db,
+		pdfGen:         pdf.NewGPDF(),
 	}
 }
 
@@ -156,7 +161,9 @@ func (s *ProyectoService) Create(req dto.CreateProyectoReq) (*domain.RSUProyecto
 			return nil, errors.New("el estudiante ya lidera un proyecto activo. Solo un proyecto a la vez")
 		}
 		tipo, err := s.getTipo(req.IDTipo)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		cicloNum, err := s.estudianteRepo.GetCicloNumerico(*req.IDEstudianteLider, req.IDCicloCreacion)
 		if err != nil {
 			return nil, errors.New("estudiante no matriculado en el ciclo indicado o ciclo incorrecto")
@@ -179,32 +186,36 @@ func (s *ProyectoService) Create(req dto.CreateProyectoReq) (*domain.RSUProyecto
 		}
 	}
 	p := &domain.RSUProyecto{
-		CodigoProyecto: req.CodigoProyecto,
-		Titulo:         req.Titulo,
-		IDEscuela:      req.IDEscuela,
-		IDTipo:         req.IDTipo,
-		Modalidad:      modalidad,
-		IDLineaAccion:  req.IDLineaAccion,
-		IDEstadoActual: estado.ID,
-		IDCicloCreacion: req.IDCicloCreacion,
-		IDEstudianteLider: req.IDEstudianteLider,
-		IDDocenteAsesor: req.IDDocenteAsesor,
-		Descripcion: req.Descripcion,
-		Problematica: req.Problematica,
-		ODS:          req.ODS,
-		ObjetivoGeneral: req.ObjetivoGeneral,
-		ObjetivosEspecificos: req.ObjetivosEspecificos,
+		CodigoProyecto:        req.CodigoProyecto,
+		Titulo:                req.Titulo,
+		IDEscuela:             req.IDEscuela,
+		IDTipo:                req.IDTipo,
+		Modalidad:             modalidad,
+		IDLineaAccion:         req.IDLineaAccion,
+		IDEstadoActual:        estado.ID,
+		IDCicloCreacion:       req.IDCicloCreacion,
+		IDEstudianteLider:     req.IDEstudianteLider,
+		IDDocenteAsesor:       req.IDDocenteAsesor,
+		Descripcion:           req.Descripcion,
+		Problematica:          req.Problematica,
+		ODS:                   req.ODS,
+		ObjetivoGeneral:       req.ObjetivoGeneral,
+		ObjetivosEspecificos:  req.ObjetivosEspecificos,
 		PoblacionBeneficiaria: req.PoblacionBeneficiaria,
-		SectorBeneficiario: req.SectorBeneficiario,
-		LugarIntervencion: req.LugarIntervencion,
+		SectorBeneficiario:    req.SectorBeneficiario,
+		LugarIntervencion:     req.LugarIntervencion,
 		PresupuestoSolicitado: req.PresupuestoSolicitado,
-		Activo: true,
+		Activo:                true,
 	}
 	if req.FechaInicioPlan != nil {
-		if t, err := time.Parse("2006-01-02", *req.FechaInicioPlan); err == nil { p.FechaInicioPlan = &t }
+		if t, err := time.Parse("2006-01-02", *req.FechaInicioPlan); err == nil {
+			p.FechaInicioPlan = &t
+		}
 	}
 	if req.FechaFinPlan != nil {
-		if t, err := time.Parse("2006-01-02", *req.FechaFinPlan); err == nil { p.FechaFinPlan = &t }
+		if t, err := time.Parse("2006-01-02", *req.FechaFinPlan); err == nil {
+			p.FechaFinPlan = &t
+		}
 	}
 	if err := s.proyectoRepo.Create(p); err != nil {
 		low := strings.ToLower(err.Error())
@@ -262,7 +273,25 @@ func (s *ProyectoService) getTipo(id uint) (*domain.RSUTipoProyecto, error) {
 }
 
 func (s *ProyectoService) List(page, limit int, estado, escuela *uint, search string, modalidades []string) ([]domain.RSUProyecto, int64, error) {
-	return s.proyectoRepo.FindAll(page, limit, estado, escuela, search, modalidades)
+	items, total, err := s.proyectoRepo.FindAll(page, limit, estado, escuela, search, modalidades)
+	if err != nil {
+		return items, total, err
+	}
+	// HU-F2-02 (E3): el vencimiento también se evalúa en el listado, que es lo
+	// que ve la bandeja de la Facultad. Se refleja en la respuesta sin repetir
+	// la consulta.
+	for i := range items {
+		archivado, err := s.VencerSiCorresponde(&items[i])
+		if err != nil {
+			return nil, total, err
+		}
+		if archivado {
+			if p, err := s.proyectoRepo.FindByID(items[i].ID); err == nil {
+				items[i] = *p
+			}
+		}
+	}
+	return items, total, nil
 }
 func (s *ProyectoService) ListByEstudiante(page, limit int, idEstudiante uint, search string) ([]domain.RSUProyecto, int64, error) {
 	return s.proyectoRepo.FindAllByEstudiante(page, limit, idEstudiante, search)
@@ -273,25 +302,53 @@ func (s *ProyectoService) ListByDocente(page, limit int, idDocente uint, search 
 func (s *ProyectoService) IsMiembro(idProyecto, idEstudiante uint) bool {
 	return s.proyectoRepo.IsEstudianteMiembro(idProyecto, idEstudiante)
 }
-func (s *ProyectoService) Get(id uint) (*domain.RSUProyecto, error) { return s.proyectoRepo.FindByID(id) }
+func (s *ProyectoService) Get(id uint) (*domain.RSUProyecto, error) {
+	p, err := s.proyectoRepo.FindByID(id)
+	if err != nil {
+		return nil, err
+	}
+	// HU-F2-02 (E3): el vencimiento se evalúa de forma perezosa al leer.
+	if _, err := s.VencerSiCorresponde(p); err != nil {
+		return nil, err
+	}
+	return s.proyectoRepo.FindByID(id)
+}
 
 func (s *ProyectoService) Update(id uint, req dto.UpdateProyectoReq) (*domain.RSUProyecto, error) {
 	p, err := s.proyectoRepo.FindByID(id)
-	if err != nil { return nil, err }
-	if req.Titulo != nil { p.Titulo = *req.Titulo }
-	if req.Descripcion != nil { p.Descripcion = req.Descripcion }
-	if req.ObjetivoGeneral != nil { p.ObjetivoGeneral = req.ObjetivoGeneral }
+	if err != nil {
+		return nil, err
+	}
+	if req.Titulo != nil {
+		p.Titulo = *req.Titulo
+	}
+	if req.Descripcion != nil {
+		p.Descripcion = req.Descripcion
+	}
+	if req.ObjetivoGeneral != nil {
+		p.ObjetivoGeneral = req.ObjetivoGeneral
+	}
 	if req.PorcentajeAvance != nil {
 		if *req.PorcentajeAvance < 0 || *req.PorcentajeAvance > 100 {
 			return nil, errors.New("porcentaje_avance debe estar entre 0 y 100")
 		}
 		p.PorcentajeAvance = *req.PorcentajeAvance
 	}
-	if req.PresupuestoSolicitado != nil { p.PresupuestoSolicitado = *req.PresupuestoSolicitado }
-	if req.PresupuestoAprobado != nil { p.PresupuestoAprobado = *req.PresupuestoAprobado }
-	if req.MontoEjecutado != nil { p.MontoEjecutado = *req.MontoEjecutado }
-	if req.LugarIntervencion != nil { p.LugarIntervencion = req.LugarIntervencion }
-	if err := s.proyectoRepo.Update(p); err != nil { return nil, err }
+	if req.PresupuestoSolicitado != nil {
+		p.PresupuestoSolicitado = *req.PresupuestoSolicitado
+	}
+	if req.PresupuestoAprobado != nil {
+		p.PresupuestoAprobado = *req.PresupuestoAprobado
+	}
+	if req.MontoEjecutado != nil {
+		p.MontoEjecutado = *req.MontoEjecutado
+	}
+	if req.LugarIntervencion != nil {
+		p.LugarIntervencion = req.LugarIntervencion
+	}
+	if err := s.proyectoRepo.Update(p); err != nil {
+		return nil, err
+	}
 	return p, nil
 }
 
@@ -351,7 +408,7 @@ func (s *ProyectoService) Transicion(idProyecto uint, req dto.TransicionReq) err
 	flujo := &domain.RSUFlujoAprobacion{
 		IDProyecto:          idProyecto,
 		IDEstadoOrigen:      proj.IDEstadoActual,
-		IDEstadoDestino:      destinoID,
+		IDEstadoDestino:     destinoID,
 		IDRolActor:          req.IDRolActor,
 		IDUsuario:           req.IDUsuario,
 		IDDocumentoSustento: req.IDDocumentoSustento,
@@ -368,6 +425,19 @@ func (s *ProyectoService) Transicion(idProyecto uint, req dto.TransicionReq) err
 	if req.Resultado == "APROBADO" || req.Resultado == "RECHAZADO" || req.Resultado == "DEVUELTO" || req.Resultado == "OBSERVADO" {
 		if err := s.proyectoRepo.UpdateEstado(idProyecto, destinoID); err != nil {
 			return err
+		}
+		// HU-F2-02 / rules §5 CAMINO 2: la devolución abre un plazo de
+		// subsanación. El vencimiento se evalúa de forma perezosa (E3).
+		if req.Resultado != "APROBADO" {
+			motivo := ""
+			if req.Comentarios != nil {
+				motivo = *req.Comentarios
+			}
+			limite := diasHabiles(time.Now(), plazoSegunEstado(s.db, proj.EstadoActual.Codigo))
+			limiteStr := limite.Format(time.RFC3339)
+			if err := s.proyectoRepo.UpdatePlazoSubsanacion(idProyecto, &limiteStr, &motivo, camposBloqueadosPara(proj.EstadoActual.Codigo)); err != nil {
+				return err
+			}
 		}
 	}
 	// ── Circuito de notificaciones del flujo (HU-052..055, R26/R31/R32) ──
@@ -440,4 +510,3 @@ func (s *ProyectoService) Historial(id uint) ([]domain.RSUFlujoAprobacion, error
 func (s *ProyectoService) ResumenVw(page, limit int) ([]domain.VwProyectoResumen, int64, error) {
 	return s.proyectoRepo.VwResumen(page, limit)
 }
-

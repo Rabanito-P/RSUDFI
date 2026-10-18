@@ -100,13 +100,13 @@ func (h *RegistroHandler) Estudiante(c *gin.Context) {
 	}
 
 	est := &domain.Estudiante{
-		Codigo:   codigo,
-		DNI:      req.DNI,
-		Nombres:  req.Nombres,
+		Codigo:    codigo,
+		DNI:       req.DNI,
+		Nombres:   req.Nombres,
 		Apellidos: req.Apellidos,
-		Correo:   req.Correo,
+		Correo:    req.Correo,
 		IDEscuela: idEscuela,
-		Estado:   "ACTIVO",
+		Estado:    "ACTIVO",
 	}
 
 	// Persona + matrícula + cuenta se crean en una sola transacción: si algo
@@ -157,24 +157,24 @@ func (h *RegistroHandler) Estudiante(c *gin.Context) {
 		// La persona ya quedó creada: se intenta crear el usuario sin eso y se
 		// avisa del resultado real en lugar de devolver éxito falso.
 		utils.Created(c, gin.H{
-			"estudiante":      est,
+			"estudiante":     est,
 			"usuario_creado": false,
 		}, "Estudiante registrado (sin cuenta de acceso)")
 		return
 	}
 
 	// Se habilita el acceso a los mismos módulos que el seed concede al rol
-// estudiante. Deben coincidir: si se omite 'catalogos' el formulario de
-// creación se queda sin selector de ODS, tipo de proyecto y línea de acción,
-// y si falta 'entregables' el estudiante no ve sus cinco entregas.
-for _, m := range []string{
+	// estudiante. Deben coincidir: si se omite 'catalogos' el formulario de
+	// creación se queda sin selector de ODS, tipo de proyecto y línea de acción,
+	// y si falta 'entregables' el estudiante no ve sus cinco entregas.
+	for _, m := range []string{
 		"proyectos", "evidencias", "entregables", "encuestas", "documentos", "catalogos",
 	} {
 		_ = h.db.Create(&domain.RSUUsuarioPermiso{IDUsuario: usr.ID, Modulo: m, Activo: true}).Error
 	}
 
 	utils.Created(c, gin.H{
-		"estudiante":      est,
+		"estudiante":     est,
 		"usuario_creado": true,
 	}, "Perfil de estudiante creado")
 }

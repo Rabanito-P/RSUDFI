@@ -13,7 +13,11 @@ import (
 // ── Beneficiario Handler ─────────────────────────────────────
 
 type BeneficiarioHandler struct{ svc *service.BeneficiarioService }
-func NewBeneficiarioHandler(db *gorm.DB) *BeneficiarioHandler { return &BeneficiarioHandler{svc: service.NewBeneficiarioService(db)} }
+
+func NewBeneficiarioHandler(db *gorm.DB) *BeneficiarioHandler {
+	return &BeneficiarioHandler{svc: service.NewBeneficiarioService(db)}
+}
+
 // Registrar beneficiario (DNI 8 / RUC 11 según tipo)
 // @Tags		Beneficiarios
 // @Accept		json
@@ -25,11 +29,18 @@ func NewBeneficiarioHandler(db *gorm.DB) *BeneficiarioHandler { return &Benefici
 // @Router		/api/v1/beneficiarios [post]
 func (h *BeneficiarioHandler) Create(c *gin.Context) {
 	var req dto.CreateBeneficiarioReq
-	if err := c.ShouldBindJSON(&req); err != nil { utils.ValidationFail(c, err.Error()); return }
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ValidationFail(c, err.Error())
+		return
+	}
 	b, err := h.svc.Create(req)
-	if err != nil { utils.Fail(c, 400, err.Error(), nil); return }
+	if err != nil {
+		utils.Fail(c, 400, err.Error(), nil)
+		return
+	}
 	utils.Created(c, b, "Beneficiario creado")
 }
+
 // Listar padrón de beneficiarios (filtros + search)
 // @Tags		Beneficiarios
 // @Accept		json
@@ -41,9 +52,13 @@ func (h *BeneficiarioHandler) Create(c *gin.Context) {
 func (h *BeneficiarioHandler) List(c *gin.Context) {
 	page, limit, _ := utils.GetPagination(c)
 	items, total, err := h.svc.List(page, limit, c.Query("search"))
-	if err != nil { utils.Fail(c, 500, "Error", err.Error()); return }
+	if err != nil {
+		utils.Fail(c, 500, "Error", err.Error())
+		return
+	}
 	utils.Paginated(c, items, utils.BuildMeta(page, limit, total), "OK")
 }
+
 // Obtener beneficiario por id
 // @Tags		Beneficiarios
 // @Accept		json
@@ -56,9 +71,13 @@ func (h *BeneficiarioHandler) List(c *gin.Context) {
 func (h *BeneficiarioHandler) Get(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	b, err := h.svc.Get(uint(id))
-	if err != nil { utils.Fail(c, 404, "No encontrado", nil); return }
+	if err != nil {
+		utils.Fail(c, 404, "No encontrado", nil)
+		return
+	}
 	utils.Success(c, b, "OK")
 }
+
 // Vincular beneficiario a proyecto (único por proyecto)
 // @Tags		Beneficiarios
 // @Accept		json
@@ -70,10 +89,17 @@ func (h *BeneficiarioHandler) Get(c *gin.Context) {
 // @Router		/api/v1/beneficiarios/vincular [post]
 func (h *BeneficiarioHandler) Vincular(c *gin.Context) {
 	var req dto.VincularBeneficiarioReq
-	if err := c.ShouldBindJSON(&req); err != nil { utils.ValidationFail(c, err.Error()); return }
-	if err := h.svc.Vincular(req); err != nil { utils.Fail(c, 400, err.Error(), nil); return }
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ValidationFail(c, err.Error())
+		return
+	}
+	if err := h.svc.Vincular(req); err != nil {
+		utils.Fail(c, 400, err.Error(), nil)
+		return
+	}
 	utils.Success(c, nil, "Beneficiario vinculado")
 }
+
 // Beneficiarios vinculados a un proyecto
 // @Tags		Beneficiarios
 // @Accept		json
@@ -86,7 +112,9 @@ func (h *BeneficiarioHandler) Vincular(c *gin.Context) {
 func (h *BeneficiarioHandler) ByProyecto(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	list, err := h.svc.ListByProyecto(uint(id))
-	if err != nil { utils.Fail(c, 500, "Error", err.Error()); return }
+	if err != nil {
+		utils.Fail(c, 500, "Error", err.Error())
+		return
+	}
 	utils.Success(c, list, "OK")
 }
-

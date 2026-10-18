@@ -1,4 +1,4 @@
-﻿package storage
+package storage
 
 import (
 	"crypto/sha256"
@@ -40,10 +40,11 @@ func UploadDir() string {
 }
 
 // New devuelve el driver según STORAGE_DRIVER:
-//   local (default) → disco en UPLOAD_DIR, URLs públicas /uploads/...
-//   b2               → Backblaze B2 API nativa (bucket PRIVADO). Las URLs
-//                      guardadas son keys lógicos servidos por
-//                      GET /api/v1/archivos?key=... (con token de cuenta).
+//
+//	local (default) → disco en UPLOAD_DIR, URLs públicas /uploads/...
+//	b2               → Backblaze B2 API nativa (bucket PRIVADO). Las URLs
+//	                   guardadas son keys lógicos servidos por
+//	                   GET /api/v1/archivos?key=... (con token de cuenta).
 func New() Storage {
 	switch strings.ToLower(Driver()) {
 	case "b2", "s3", "backblaze":
@@ -68,21 +69,22 @@ func EsCloud() bool {
 // (proyectos/<id>/). B2 no tiene carpetas reales: el "/" en el nombre del
 // objeto se muestra como carpeta en la consola, igual que en un disco.
 // Estructura del bucket:
-//   proyectos/<id_proyecto>/documentos/<archivo>   informes, entregables
-//   proyectos/<id_proyecto>/evidencias/<archivo>   fotos de campo
-//   proyectos/<id_proyecto>/firmas/<archivo>       firmas de asistencia
-//   formatos/<archivo>                             formatos RSU (admin)
-//   plantillas/<archivo>                           guías oficiales
+//
+//	proyectos/<id_proyecto>/documentos/<archivo>   informes, entregables
+//	proyectos/<id_proyecto>/evidencias/<archivo>   fotos de campo
+//	proyectos/<id_proyecto>/firmas/<archivo>       firmas de asistencia
+//	formatos/<archivo>                             formatos RSU (admin)
+//	plantillas/<archivo>                           guías oficiales
 func PrefijoProyecto(idProyecto uint) string {
 	return fmt.Sprintf("proyectos/%d", idProyecto)
 }
 
 // AbrirArchivo resuelve un key/URL guardado en BD a un stream + content-type
 // para servir la descarga. Prioridad:
-//   1. Si la URL es /uploads/... y el archivo existe en disco → local (así
-//      los archivos que quedaron por fallback siguen descargando aunque el
-//      driver activo sea b2).
-//   2. Si no, se baja del bucket B2 con el token de la cuenta.
+//  1. Si la URL es /uploads/... y el archivo existe en disco → local (así
+//     los archivos que quedaron por fallback siguen descargando aunque el
+//     driver activo sea b2).
+//  2. Si no, se baja del bucket B2 con el token de la cuenta.
 func AbrirArchivo(url string) (io.ReadCloser, string, error) {
 	if url == "" {
 		return nil, "", fmt.Errorf("sin archivo asociado")
@@ -120,6 +122,41 @@ func ExisteLocal(url string) bool {
 	}
 	_, err := os.Stat(filepath.Join(UploadDir(), strings.TrimPrefix(url, "/uploads/")))
 	return err == nil
+}
+
+// GuardarBytes guarda un documento generado por el sistema (por ejemplo el
+// Oficio de Elevación del Decano) usando el driver activo. Recibe bytes, no un
+// multipart: los documentos que crea el sistema no pasan por el formulario.
+// Sigue la misma estructura de rutas y el mismo saneamiento que Save, y
+// devuelve el error real si el driver de nube no está disponible.
+func GuardarBytes(datos []byte, nombre, subdir string) (*Saved, error) {
+	if len(datos) == 0 {
+		return nil, fmt.Errorf("el documento está vacío")
+	}
+	if !strings.HasPrefix(string(datos[:4]), "%PDF") {
+		return nil, fmt.Errorf("el contenido no es un PDF válido")
+	}
+	safe := fmt.Sprintf("%d_%s", time.Now().UnixNano(), SaveName(nombre))
+	if EsCloud() {
+		return (&B2Bucket{}).subirBytes(datos, safe, subdir)
+	}
+	dir := UploadDir()
+	if subdir != "" {
+		dir = filepath.Join(UploadDir(), SaveName(subdir))
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return nil, err
+	}
+	ruta := filepath.Join(dir, safe)
+	if err := os.WriteFile(ruta, datos, 0o644); err != nil {
+		return nil, err
+	}
+	h := sha256.Sum256(datos)
+	url := "/uploads/" + safe
+	if subdir != "" {
+		url = "/uploads/" + SaveName(subdir) + "/" + safe
+	}
+	return &Saved{URL: url, Hash: hex.EncodeToString(h[:]), Size: len(datos), Filename: safe}, nil
 }
 
 // ── Local (activo) ────────────────────────────────────────────
@@ -195,5 +232,3 @@ func (l *LocalStorage) Save(file *multipart.FileHeader, subdir string) (*Saved, 
 	}
 	return &Saved{URL: url, Hash: hash, Size: int(n), Filename: safe}, nil
 }
-
-

@@ -32,10 +32,10 @@ type Escuela struct {
 func (Escuela) TableName() string { return "Escuela" }
 
 type DepartamentoAcademico struct {
-	ID         uint      `gorm:"primaryKey;column:id_departamento" json:"id_departamento"`
-	IDFacultad uint      `gorm:"column:id_facultad" json:"id_facultad"`
-	Nombre     string    `gorm:"column:nombre" json:"nombre"`
-	DirectorID *uint     `gorm:"column:director_id" json:"director_id"`
+	ID         uint   `gorm:"primaryKey;column:id_departamento" json:"id_departamento"`
+	IDFacultad uint   `gorm:"column:id_facultad" json:"id_facultad"`
+	Nombre     string `gorm:"column:nombre" json:"nombre"`
+	DirectorID *uint  `gorm:"column:director_id" json:"director_id"`
 }
 
 func (DepartamentoAcademico) TableName() string { return "Departamento_Academico" }

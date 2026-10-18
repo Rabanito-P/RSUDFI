@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"errors"
@@ -128,17 +128,17 @@ func (h *FormatoHandler) asegurarCatalogo() {
 
 // vista expone el formato junto a la URL de descarga y si está personalizado.
 type vistaFormato struct {
-	ID             uint   `json:"id_formato"`
-	Codigo         string `json:"codigo"`
-	Nombre         string `json:"nombre"`
-	Descripcion    string `json:"descripcion"`
-	Tipo           string `json:"tipo"`
-	Version        string `json:"version"`
-	Personalizado  bool   `json:"personalizado"`
-	NombreArchivo  string `json:"nombre_archivo"`
-	PesoBytes      int64  `json:"peso_bytes"`
-	FechaActualiz  string `json:"fecha_actualizacion"`
-	Orden          int    `json:"orden"`
+	ID            uint   `json:"id_formato"`
+	Codigo        string `json:"codigo"`
+	Nombre        string `json:"nombre"`
+	Descripcion   string `json:"descripcion"`
+	Tipo          string `json:"tipo"`
+	Version       string `json:"version"`
+	Personalizado bool   `json:"personalizado"`
+	NombreArchivo string `json:"nombre_archivo"`
+	PesoBytes     int64  `json:"peso_bytes"`
+	FechaActualiz string `json:"fecha_actualizacion"`
+	Orden         int    `json:"orden"`
 }
 
 func (h *FormatoHandler) aVista(f *domain.RSUFormato) vistaFormato {

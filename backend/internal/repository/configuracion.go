@@ -8,6 +8,7 @@ import (
 // ── Configuración (M11) ─────────────────────────────────
 
 type ConfiguracionRepo struct{ db *gorm.DB }
+
 func NewConfiguracionRepo(db *gorm.DB) *ConfiguracionRepo { return &ConfiguracionRepo{db} }
 
 func (r *ConfiguracionRepo) FindAll(ambito string, idFacultad *uint) ([]domain.RSUConfiguracion, error) {
@@ -43,5 +44,6 @@ func (r *ConfiguracionRepo) Upsert(c *domain.RSUConfiguracion) error {
 	}
 	return r.db.Create(c).Error
 }
-func (r *ConfiguracionRepo) Delete(id uint) error { return r.db.Delete(&domain.RSUConfiguracion{}, "id_config = ?", id).Error }
-
+func (r *ConfiguracionRepo) Delete(id uint) error {
+	return r.db.Delete(&domain.RSUConfiguracion{}, "id_config = ?", id).Error
+}

@@ -8,6 +8,7 @@ import (
 // ── Comité RSU (M04) ────────────────────────────────────
 
 type ComiteRSURepo struct{ db *gorm.DB }
+
 func NewComiteRSURepo(db *gorm.DB) *ComiteRSURepo { return &ComiteRSURepo{db} }
 
 func (r *ComiteRSURepo) Create(c *domain.RSUComiteRSU) error { return r.db.Create(c).Error }
@@ -22,5 +23,6 @@ func (r *ComiteRSURepo) PresidenteDeEscuela(idEscuela uint) (*domain.RSUComiteRS
 		Order("fecha_designacion DESC").First(&c).Error
 	return &c, err
 }
-func (r *ComiteRSURepo) Delete(id uint) error { return r.db.Delete(&domain.RSUComiteRSU{}, "id_comite = ?", id).Error }
-
+func (r *ComiteRSURepo) Delete(id uint) error {
+	return r.db.Delete(&domain.RSUComiteRSU{}, "id_comite = ?", id).Error
+}

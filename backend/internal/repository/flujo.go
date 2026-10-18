@@ -8,7 +8,8 @@ import (
 // ── Flujo ────────────────────────────────────────────────────
 
 type FlujoRepo struct{ db *gorm.DB }
-func NewFlujoRepo(db *gorm.DB) *FlujoRepo { return &FlujoRepo{db} }
+
+func NewFlujoRepo(db *gorm.DB) *FlujoRepo                      { return &FlujoRepo{db} }
 func (r *FlujoRepo) Create(f *domain.RSUFlujoAprobacion) error { return r.db.Create(f).Error }
 func (r *FlujoRepo) History(idProyecto uint) ([]domain.RSUFlujoAprobacion, error) {
 	var list []domain.RSUFlujoAprobacion
@@ -43,4 +44,3 @@ func (r *FlujoRepo) ResolverEstadoCodigo(codigo string) (uint, error) {
 	}
 	return e.ID, nil
 }
-

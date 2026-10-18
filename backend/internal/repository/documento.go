@@ -8,7 +8,8 @@ import (
 // ── Documento / Resolucion ───────────────────────────────────
 
 type DocumentoRepo struct{ db *gorm.DB }
-func NewDocumentoRepo(db *gorm.DB) *DocumentoRepo { return &DocumentoRepo{db} }
+
+func NewDocumentoRepo(db *gorm.DB) *DocumentoRepo            { return &DocumentoRepo{db} }
 func (r *DocumentoRepo) Create(d *domain.RSUDocumento) error { return r.db.Create(d).Error }
 func (r *DocumentoRepo) FindByProyecto(idProyecto uint) ([]domain.RSUDocumento, error) {
 	var list []domain.RSUDocumento
@@ -20,4 +21,3 @@ func (r *DocumentoRepo) FindByID(id uint) (*domain.RSUDocumento, error) {
 	err := r.db.First(&d, "id_documento = ?", id).Error
 	return &d, err
 }
-

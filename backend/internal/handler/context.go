@@ -71,13 +71,13 @@ func personaIDFromToken(db *gorm.DB, c *gin.Context) int {
 		return 0
 	}
 	return int(*u.IDPersona)
-	}
+}
 
 // Roles de gestión: ven y actúan sobre cualquier proyecto de su ámbito.
 var rolesGestion = map[string]bool{
 	"ADMIN": true, "DIR_ESCUELA": true, "DIR_RS_FACULTAD": true, "DIR_CENTRAL_RS": true,
 	"CONSEJO_FACULTAD": true, "DIR_DEPTO": true, "COMITE_PS": true, "COMITE_CALIDAD": true,
-	"UNIDAD_ABAST": true,
+	"UNIDAD_ABAST": true, "DECANO": true,
 }
 
 // esGestion reporta si el token es de un rol de dirección/gestión.

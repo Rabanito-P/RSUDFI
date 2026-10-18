@@ -20,6 +20,7 @@ type FacultadHandler struct {
 func NewFacultadHandler(db *gorm.DB) *FacultadHandler {
 	return &FacultadHandler{repo: repository.NewFacultadRepo(db)}
 }
+
 // Crear facultad
 // @Tags		Estructura
 // @Accept		json
@@ -32,14 +33,17 @@ func NewFacultadHandler(db *gorm.DB) *FacultadHandler {
 func (h *FacultadHandler) Create(c *gin.Context) {
 	var req dto.CreateFacultadReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.ValidationFail(c, err.Error()); return
+		utils.ValidationFail(c, err.Error())
+		return
 	}
 	f := &domain.Facultad{Codigo: req.Codigo, Nombre: req.Nombre, DecanoID: req.DecanoID, Activo: true}
 	if err := h.repo.Create(f); err != nil {
-		utils.Fail(c, 400, "No se pudo crear facultad", err.Error()); return
+		utils.Fail(c, 400, "No se pudo crear facultad", err.Error())
+		return
 	}
 	utils.Created(c, f, "Facultad creada")
 }
+
 // Listar facultades (paginado + search)
 // @Tags		Estructura
 // @Accept		json
@@ -52,9 +56,13 @@ func (h *FacultadHandler) List(c *gin.Context) {
 	page, limit, _ := utils.GetPagination(c)
 	search := c.Query("search")
 	items, total, err := h.repo.FindAll(page, limit, search)
-	if err != nil { utils.Fail(c, 500, "Error listando facultades", err.Error()); return }
+	if err != nil {
+		utils.Fail(c, 500, "Error listando facultades", err.Error())
+		return
+	}
 	utils.Paginated(c, items, utils.BuildMeta(page, limit, total), "OK")
 }
+
 // Obtener facultad por id
 // @Tags		Estructura
 // @Accept		json
@@ -67,9 +75,13 @@ func (h *FacultadHandler) List(c *gin.Context) {
 func (h *FacultadHandler) Get(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	f, err := h.repo.FindByID(uint(id))
-	if err != nil { utils.Fail(c, 404, "Facultad no encontrada", nil); return }
+	if err != nil {
+		utils.Fail(c, 404, "Facultad no encontrada", nil)
+		return
+	}
 	utils.Success(c, f, "OK")
 }
+
 // Actualizar facultad
 // @Tags		Estructura
 // @Accept		json
@@ -83,14 +95,28 @@ func (h *FacultadHandler) Get(c *gin.Context) {
 func (h *FacultadHandler) Update(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	f, err := h.repo.FindByID(uint(id))
-	if err != nil { utils.Fail(c, 404, "No encontrada", nil); return }
+	if err != nil {
+		utils.Fail(c, 404, "No encontrada", nil)
+		return
+	}
 	var req map[string]interface{}
-	if err := c.ShouldBindJSON(&req); err != nil { utils.ValidationFail(c, err.Error()); return }
-	if v, ok := req["nombre"].(string); ok { f.Nombre = v }
-	if v, ok := req["codigo"].(string); ok { f.Codigo = v }
-	if err := h.repo.Update(f); err != nil { utils.Fail(c, 500, "No se pudo actualizar facultad", err.Error()); return }
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ValidationFail(c, err.Error())
+		return
+	}
+	if v, ok := req["nombre"].(string); ok {
+		f.Nombre = v
+	}
+	if v, ok := req["codigo"].(string); ok {
+		f.Codigo = v
+	}
+	if err := h.repo.Update(f); err != nil {
+		utils.Fail(c, 500, "No se pudo actualizar facultad", err.Error())
+		return
+	}
 	utils.Success(c, f, "Actualizada")
 }
+
 // Eliminar facultad
 // @Tags		Estructura
 // @Accept		json
@@ -102,7 +128,9 @@ func (h *FacultadHandler) Update(c *gin.Context) {
 // @Router		/api/v1/facultades/{id} [delete]
 func (h *FacultadHandler) Delete(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	if err := h.repo.Delete(uint(id)); err != nil { utils.Fail(c, 500, "No se pudo eliminar facultad", err.Error()); return }
+	if err := h.repo.Delete(uint(id)); err != nil {
+		utils.Fail(c, 500, "No se pudo eliminar facultad", err.Error())
+		return
+	}
 	utils.Success(c, nil, "Eliminada")
 }
-

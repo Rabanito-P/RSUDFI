@@ -205,9 +205,9 @@ func (h *EstudianteHandler) Create(c *gin.Context) {
 		if err := h.db.Create(u).Error; err != nil {
 			// La persona ya quedó creada: se avisa en lugar de fallar en silencio.
 			utils.Success(c, gin.H{
-				"estudiante": e,
+				"estudiante":     e,
 				"usuario_creado": false,
-				"aviso": "La persona se creó, pero no se pudo crear el usuario de acceso: " + err.Error(),
+				"aviso":          "La persona se creó, pero no se pudo crear el usuario de acceso: " + err.Error(),
 			}, "Estudiante creado (sin usuario de acceso)")
 			return
 		}

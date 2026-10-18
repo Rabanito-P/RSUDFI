@@ -1,4 +1,4 @@
-﻿package router
+package router
 
 import (
 	"time"
@@ -94,21 +94,21 @@ func Setup(db *gorm.DB) *gin.Engine {
 		// poder de escritura: eso lo concede el rol, no el permiso.
 		middleware.SetDBPermisos(db)
 
-		verProyectos     := middleware.PermiteModulo("proyectos")
-		verEntregables   := middleware.PermiteModulo("entregables")
-		verEvidencias    := middleware.PermiteModulo("evidencias")
-		verEncuestas     := middleware.PermiteModulo("encuestas")
-		verDocumentos    := middleware.PermiteModulo("documentos")
-		verCatalogos     := middleware.PermiteModulo("catalogos")
-		verPersonas      := middleware.PermiteModulo("personas")
-		verEstructura    := middleware.PermiteModulo("estructura")
-		verBandeja       := middleware.PermiteModulo("bandeja")
-		verMonitoreo     := middleware.PermiteModulo("monitoreo")
-		verPresupuesto   := middleware.PermiteModulo("presupuesto")
+		verProyectos := middleware.PermiteModulo("proyectos")
+		verEntregables := middleware.PermiteModulo("entregables")
+		verEvidencias := middleware.PermiteModulo("evidencias")
+		verEncuestas := middleware.PermiteModulo("encuestas")
+		verDocumentos := middleware.PermiteModulo("documentos")
+		verCatalogos := middleware.PermiteModulo("catalogos")
+		verPersonas := middleware.PermiteModulo("personas")
+		verEstructura := middleware.PermiteModulo("estructura")
+		verBandeja := middleware.PermiteModulo("bandeja")
+		verMonitoreo := middleware.PermiteModulo("monitoreo")
+		verPresupuesto := middleware.PermiteModulo("presupuesto")
 		verBeneficiarios := middleware.PermiteModulo("beneficiarios")
-		verReportes      := middleware.PermiteModulo("reportes")
+		verReportes := middleware.PermiteModulo("reportes")
 		verConfiguracion := middleware.PermiteModulo("configuracion")
-		verAuditoria     := middleware.PermiteModulo("auditoria")
+		verAuditoria := middleware.PermiteModulo("auditoria")
 
 		// /dashboard/kpis alimenta varias pantallas según el módulo habilitado:
 		// Reportes, Presupuesto y el tablero de la Facultad.
@@ -224,9 +224,9 @@ func Setup(db *gorm.DB) *gin.Engine {
 		api.GET("/proyectos/:id/presupuesto", verPresupuesto, presH.ByProyecto)
 
 		// encuestas e indicadores
-	api.POST("/encuestas/beneficiario", verEncuestas, encH.Create)
-	api.POST("/encuestas/docente", verEncuestas, encH.CrearDocente) // HU-023
-	api.GET("/proyectos/:id/encuestas", verEncuestas, encH.ByProyecto)
+		api.POST("/encuestas/beneficiario", verEncuestas, encH.Create)
+		api.POST("/encuestas/docente", verEncuestas, encH.CrearDocente) // HU-023
+		api.GET("/proyectos/:id/encuestas", verEncuestas, encH.ByProyecto)
 
 		api.POST("/indicadores", verReportes, esGestion, indH.Create)
 		api.GET("/proyectos/:id/indicadores", verEncuestas, indH.ByProyecto)
@@ -311,6 +311,11 @@ func Setup(db *gorm.DB) *gin.Engine {
 		// ── Fase 1 · Creación (HU-F1) ──
 		// Bucle del docente asesor, reactivación de archivados y catálogo DRSU.
 		handler.RegisterFase1(api, db, projH.Svc())
+
+		// ── Fase 2 · Aprobación (HU-F2) ──
+		// Oficio de Elevación del Decano, activación (opción C), duplicidad,
+		// filtro presupuestal y vencimiento perezoso.
+		handler.RegisterFase2(api, db, projH.Svc())
 	}
 	return r
 }

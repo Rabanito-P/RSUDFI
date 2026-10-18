@@ -8,7 +8,8 @@ import (
 // ── Escuela ──────────────────────────────────────────────────
 
 type EscuelaRepo struct{ db *gorm.DB }
-func NewEscuelaRepo(db *gorm.DB) *EscuelaRepo { return &EscuelaRepo{db} }
+
+func NewEscuelaRepo(db *gorm.DB) *EscuelaRepo         { return &EscuelaRepo{db} }
 func (r *EscuelaRepo) Create(e *domain.Escuela) error { return r.db.Create(e).Error }
 func (r *EscuelaRepo) FindAll(page, limit int, idFacultad *uint) ([]domain.Escuela, int64, error) {
 	var items []domain.Escuela
@@ -18,7 +19,7 @@ func (r *EscuelaRepo) FindAll(page, limit int, idFacultad *uint) ([]domain.Escue
 		q = q.Where("id_facultad = ?", *idFacultad)
 	}
 	q.Session(&gorm.Session{}).Count(&total)
-	err := q.Preload("Facultad").Preload("Director").Offset((page-1)*limit).Limit(limit).Order("nombre ASC").Find(&items).Error
+	err := q.Preload("Facultad").Preload("Director").Offset((page - 1) * limit).Limit(limit).Order("nombre ASC").Find(&items).Error
 	return items, total, err
 }
 func (r *EscuelaRepo) FindByID(id uint) (*domain.Escuela, error) {
@@ -27,5 +28,6 @@ func (r *EscuelaRepo) FindByID(id uint) (*domain.Escuela, error) {
 	return &e, err
 }
 func (r *EscuelaRepo) Update(e *domain.Escuela) error { return r.db.Save(e).Error }
-func (r *EscuelaRepo) Delete(id uint) error { return r.db.Delete(&domain.Escuela{}, "id_escuela = ?", id).Error }
-
+func (r *EscuelaRepo) Delete(id uint) error {
+	return r.db.Delete(&domain.Escuela{}, "id_escuela = ?", id).Error
+}

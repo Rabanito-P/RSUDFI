@@ -8,7 +8,8 @@ import (
 // ── Ciclo ────────────────────────────────────────────────────
 
 type CicloRepo struct{ db *gorm.DB }
-func NewCicloRepo(db *gorm.DB) *CicloRepo { return &CicloRepo{db} }
+
+func NewCicloRepo(db *gorm.DB) *CicloRepo                  { return &CicloRepo{db} }
 func (r *CicloRepo) Create(c *domain.CicloAcademico) error { return r.db.Create(c).Error }
 func (r *CicloRepo) FindAll() ([]domain.CicloAcademico, error) {
 	var list []domain.CicloAcademico
@@ -25,4 +26,3 @@ func (r *CicloRepo) Active() (*domain.CicloAcademico, error) {
 	err := r.db.First(&c, "activo = TRUE").Error
 	return &c, err
 }
-

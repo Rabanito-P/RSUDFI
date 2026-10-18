@@ -101,4 +101,3 @@ func (h *ComiteRSUHandler) Delete(c *gin.Context) {
 	}
 	utils.Success(c, nil, "Eliminado")
 }
-

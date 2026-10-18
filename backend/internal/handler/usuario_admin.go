@@ -334,9 +334,9 @@ func moduloValido(mod string) bool {
 		if m.Clave == mod {
 			return true
 		}
- 	}
- 	return false
- }
+	}
+	return false
+}
 
 // validarPassword exige la política OWASP A07: 8+ caracteres, mayúscula,
 // minúscula y número. Se aplica al crear y al cambiar contraseñas.

@@ -115,16 +115,16 @@ func (h *FotoHandler) DelDia(c *gin.Context) {
 			Where("id_actividad = ? AND etapa IS NOT NULL", a.ID).
 			Distinct().Pluck("etapa", &etapas)
 		out = append(out, gin.H{
-			"id_actividad":       a.ID,
-			"nombre":             a.Nombre,
-			"descripcion":        a.Descripcion,
-			"fecha_programada":   a.FechaProgramada,
-			"hora_inicio":        a.HoraInicio,
-			"hora_fin":           a.HoraFin,
-			"minutos":            a.Minutos,
-			"estado":             a.Estado,
-			"total_fotos":        n,
-			"etapas_capturadas":  etapas,
+			"id_actividad":      a.ID,
+			"nombre":            a.Nombre,
+			"descripcion":       a.Descripcion,
+			"fecha_programada":  a.FechaProgramada,
+			"hora_inicio":       a.HoraInicio,
+			"hora_fin":          a.HoraFin,
+			"minutos":           a.Minutos,
+			"estado":            a.Estado,
+			"total_fotos":       n,
+			"etapas_capturadas": etapas,
 		})
 	}
 	utils.Success(c, out, "OK")

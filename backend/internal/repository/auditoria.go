@@ -8,6 +8,7 @@ import (
 // ── Auditoría (M09) ─────────────────────────────────────
 
 type AuditoriaRepo struct{ db *gorm.DB }
+
 func NewAuditoriaRepo(db *gorm.DB) *AuditoriaRepo { return &AuditoriaRepo{db} }
 
 func (r *AuditoriaRepo) FindAll(page, limit int, idProyecto *uint, accion *string) ([]domain.RSUAuditoriaLog, int64, error) {
@@ -21,7 +22,7 @@ func (r *AuditoriaRepo) FindAll(page, limit int, idProyecto *uint, accion *strin
 		q = q.Where("accion = ?", *accion)
 	}
 	q.Session(&gorm.Session{}).Count(&total)
-	err := q.Order("fecha_hora DESC").Offset((page-1)*limit).Limit(limit).Find(&list).Error
+	err := q.Order("fecha_hora DESC").Offset((page - 1) * limit).Limit(limit).Find(&list).Error
 	return list, total, err
 }
 

@@ -114,4 +114,3 @@ func (h *ConfiguracionHandler) Delete(c *gin.Context) {
 	}
 	utils.Success(c, nil, "Eliminada")
 }
-

@@ -15,4 +15,3 @@ func NewBaseRepo[T any](db *gorm.DB) *BaseRepo[T] {
 }
 
 func (r *BaseRepo[T]) DB() *gorm.DB { return r.db }
-

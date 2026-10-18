@@ -10,7 +10,11 @@ import (
 // ── Catalogo Handler ─────────────────────────────────────────
 
 type CatalogoHandler struct{ repo *repository.CatalogoRepo }
-func NewCatalogoHandler(db *gorm.DB) *CatalogoHandler { return &CatalogoHandler{repo: repository.NewCatalogoRepo(db)} }
+
+func NewCatalogoHandler(db *gorm.DB) *CatalogoHandler {
+	return &CatalogoHandler{repo: repository.NewCatalogoRepo(db)}
+}
+
 // Catálogo: tipos de proyecto (5 modalidades)
 // @Tags		Catálogos
 // @Accept		json
@@ -27,6 +31,7 @@ func (h *CatalogoHandler) TiposProyecto(c *gin.Context) {
 	}
 	utils.Success(c, l, "OK")
 }
+
 // Catálogo: líneas de acción
 // @Tags		Catálogos
 // @Accept		json
@@ -43,6 +48,7 @@ func (h *CatalogoHandler) LineasAccion(c *gin.Context) {
 	}
 	utils.Success(c, l, "OK")
 }
+
 // Catálogo: 16 estados BPMN
 // @Tags		Catálogos
 // @Accept		json
@@ -59,6 +65,7 @@ func (h *CatalogoHandler) Estados(c *gin.Context) {
 	}
 	utils.Success(c, l, "OK")
 }
+
 // Catálogo: roles actor
 // @Tags		Catálogos
 // @Accept		json
@@ -75,6 +82,7 @@ func (h *CatalogoHandler) RolesActor(c *gin.Context) {
 	}
 	utils.Success(c, l, "OK")
 }
+
 // Catálogo: tipos de documento por etapa
 // @Tags		Catálogos
 // @Accept		json
@@ -91,6 +99,7 @@ func (h *CatalogoHandler) TiposDocumento(c *gin.Context) {
 	}
 	utils.Success(c, l, "OK")
 }
+
 // Catálogo: transiciones BPMN permitidas por rol
 // @Tags		Catálogos
 // @Accept		json
@@ -107,6 +116,7 @@ func (h *CatalogoHandler) Transiciones(c *gin.Context) {
 	}
 	utils.Success(c, l, "OK")
 }
+
 // Catálogo: preguntas Likert P01-P06
 // @Tags		Catálogos
 // @Accept		json
@@ -123,4 +133,3 @@ func (h *CatalogoHandler) PreguntasEncuesta(c *gin.Context) {
 	}
 	utils.Success(c, l, "OK")
 }
-

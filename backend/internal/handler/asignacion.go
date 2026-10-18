@@ -23,6 +23,7 @@ type AsignacionHandler struct {
 func NewAsignacionHandler(db *gorm.DB) *AsignacionHandler {
 	return &AsignacionHandler{svc: service.NewAsignacionService(db), db: db}
 }
+
 // Asignar docente (valida carga no lectiva Art.86)
 // @Tags		Asignaciones
 // @Accept		json
@@ -34,11 +35,18 @@ func NewAsignacionHandler(db *gorm.DB) *AsignacionHandler {
 // @Router		/api/v1/asignaciones/docente [post]
 func (h *AsignacionHandler) AsignarDocente(c *gin.Context) {
 	var req dto.AsignarDocenteReq
-	if err := c.ShouldBindJSON(&req); err != nil { utils.ValidationFail(c, err.Error()); return }
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ValidationFail(c, err.Error())
+		return
+	}
 	a, err := h.svc.AsignarDocente(req)
-	if err != nil { utils.Fail(c, 400, err.Error(), nil); return }
+	if err != nil {
+		utils.Fail(c, 400, err.Error(), nil)
+		return
+	}
 	utils.Created(c, a, "Docente asignado (pendiente aprobación)")
 }
+
 // Inscribir estudiante (valida ciclo mínimo + no duplicado)
 // @Tags		Asignaciones
 // @Accept		json
@@ -50,11 +58,18 @@ func (h *AsignacionHandler) AsignarDocente(c *gin.Context) {
 // @Router		/api/v1/asignaciones/estudiante [post]
 func (h *AsignacionHandler) InscribirEstudiante(c *gin.Context) {
 	var req dto.InscribirEstudianteReq
-	if err := c.ShouldBindJSON(&req); err != nil { utils.ValidationFail(c, err.Error()); return }
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ValidationFail(c, err.Error())
+		return
+	}
 	p, err := h.svc.InscribirEstudiante(req)
-	if err != nil { utils.Fail(c, 400, err.Error(), nil); return }
+	if err != nil {
+		utils.Fail(c, 400, err.Error(), nil)
+		return
+	}
 	utils.Created(c, p, "Estudiante inscrito")
 }
+
 // InscribirPorDatos inscribe a un compañero indicando directamente su nombre y
 // correo, sin conocer su id. Si no existe como persona se crea (con su cuenta
 // de acceso) y se vincula al proyecto. Pensado para el momento de crear el
@@ -104,13 +119,13 @@ func (h *AsignacionHandler) InscribirPorDatos(c *gin.Context) {
 			apellidos = "—"
 		}
 		est = domain.Estudiante{
-			Codigo:     strings.ToUpper(codigo),
-			DNI:        req.DNI,
-			Nombres:    req.Nombres,
-			Apellidos:  apellidos,
-			Correo:     correo,
-			IDEscuela:  proy.IDEscuela,
-			Estado:     "ACTIVO",
+			Codigo:    strings.ToUpper(codigo),
+			DNI:       req.DNI,
+			Nombres:   req.Nombres,
+			Apellidos: apellidos,
+			Correo:    correo,
+			IDEscuela: proy.IDEscuela,
+			Estado:    "ACTIVO",
 		}
 		if err := h.db.Create(&est).Error; err != nil {
 			utils.Fail(c, 400, "No se pudo crear el perfil del participante: "+err.Error(), nil)
@@ -162,9 +177,13 @@ func (h *AsignacionHandler) InscribirPorDatos(c *gin.Context) {
 func (h *AsignacionHandler) ListDocentes(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	list, err := h.svc.ListDocentes(uint(id))
-	if err != nil { utils.Fail(c, 500, "Error", err.Error()); return }
+	if err != nil {
+		utils.Fail(c, 500, "Error", err.Error())
+		return
+	}
 	utils.Success(c, list, "OK")
 }
+
 // Estudiantes inscritos en el proyecto
 // @Tags		Asignaciones
 // @Accept		json
@@ -177,9 +196,13 @@ func (h *AsignacionHandler) ListDocentes(c *gin.Context) {
 func (h *AsignacionHandler) ListEstudiantes(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	list, err := h.svc.ListEstudiantes(uint(id))
-	if err != nil { utils.Fail(c, 500, "Error", err.Error()); return }
+	if err != nil {
+		utils.Fail(c, 500, "Error", err.Error())
+		return
+	}
 	utils.Success(c, list, "OK")
 }
+
 // Retirar estudiante del proyecto
 // @Tags		Asignaciones
 // @Accept		json
@@ -193,7 +216,9 @@ func (h *AsignacionHandler) ListEstudiantes(c *gin.Context) {
 func (h *AsignacionHandler) RetirarEstudiante(c *gin.Context) {
 	idProj, _ := strconv.Atoi(c.Param("id"))
 	idEst, _ := strconv.Atoi(c.Param("estudianteId"))
-	if err := h.svc.RetirarEstudiante(uint(idProj), uint(idEst)); err != nil { utils.Fail(c, 400, err.Error(), nil); return }
+	if err := h.svc.RetirarEstudiante(uint(idProj), uint(idEst)); err != nil {
+		utils.Fail(c, 400, err.Error(), nil)
+		return
+	}
 	utils.Success(c, nil, "Estudiante retirado — queda libre para otro proyecto")
 }
-

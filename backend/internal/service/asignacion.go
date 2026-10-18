@@ -18,6 +18,7 @@ type AsignacionService struct {
 	docenteRepo *repository.DocenteRepo
 	db          *gorm.DB
 }
+
 func NewAsignacionService(db *gorm.DB) *AsignacionService {
 	return &AsignacionService{repo: repository.NewAsignacionRepo(db), docenteRepo: repository.NewDocenteRepo(db), db: db}
 }
@@ -46,7 +47,9 @@ func (s *AsignacionService) AsignarDocente(req dto.AsignarDocenteReq) (*domain.R
 		HorasAsignadas: req.HorasAsignadas, TipoHora: req.TipoHora, IDCiclo: req.IDCiclo,
 		FechaAsignacion: time.Now(), EstadoAsignacion: "PENDIENTE",
 	}
-	if err := s.repo.CreateDocente(a); err != nil { return nil, err }
+	if err := s.repo.CreateDocente(a); err != nil {
+		return nil, err
+	}
 	return a, nil
 }
 func (s *AsignacionService) InscribirEstudiante(req dto.InscribirEstudianteReq) (*domain.RSUParticipanteEstudiante, error) {
@@ -98,7 +101,9 @@ func (s *AsignacionService) InscribirEstudiante(req dto.InscribirEstudianteReq) 
 		IDProyecto: req.IDProyecto, IDEstudiante: req.IDEstudiante, IDRolProyecto: req.IDRolProyecto,
 		FechaInscripcion: time.Now(), EstadoParticipacion: "ACTIVO", ValidacionCiclo: true,
 	}
-	if err := s.repo.CreateEstudiante(p); err != nil { return nil, err }
+	if err := s.repo.CreateEstudiante(p); err != nil {
+		return nil, err
+	}
 	return p, nil
 }
 func (s *AsignacionService) RetirarEstudiante(idProyecto, idEstudiante uint) error {
@@ -128,4 +133,3 @@ func (s *AsignacionService) ListDocentes(idProyecto uint) ([]domain.RSUAsignacio
 func (s *AsignacionService) ListEstudiantes(idProyecto uint) ([]domain.RSUParticipanteEstudiante, error) {
 	return s.repo.ListEstudiantesByProyecto(idProyecto)
 }
-

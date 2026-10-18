@@ -10,7 +10,8 @@ import (
 // ── Docente / Estudiante ─────────────────────────────────────
 
 type DocenteRepo struct{ db *gorm.DB }
-func NewDocenteRepo(db *gorm.DB) *DocenteRepo { return &DocenteRepo{db} }
+
+func NewDocenteRepo(db *gorm.DB) *DocenteRepo         { return &DocenteRepo{db} }
 func (r *DocenteRepo) Create(d *domain.Docente) error { return r.db.Create(d).Error }
 func (r *DocenteRepo) FindAll(page, limit int, search string) ([]domain.Docente, int64, error) {
 	var items []domain.Docente
@@ -21,7 +22,7 @@ func (r *DocenteRepo) FindAll(page, limit int, search string) ([]domain.Docente,
 		q = q.Where("nombres LIKE ? OR apellidos LIKE ? OR dni LIKE ?", like, like, like)
 	}
 	q.Session(&gorm.Session{}).Count(&total)
-	err := q.Preload("Escuela").Offset((page-1)*limit).Limit(limit).Order("apellidos ASC").Find(&items).Error
+	err := q.Preload("Escuela").Offset((page - 1) * limit).Limit(limit).Order("apellidos ASC").Find(&items).Error
 	return items, total, err
 }
 func (r *DocenteRepo) FindByID(id uint) (*domain.Docente, error) {
@@ -89,7 +90,8 @@ func (r *DocenteRepo) ProyectosAsesoradosActivosEnCiclo(idDocente, idCiclo, excl
 }
 
 type EstudianteRepo struct{ db *gorm.DB }
-func NewEstudianteRepo(db *gorm.DB) *EstudianteRepo { return &EstudianteRepo{db} }
+
+func NewEstudianteRepo(db *gorm.DB) *EstudianteRepo         { return &EstudianteRepo{db} }
 func (r *EstudianteRepo) Create(e *domain.Estudiante) error { return r.db.Create(e).Error }
 func (r *EstudianteRepo) FindAll(page, limit int, search string) ([]domain.Estudiante, int64, error) {
 	var items []domain.Estudiante
@@ -100,7 +102,7 @@ func (r *EstudianteRepo) FindAll(page, limit int, search string) ([]domain.Estud
 		q = q.Where("nombres LIKE ? OR apellidos LIKE ? OR dni LIKE ?", like, like, like)
 	}
 	q.Session(&gorm.Session{}).Count(&total)
-	err := q.Preload("Escuela").Offset((page-1)*limit).Limit(limit).Order("apellidos ASC").Find(&items).Error
+	err := q.Preload("Escuela").Offset((page - 1) * limit).Limit(limit).Order("apellidos ASC").Find(&items).Error
 	return items, total, err
 }
 func (r *EstudianteRepo) FindByID(id uint) (*domain.Estudiante, error) {
@@ -116,4 +118,3 @@ func (r *EstudianteRepo) GetCicloNumerico(idEstudiante, idCiclo uint) (int, erro
 	}
 	return ec.CicloNumerico, nil
 }
-

@@ -50,9 +50,9 @@ func (r *JustificacionRepo) FindByID(id uint) (*domain.RSUJustificacionFalta, er
 // UpdateEstado cambia el estado, verificador y observaciones.
 func (r *JustificacionRepo) UpdateEstado(id uint, estado string, idVerificador *uint, obs *string) error {
 	upd := map[string]any{
-		"estado":            estado,
-		"id_verificador":    idVerificador,
-		"observaciones":     obs,
+		"estado":             estado,
+		"id_verificador":     idVerificador,
+		"observaciones":      obs,
 		"fecha_verificacion": time.Now(),
 	}
 	return r.db.Model(&domain.RSUJustificacionFalta{}).Where("id_justificacion = ?", id).Updates(upd).Error
@@ -91,9 +91,9 @@ func (r *ModificacionRepo) FindByID(id uint) (*domain.RSUModificacionInforme, er
 
 func (r *ModificacionRepo) UpdateEstado(id uint, estado string, idVerificador *uint, obs *string) error {
 	upd := map[string]any{
-		"estado":            estado,
-		"id_verificador":    idVerificador,
-		"observaciones":     obs,
+		"estado":             estado,
+		"id_verificador":     idVerificador,
+		"observaciones":      obs,
 		"fecha_verificacion": time.Now(),
 	}
 	return r.db.Model(&domain.RSUModificacionInforme{}).Where("id_modificacion = ?", id).Updates(upd).Error

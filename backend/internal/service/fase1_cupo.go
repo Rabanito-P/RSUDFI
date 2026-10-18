@@ -14,11 +14,11 @@ import (
 // El proyecto nace en BORRADOR (decisión E1 del usuario) y recorre el
 // bucle del docente asesor antes de pasar a la Fase 2.
 var estadosFase1 = map[string]bool{
-	"BORRADOR":                 true,
-	"ENVIADO_ASESOR":           true,
-	"OBSERVADO_ASESOR":         true,
-	"ACEPTADO_ASESOR":          true,
-	"ARCHIVADO_VENCIMIENTO":    true,
+	"BORRADOR":              true,
+	"ENVIADO_ASESOR":        true,
+	"OBSERVADO_ASESOR":      true,
+	"ACEPTADO_ASESOR":       true,
+	"ARCHIVADO_VENCIMIENTO": true,
 }
 
 // EstadoFase1Valido indica si un código de estado pertenece a la Fase 1.

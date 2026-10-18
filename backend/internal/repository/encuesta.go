@@ -8,9 +8,14 @@ import (
 // ── Encuestas / Indicadores ──────────────────────────────────
 
 type EncuestaRepo struct{ db *gorm.DB }
+
 func NewEncuestaRepo(db *gorm.DB) *EncuestaRepo { return &EncuestaRepo{db} }
-func (r *EncuestaRepo) CreateEncuesta(e *domain.RSUEncuestaBeneficiario) error { return r.db.Create(e).Error }
-func (r *EncuestaRepo) CreateRespuesta(resp *domain.RSURespuestaEncuesta) error { return r.db.Create(resp).Error }
+func (r *EncuestaRepo) CreateEncuesta(e *domain.RSUEncuestaBeneficiario) error {
+	return r.db.Create(e).Error
+}
+func (r *EncuestaRepo) CreateRespuesta(resp *domain.RSURespuestaEncuesta) error {
+	return r.db.Create(resp).Error
+}
 func (r *EncuestaRepo) FindByProyecto(idProyecto uint) ([]domain.RSUEncuestaBeneficiario, error) {
 	var list []domain.RSUEncuestaBeneficiario
 	err := r.db.Preload("Beneficiario").
@@ -34,7 +39,8 @@ func (r *EncuestaRepo) PromedioProyecto(idProyecto uint) (*float64, error) {
 }
 
 type IndicadorRepo struct{ db *gorm.DB }
-func NewIndicadorRepo(db *gorm.DB) *IndicadorRepo { return &IndicadorRepo{db} }
+
+func NewIndicadorRepo(db *gorm.DB) *IndicadorRepo                   { return &IndicadorRepo{db} }
 func (r *IndicadorRepo) Create(i *domain.RSUIndicadorImpacto) error { return r.db.Create(i).Error }
 func (r *IndicadorRepo) FindByProyecto(idProyecto uint) ([]domain.RSUIndicadorImpacto, error) {
 	var list []domain.RSUIndicadorImpacto
@@ -42,4 +48,3 @@ func (r *IndicadorRepo) FindByProyecto(idProyecto uint) ([]domain.RSUIndicadorIm
 	return list, err
 }
 func (r *IndicadorRepo) Update(i *domain.RSUIndicadorImpacto) error { return r.db.Save(i).Error }
-

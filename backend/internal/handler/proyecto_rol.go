@@ -123,4 +123,3 @@ func (h *ProyectoRolHandler) RolesDeUsuario(c *gin.Context) {
 	}
 	utils.Success(c, list, "OK")
 }
-

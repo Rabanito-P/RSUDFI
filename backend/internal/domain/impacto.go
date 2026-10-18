@@ -18,31 +18,31 @@ type RSUPreguntaEncuesta struct {
 func (RSUPreguntaEncuesta) TableName() string { return "RSU_Pregunta_Encuesta" }
 
 type RSUEncuestaBeneficiario struct {
-	ID                uint      `gorm:"primaryKey;column:id_encuesta_benef" json:"id_encuesta_benef"`
-	IDProyecto        uint      `gorm:"column:id_proyecto" json:"id_proyecto"`
-	IDBeneficiario    uint      `gorm:"column:id_beneficiario" json:"id_beneficiario"`
-	Beneficiario      *RSUBeneficiario `gorm:"foreignKey:IDBeneficiario" json:"beneficiario,omitempty"`
+	ID             uint             `gorm:"primaryKey;column:id_encuesta_benef" json:"id_encuesta_benef"`
+	IDProyecto     uint             `gorm:"column:id_proyecto" json:"id_proyecto"`
+	IDBeneficiario uint             `gorm:"column:id_beneficiario" json:"id_beneficiario"`
+	Beneficiario   *RSUBeneficiario `gorm:"foreignKey:IDBeneficiario" json:"beneficiario,omitempty"`
 	// Respuestas individuales (P01..P06): permiten calcular el promedio por
 	// pregunta y por dimensión en el panel de resultados.
-	Respuestas        []RSURespuestaEncuesta `gorm:"foreignKey:IDEncuestaBenef" json:"respuestas,omitempty"`
-	FechaAplicacion   time.Time `gorm:"column:fecha_aplicacion" json:"fecha_aplicacion"`
-	Modalidad         string    `gorm:"column:modalidad" json:"modalidad"`
-	PromedioGeneral   *float64  `gorm:"column:promedio_general" json:"promedio_general"`
-	Calificacion      *string   `gorm:"column:calificacion_cualitativa" json:"calificacion_cualitativa"`
-	Comentario        *string   `gorm:"column:comentario_abierto" json:"comentario_abierto"`
-	Sugerencia        *string   `gorm:"column:sugerencia_mejora" json:"sugerencia_mejora"`
-	Estado            string    `gorm:"column:estado" json:"estado"`
+	Respuestas      []RSURespuestaEncuesta `gorm:"foreignKey:IDEncuestaBenef" json:"respuestas,omitempty"`
+	FechaAplicacion time.Time              `gorm:"column:fecha_aplicacion" json:"fecha_aplicacion"`
+	Modalidad       string                 `gorm:"column:modalidad" json:"modalidad"`
+	PromedioGeneral *float64               `gorm:"column:promedio_general" json:"promedio_general"`
+	Calificacion    *string                `gorm:"column:calificacion_cualitativa" json:"calificacion_cualitativa"`
+	Comentario      *string                `gorm:"column:comentario_abierto" json:"comentario_abierto"`
+	Sugerencia      *string                `gorm:"column:sugerencia_mejora" json:"sugerencia_mejora"`
+	Estado          string                 `gorm:"column:estado" json:"estado"`
 }
 
 func (RSUEncuestaBeneficiario) TableName() string { return "RSU_Encuesta_Beneficiario" }
 
 type RSURespuestaEncuesta struct {
-	ID              uint  `gorm:"primaryKey;column:id_respuesta" json:"id_respuesta"`
-	IDEncuestaBenef uint `gorm:"column:id_encuesta_benef" json:"id_encuesta_benef"`
-	IDPregunta      uint  `gorm:"column:id_pregunta" json:"id_pregunta"`
-	Pregunta        *RSUPreguntaEncuesta `gorm:"foreignKey:IDPregunta" json:"pregunta,omitempty"`
-	ValorNumerico   int   `gorm:"column:valor_numerico" json:"valor_numerico"`
-	ValorCualitativo string `gorm:"column:valor_cualitativo" json:"valor_cualitativo"`
+	ID               uint                 `gorm:"primaryKey;column:id_respuesta" json:"id_respuesta"`
+	IDEncuestaBenef  uint                 `gorm:"column:id_encuesta_benef" json:"id_encuesta_benef"`
+	IDPregunta       uint                 `gorm:"column:id_pregunta" json:"id_pregunta"`
+	Pregunta         *RSUPreguntaEncuesta `gorm:"foreignKey:IDPregunta" json:"pregunta,omitempty"`
+	ValorNumerico    int                  `gorm:"column:valor_numerico" json:"valor_numerico"`
+	ValorCualitativo string               `gorm:"column:valor_cualitativo" json:"valor_cualitativo"`
 }
 
 func (RSURespuestaEncuesta) TableName() string { return "RSU_Respuesta_Encuesta" }
