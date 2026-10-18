@@ -1,0 +1,121 @@
+================================================================================
+UNIVERSIDAD NACIONAL DE CAÑETE (UNDC)
+FACULTAD DE INGENIERÍA - ESCUELA PROFESIONAL DE INGENIERÍA DE SISTEMAS
+SISTEMA DE GESTIÓN INTERNO DE RESPONSABILIDAD SOCIAL UNIVERSITARIA ("MINI-RSU")
+--------------------------------------------------------------------------------
+ESPECIFICACIÓN TÉCNICA DE COMPLETA: FASE DE EJECUCIÓN Y CIERRE
+VERSIÓN 0.4 - CONSOLIDADO FINAL CONFIRMADO
+================================================================================
+
+1. MARCO NORMATIVO Y PRINCIPIOS DE LA FASE DE EJECUCIÓN Y CIERRE
+--------------------------------------------------------------------------------
+- Ley Universitaria N° 30220:
+  * Art. 124 y 125: Gestión ética del impacto universitario y presupuesto del 2% RSU.
+  * Art. 130: Servicio Social Universitario (SSU) obligatorio para estudiantes. Requisito indispensable para obtener el Grado Académico de Bachiller.
+- Reglamento de RSU de la UNDC (Res. CO N° 299-2026-UNDC/CO):
+  * Define el cumplimiento de 60 horas efectivas mínimas para SSU y la asignación de hasta 3 horas semanales de carga no lectiva para docentes en RSU.
+- Diferencia de Validez Académica entre Modalidades:
+  * Servicio Social Universitario (SSU): SÍ es válido y obligatorio para la obtención del Bachiller.
+  * Proyectos de Escuelas Profesionales (PEP): NO son válidos para la obtención del Bachiller. Otorgan constancia de proyección/extensión universitaria pero no reemplazan la obligación legal del SSU.
+
+
+2. MATRIZ DE ROLES, CARGA HORARIA Y ATRIBUCIONES EN EJECUCIÓN Y CIERRE
+--------------------------------------------------------------------------------
+1. Estudiante (Líder / Integrantes):
+   - Registra bitácoras digitales, listas de asistencia de beneficiarios y capturas fotográficas con ubicación GPS web.
+   - SSU: Acumula obligatoriamente un mínimo de 60 horas efectivas de trabajo en comunidad.
+   - Visualiza en plataforma el progreso de horas acumuladas y el visor del certificado emitido por la DRSU Central.
+
+2. Docente Asesor (SSU) / Docente Responsable (PEP):
+   - Acreditación de Carga No Lectiva: La plataforma le acredita automáticamente hasta 3 horas semanales de carga no lectiva RSU por la revisión, evaluación y aprobación de los informes de avance en el sistema.
+   - Ventana de Evaluación (Plazo X): Dispone de X días hábiles (ej. 5 días hábiles) desde el envío del informe para revisar, aprobar u observar el avance.
+   - PEP Financiado: Registra el Informe Final y adjunta la pre-liquidación digital de gastos del 2% RSU.
+
+3. Director de Escuela Profesional de Ingeniería de Sistemas:
+   - Supervisa el cumplimiento de los cronogramas académicos y otorga el V°B° al Informe Final de Ejecución de SSU y PEP.
+
+4. Dirección / Comité de RS de la Facultad de Ingeniería:
+   - Monitoreo Georreferenciado: Visualiza un mapa interactivo de la provincia de Cañete con la ubicación real de los proyectos activos y sus fotos GPS.
+   - Valida la pre-liquidación económica de PEP Financiados y gestiona los trámites de cierre ante la DRSU Central.
+
+5. Decano de la Facultad de Ingeniería:
+   - Emite el Oficio de Elevación del Informe Final a la DRSU Central tras el V°B° del Comité de RS de la Facultad.
+
+6. Dirección de Responsabilidad Social Universitaria (DRSU Central):
+   - Certificación SSU: Gestiona de forma 100% EXTERNA el trámite de certificación en su portal oficial y emite la Constancia de Cumplimiento del SSU (60 Horas).
+   - PEP: Revisa la pre-liquidación y emite Informe Técnico de Cierre para el Vicerrectorado Académico.
+
+7. Vicepresidencia Académica (VPA) / Comisión Organizadora:
+   - Emite la RESOLUCIÓN DE VICERRECTORADO ACADÉMICO DE CIERRE / CULMINACIÓN exclusivamente para los proyectos PEP.
+
+
+================================================================================
+3. FLUJO DETALLADO DE LA FASE DE EJECUCIÓN
+================================================================================
+
+3.1. Reglas Paramétricas de Cronogramas y Reprogramaciones
+- Restricciones Obligatorias:
+  * Mínimo de 60 horas efectivas en SSU dentro del calendario lectivo del semestre.
+  * Estructura por Fases: Fase 1 - Diagnóstico e Inducción (10%-15%), Fase 2 - Talleres y Ejecución (75%-80%), Fase 3 - Evaluación y Cierre (10%).
+  * Sugerencia de carga: 4 a 8 horas semanales por alumno.
+- Reprogramación de Actividades:
+  * Si ocurren imprevistos en comunidad (clima, paros, eventos del colegio), el estudiante solicita "Reprogramación de Fecha" en sistema con justificación.
+  * Requiere V°B° digital del Docente Asesor dentro del plazo X.
+
+3.2. Captura Fotográfica y Geolocalización por Web (GPS HTML5)
+- Captura Web Directa: Al subir la fotografía desde la plataforma web (móvil o PC), el navegador ejecuta la API de Geolocalización HTML5 obteniendo latitud y longitud en tiempo real.
+- Mecanismo de Excepción por Fallo de GPS:
+  * Si falla el sensor o la señal en zonas rurales de Cañete, se habilita el botón `[Reportar Falla de Ubicación / GPS]`.
+  * El estudiante redacta la incidencia y adjunta de forma obligatoria el Padrón / Lista de Asistencia firmada por los beneficiarios.
+  * El Docente Asesor evalúa la incidencia y aprueba el registro por excepción.
+
+3.3. Bucle de Revisión y Observaciones en Ejecución (Plazo de 3 días)
+- Si el Docente Asesor observa un avance (fotos borrosas, falta de firmas en lista):
+  * Cambia el estado a `Avance Observado`.
+  * Se otorga un plazo de 3 días hábiles al estudiante para corregir o resubir la evidencia sin perder el registro de la sesión.
+
+3.4. Estado Contemplado: Plazos Extemporáneos y Prórrogas (Tema a Tratar)
+- El sistema incluye en su arquitectura el estado `En Prórroga / Extemporáneo`.
+- Permite gestionar casos excepcionales donde un grupo alcance entre 45 y 55 horas al término del ciclo lectivo y requiera una extensión autorizada por la Facultad.
+
+
+================================================================================
+4. FLUJO DETALLADO DE LA FASE DE CIERRE Y CERTIFICACIÓN
+================================================================================
+
+4.1. Cierre de Proyectos de Escuelas Profesionales (PEP)
+1. El Docente Responsable sube el Informe Final de Ejecución. Si es PEP Financiado, adjunta la pre-liquidación digital de comprobantes (facturas, boletas, DJ) del fondo del 2% RSU.
+2. La Dir. de RS de Facultad y la Dirección de Escuela aprueban el Informe Final.
+3. Decanato eleva mediante Oficio a la DRSU Central.
+4. La Vicepresidencia Académica (VPA) emite la RESOLUCIÓN VRA DE CIERRE / CULMINACIÓN DEL PEP.
+5. El Responsable de RS de la Facultad adjunta el PDF de la Resolución VRA en la plataforma.
+6. Estado Final PEP: **`PEP CULMINADO`**.
+
+4.2. Cierre y Certificación de Servicio Social Universitario (SSU)
+1. Al acumular las 60 horas efectivas conforme, el estudiante presenta el Informe Final de SSU (Formato F-M03.01-RSU-003).
+2. El Docente Asesor y el Director de Escuela otorgan la conformidad técnica.
+3. Tramitación Externa de Certificado:
+   * El trámite de certificación es 100% EXTERNO, gestionado por la DRSU Central a través de su portal oficial de trámites universitarios.
+4. Integración en el "Mini-RSU" (Visor Interno):
+   * Cuando la DRSU Central aprueba y emite la Constancia de Cumplimiento del SSU (60 Horas), provee el enlace/URL oficial de acceso.
+   * El sistema "Mini-RSU" de la Facultad consume dicho enlace y despliega un VISOR PDF INTERNO del certificado dentro del perfil del estudiante y del proyecto.
+5. Estado Final SSU: **`CERTIFICADO Y CULMINADO`**.
+
+
+================================================================================
+5. MATRIZ RESUMEN DE ESTADOS EN EJECUCIÓN Y CIERRE
+================================================================================
+1. `EN EJECUCIÓN`: Proyecto activado con Ficha RSU o Res. VRA. Módulos de bitácora y GPS desbloqueados.
+2. `AVANCE REGISTRADO`: Estudiante sube bitácora, foto GPS web y lista de asistencia.
+3. `AVANCE OBSERVADO`: Docente observa evidencias (otorgando 3 días hábiles para corregir).
+4. `AVANCE CONFORME`: Docente aprueba avance. Se suman las horas al contador oficial (0 a 60h).
+5. `EN PRÓRROGA / EXTEMPORÁNEO`: Estado contemplado para extensiones autorizadas de plazo.
+6. `EJECUCIÓN COMPLETADA`: Se alcanzan las 60h (SSU) o el 100% del cronograma (PEP). Se bloquea la bitácora.
+7. `EN PROCESO DE CIERRE`: Informe Final en revisión de Facultad y DRSU Central.
+8. `PEP CULMINADO`: PEP cerrado con Resolución VRA registrada en plataforma.
+9. `CERTIFICADO Y CULMINADO`: SSU concluido con Visor PDF de la Constancia emitida por la DRSU Central.
+
+
+================================================================================
+FIN DEL DOCUMENTO TÉCNICO V0.4 - FASE DE EJECUCIÓN Y CIERRE (RSU UNDC)
+================================================================================

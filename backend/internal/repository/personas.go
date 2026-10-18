@@ -55,6 +55,39 @@ func (r *DocenteRepo) ProyectosAsesoradosActivos(idDocente uint) (int64, error) 
 	return n, err
 }
 
+// ProyectosAsesoradosActivosEnCiclo cuenta los proyectos que ocupan cupo
+// de asesoria del docente DENTRO de un ciclo concreto.
+//
+// `excluirProyecto` permite dejar fuera un proyecto del conteo: es lo que
+// hace falta cuando el docente ACEPTA una asesoria, porque el proyecto que
+// se acepta no debe competir consigo mismo por el tope.
+//
+// HU-F1-03 CA-3.2 / HU-F1-04 CA-4.2: el tope de asesorias se evalua por
+// ciclo, no de forma global. Base: rules (3) §3.1 punto 2 ("el docente
+// tenga menos de 2 SSU en el ciclo") e info/objetivo.txt R06.
+//
+// Tres exclusiones:
+//   - ARCHIVADO_VENCIMIENTO: libera el cupo (CA-7.2), por eso se puede
+//     reactivar el proyecto cuando el docente recupera cupo.
+//   - Solo modalidad SSU: los PEP los propone el propio docente o el
+//     Comite, asi que no compiten por el tope de "asesorados" (R42).
+//   - Los proyectos ya concluidos tampoco ocupan cupo.
+func (r *DocenteRepo) ProyectosAsesoradosActivosEnCiclo(idDocente, idCiclo, excluirProyecto uint) (int, error) {
+	var n int64
+	q := r.db.Model(&domain.RSUProyecto{}).
+		Where(`"id_docente_asesor" = ? AND "activo" = ? AND "id_ciclo_creacion" = ?
+			AND "modalidad" = 'SSU'
+			AND "id_estado_actual" NOT IN (
+				SELECT "id_estado" FROM "RSU_Estado_Proyecto"
+				WHERE "codigo" IN ('CERRADO','REPORTADO_SUNEDU','EVALUACION_VALIDADA','ARCHIVADO_VENCIMIENTO'))`,
+			idDocente, true, idCiclo)
+	if excluirProyecto != 0 {
+		q = q.Where("id_proyecto <> ?", excluirProyecto)
+	}
+	err := q.Count(&n).Error
+	return int(n), err
+}
+
 type EstudianteRepo struct{ db *gorm.DB }
 func NewEstudianteRepo(db *gorm.DB) *EstudianteRepo { return &EstudianteRepo{db} }
 func (r *EstudianteRepo) Create(e *domain.Estudiante) error { return r.db.Create(e).Error }

@@ -266,6 +266,10 @@ func Setup(db *gorm.DB) *gin.Engine {
 		api.GET("/formatos/:codigo/descargar", formatoH.Descargar)
 		api.POST("/formatos/:codigo/archivo", formatoH.Subir)
 		api.DELETE("/formatos/:codigo/archivo", formatoH.Restaurar)
+
+		// ── Fase 1 · Creación (HU-F1) ──
+		// Bucle del docente asesor, reactivación de archivados y catálogo DRSU.
+		handler.RegisterFase1(api, db, projH.Svc())
 	}
 	return r
 }

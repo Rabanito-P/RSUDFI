@@ -26,6 +26,11 @@ type RSUProyecto struct {
 	IDDocenteAsesor       *uint      `gorm:"column:id_docente_asesor" json:"id_docente_asesor"`
 	DocenteAsesor         *Docente   `gorm:"foreignKey:IDDocenteAsesor" json:"docente_asesor,omitempty"`
 	Descripcion           *string    `gorm:"column:descripcion" json:"descripcion"`
+	// HU-F1-01 CA-1.3: problemática que atenderá el proyecto (obligatoria,
+	// mínimo 100 caracteres). rules (3) §3.1 la exige en la formulación inicial.
+	Problematica          *string    `gorm:"column:problematica" json:"problematica"`
+	// HU-F1-01 CA-1.4: ODS del 1 al 17 al que contribuye el proyecto.
+	ODS                   *string    `gorm:"column:ods" json:"ods"`
 	ObjetivoGeneral       *string    `gorm:"column:objetivo_general" json:"objetivo_general"`
 	ObjetivosEspecificos  *string    `gorm:"column:objetivos_especificos" json:"objetivos_especificos"`
 	PoblacionBeneficiaria *string    `gorm:"column:poblacion_beneficiaria" json:"poblacion_beneficiaria"`

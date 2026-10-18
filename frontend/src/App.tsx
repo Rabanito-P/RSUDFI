@@ -39,6 +39,9 @@ const ModificarInforme = lazy(() => import('./pages/estudiante/ModificarInforme'
 const Justificacion = lazy(() => import('./pages/estudiante/Justificacion'))
 const EncuestaDocente = lazy(() => import('./pages/estudiante/EncuestaDocente'))
 const AutorizacionImagen = lazy(() => import('./pages/estudiante/AutorizacionImagen'))
+// Fase 1 · Creación (HU-F1)
+const BucleAsesor = lazy(() => import('./pages/BucleAsesor'))
+const FormatosDRSU = lazy(() => import('./pages/FormatosDRSU'))
 
 function RouteFallback(){
   return (
@@ -98,6 +101,10 @@ function AppShell(){
               <Route path="/personas" element={<RequireRole roles={['DIRECTIVO']}><Personas/></RequireRole>}/>
               <Route path="/actividades" element={<Actividades/>}/>
               <Route path="/docente/carga" element={<RequireRole roles={['DOCENTE']}><DocenteCarga/></RequireRole>}/>
+              {/* HU-F1-04: bucle de aceptación/rechazo del docente asesor */}
+              <Route path="/docente/asesorias" element={<RequireRole roles={['DOCENTE']}><BucleAsesor/></RequireRole>}/>
+              {/* HU-F1-08: catálogo de formatos oficiales DRSU */}
+              <Route path="/formatos-drsu" element={<FormatosDRSU/>}/>
               <Route path="/docente/proyectos" element={<RequireRole roles={['DOCENTE']}><Proyectos/></RequireRole>}/>
               <Route path="/docente/entregables" element={<RequireRole roles={['DOCENTE']}><DocenteEntregables/></RequireRole>}/>
               <Route path="/facultad/entregables" element={<RequireRole roles={['DIRECTIVO']}><DocenteEntregables/></RequireRole>}/>

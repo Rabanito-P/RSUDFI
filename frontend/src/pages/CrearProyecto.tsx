@@ -14,6 +14,20 @@ import { Upload, AlertCircle, FileText, CheckCircle2, Download, FileSpreadsheet,
 // El backend las sirve desde documentos/plantillas (GET /api/v1/actividades/plantilla-planificacion).
 const API_BASE = (import.meta as any).env?.VITE_API_URL ?? ''
 
+// HU-F1-01 CA-1.4: los 17 Objetivos de Desarrollo Sostenible (Agenda 2030).
+// El catálogo vive en RSU_Configuracion.ods; aquí se listan para el selector.
+const ODS: { n: number; t: string }[] = [
+  { n: 1, t: 'Fin de la pobreza' }, { n: 2, t: 'Hambre cero' },
+  { n: 3, t: 'Salud y bienestar' }, { n: 4, t: 'Educación de calidad' },
+  { n: 5, t: 'Igualdad de género' }, { n: 6, t: 'Agua limpia y saneamiento' },
+  { n: 7, t: 'Energía asequible y no contaminante' }, { n: 8, t: 'Trabajo decente y crecimiento económico' },
+  { n: 9, t: 'Industria, innovación e infraestructura' }, { n: 10, t: 'Reducción de las desigualdades' },
+  { n: 11, t: 'Ciudades sostenibles' }, { n: 12, t: 'Producción y consumo responsables' },
+  { n: 13, t: 'Acción por el clima' }, { n: 14, t: 'Vida submarina' },
+  { n: 15, t: 'Vida de tierra' }, { n: 16, t: 'Paz, justicia e instituciones sólidas' },
+  { n: 17, t: 'Alianzas para lograr los objetivos' },
+]
+
 export default function CrearProyecto(){
   const {user} = useAuth()
   const nav = useNavigate()
@@ -21,7 +35,7 @@ export default function CrearProyecto(){
   const [lineas,setLineas]=useState<any[]>([])
   const [escuelas,setEscuelas]=useState<any[]>([])
   const [docentes,setDocentes]=useState<any[]>([])
-  const [form,setForm]=useState({titulo:'', id_tipo:'', modalidad:'SSU', id_linea:'', id_escuela:'', descripcion:'', objetivo_general:'', poblacion:'', lugar:'', fecha_inicio:'', fecha_fin:'', presupuesto:'', semestre:'', ciclo: '', celular: '', docente: ''})
+  const [form,setForm]=useState({titulo:'', id_tipo:'', modalidad:'SSU', id_linea:'', id_escuela:'', descripcion:'', objetivo_general:'', poblacion:'', lugar:'', fecha_inicio:'', fecha_fin:'', presupuesto:'', semestre:'', ciclo: '', celular: '', docente: '', problematica:'', ods:''})
   const [file,setFile]=useState<File|null>(null)
   const [excel,setExcel]=useState<File|null>(null)
   const [catalogErr,setCatalogErr]=useState('')
@@ -143,6 +157,15 @@ export default function CrearProyecto(){
     const nombresMal = equipo.find(m=> m.nombres.trim().length < 2)
     if(nombresMal){ setErr('Escribe el nombre completo de cada participante.'); return }
     if(equipo.length > 4){ setErr('El equipo admite como máximo 5 estudiantes contándote a ti.'); return }
+    // HU-F1-01 CA-1.3: problemática obligatoria, mínimo 100 caracteres.
+    if(form.problematica.trim().length < 100){
+      setErr(`La problemática es obligatoria y debe tener al menos 100 caracteres (tienes ${form.problematica.trim().length}).`); return
+    }
+    // HU-F1-01 CA-1.4: ODS obligatorio dentro del rango 1..17.
+    const nOds = Number(form.ods)
+    if(!form.ods || !Number.isInteger(nOds) || nOds < 1 || nOds > 17){
+      setErr('Selecciona el ODS que contribuye el proyecto (del 1 al 17).'); return
+    }
     setLoading(true)
     try{
       const codigo = `UNDC-RSU-${new Date().getFullYear()}-${String(Math.floor(Math.random()*900)+100).padStart(3,'0')}`
@@ -157,6 +180,8 @@ export default function CrearProyecto(){
         id_estudiante_lider: user?.persona_id,
         id_docente_asesor: form.docente ? Number(form.docente) : null,
         descripcion: form.descripcion,
+        problematica: form.problematica.trim(),
+        ods: form.ods,
         objetivo_general: form.objetivo_general,
         poblacion_beneficiaria: form.poblacion,
         lugar_intervencion: form.lugar,
@@ -309,7 +334,24 @@ export default function CrearProyecto(){
             </div>
             <div>
               <Label>Descripción</Label>
-              <Textarea rows={3} value={form.descripcion} onChange={e=>setForm({...form,descripcion:e.target.value})} placeholder="Resumen del problema y propuesta"/>
+              <Textarea rows={3} value={form.descripcion} onChange={e=>setForm({...form, descripcion:e.target.value})} placeholder="Resumen del problema y propuesta"/>
+            </div>
+            <div>
+              <Label required>Problemática *</Label>
+              <Textarea rows={4} value={form.problematica} onChange={e=>setForm({...form, problematica:e.target.value})} placeholder="Describe la situación o problema concreto que atenderá el proyecto, con datos del lugar y de la población afectada (mínimo 100 caracteres)."/>
+              <div className="text-[11px] text-slate-400 mt-0.5">
+                Obligatoria (HU-F1-01). Mínimo 100 caracteres. Caracteres: {form.problematica.trim().length}/100
+              </div>
+            </div>
+            <div>
+              <Label required>ODS que contribuye *</Label>
+              <select value={form.ods} onChange={e=>setForm({...form, ods:e.target.value})} className="input" required>
+                <option value="">-- seleccionar ODS (1 a 17) --</option>
+                {ODS.map(o=><option key={o.n} value={o.n}>{o.n}. {o.t}</option>)}
+              </select>
+              <div className="text-[11px] text-slate-400 mt-0.5">
+                Obligatorio (HU-F1-01). Agenda 2030: objetivo de Desarrollo Sostenible que se contribuye a desarrollar.
+              </div>
             </div>
             <div>
               <Label>Objetivo general</Label>

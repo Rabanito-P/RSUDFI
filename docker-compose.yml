@@ -26,6 +26,7 @@ services:
       - pgdata:/var/lib/postgresql
       - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
       - ./db/seed_demo.sql:/docker-entrypoint-initdb.d/02-seed-demo.sql:ro
+      - ./db/03_fase1_creacion.sql:/docker-entrypoint-initdb.d/03-fase1-creacion.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-undc} -d ${POSTGRES_DB:-undc_rsu}"]
       interval: 5s

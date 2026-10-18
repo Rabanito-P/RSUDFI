@@ -103,6 +103,24 @@ func (s *ProyectoService) Create(req dto.CreateProyectoReq) (*domain.RSUProyecto
 	if req.IDEstudianteLider != nil && (modalidad == "PEP_FINANCIADO" || modalidad == "PEP_AUTOFINANCIADO") {
 		return nil, errors.New("los proyectos PEP los crea el docente responsable o el Comité; el estudiante solo crea SSU o Voluntariado")
 	}
+	// HU-F1-01 CA-1.3 / CA-1.4: la formulacion inicial exige la
+	// problematica y el ODS. Solo aplican al SSU: en un PEP los campos
+	// de contexto son el objetivo y la poblacion beneficiaria, que ya son
+	// obligatorios en su propio formulario.
+	if modalidad == "SSU" {
+		if req.Problematica == nil {
+			return nil, errors.New("la problemática es obligatoria en la propuesta inicial (HU-F1-01)")
+		}
+		if err := validarProblematica(*req.Problematica); err != nil {
+			return nil, err
+		}
+		if req.ODS == nil || strings.TrimSpace(*req.ODS) == "" {
+			return nil, errors.New("debes indicar el ODS que contribuye el proyecto (HU-F1-01)")
+		}
+		if err := validarODS(*req.ODS); err != nil {
+			return nil, err
+		}
+	}
 	// HU-002: el estudiante debe asignar su docente asesor al crear el proyecto
 	// (antes quedaba vacío y se asignaba después, fuera del informe inicial).
 	if (modalidad == "SSU" || modalidad == "VOLUNTARIADO") && req.IDDocenteAsesor == nil {
@@ -110,9 +128,11 @@ func (s *ProyectoService) Create(req dto.CreateProyectoReq) (*domain.RSUProyecto
 	}
 	// Norma institucional (Art. 86): un docente no asesora más de 2 equipos a la vez.
 	if req.IDDocenteAsesor != nil {
-		max := maxProyectosDocente(s.db)
-		if n, err := s.docenteRepo.ProyectosAsesoradosActivos(*req.IDDocenteAsesor); err == nil && n >= max {
-			return nil, fmt.Errorf("el docente ya asesora %d equipo(s): la norma permite como máximo %d a la vez. Elige otro asesor", n, max)
+		max := int(maxProyectosDocente(s.db))
+		if n, err := s.docenteRepo.ProyectosAsesoradosActivosEnCiclo(*req.IDDocenteAsesor, req.IDCicloCreacion, 0); err == nil {
+			if err := validarCupoAsesor(n, max); err != nil {
+				return nil, err
+			}
 		}
 	}
 	// HU-001 + HU-060: el líder declara su celular al crear (valida formato 9XXXXXXXX).
@@ -170,6 +190,8 @@ func (s *ProyectoService) Create(req dto.CreateProyectoReq) (*domain.RSUProyecto
 		IDEstudianteLider: req.IDEstudianteLider,
 		IDDocenteAsesor: req.IDDocenteAsesor,
 		Descripcion: req.Descripcion,
+		Problematica: req.Problematica,
+		ODS:          req.ODS,
 		ObjetivoGeneral: req.ObjetivoGeneral,
 		ObjetivosEspecificos: req.ObjetivosEspecificos,
 		PoblacionBeneficiaria: req.PoblacionBeneficiaria,

@@ -14,8 +14,12 @@ type CreateProyectoReq struct {
 	IDEstudianteLider    *uint    `json:"id_estudiante_lider"`
 	IDDocenteAsesor      *uint    `json:"id_docente_asesor"`
 	Descripcion          *string  `json:"descripcion"`
+	// HU-F1-01 CA-1.3: problemática obligatoria, mínimo 100 caracteres.
+	Problematica *string `json:"problematica"`
+	// HU-F1-01 CA-1.4: ODS (1..17) al que contribuye el proyecto.
+	ODS                *string  `json:"ods"`
 	ObjetivoGeneral      *string  `json:"objetivo_general"`
-	ObjetivosEspecificos *string  `json:"objetivos_especificos"`
+	ObjetivosEspecificos *string `json:"objetivos_especificos"`
 	PoblacionBeneficiaria *string `json:"poblacion_beneficiaria"`
 	SectorBeneficiario   *string  `json:"sector_beneficiario"`
 	LugarIntervencion    *string  `json:"lugar_intervencion"`

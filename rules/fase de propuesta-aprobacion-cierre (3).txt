@@ -1,0 +1,92 @@
+﻿ESPECIFICACIÓN TÉCNICA DE PROCESOS: FASE DE PROPUESTA Y APROBACIÓN (FASE DE APERTURA)
+SISTEMA DE GESTIÓN INTERNO DE RESPONSABILIDAD SOCIAL UNIVERSITARIA ("MINI-RSU") - VERSIÓN 0.3
+Universidad Nacional de Cañete (UNDC)
+Facultad de Ingeniería - Escuela Profesional de Ingeniería de Sistemas
+1. Marco Normativo y Principios del Sistema
+* Ley Universitaria N° 30220:
+   * Arts. 124 y 125: La RSU como gestión ética y eficaz del impacto universitario. Asignación presupuestal obligatoria de un mínimo del 2% del presupuesto universitario.
+   * Art. 130: Servicio Social Universitario (SSU) de carácter obligatorio para estudiantes.
+* Reglamento de RSU de la UNDC (Res. CO N° 299-2026-UNDC/CO): Regula las modalidades SSU (estudiantes) y PEP (docentes).
+* Rol del Sistema Interno "Mini-RSU": Actúa como pre-filtro de pertinencia técnica y curricular dentro de la Facultad de Ingeniería de Sistemas, automatizando el flujo desde la propuesta inicial hasta la activación para eliminar la burocracia en papel.
+2. Matriz de Roles y Atribuciones (Swimlanes en Plataforma)
+Rol / Instancia
+	Responsabilidad en SSU (Estudiantes)
+	Responsabilidad en PEP (Docentes)
+	Carga / Restricciones
+ 
+	Estudiante (Líder / Integrante)
+	Creador e impulsor del proyecto (2 a 5 alumnos). Registra diagnóstico, ODS, cronograma (mín. 60h) y propone Asesor.
+	Usuario postulante. Explora catálogo de PEP vigentes y solicita adhesión.
+	Obligatorio para egreso. No maneja fondos en efectivo (solo solicita apoyo logístico en especie).
+	Docente (Asesor / Responsable)
+	Evalúa solicitud de asesoría. Si acepta, firma Compromiso F-M03.01-RSU-016.
+	Creador del PEP (Financiado o Autofinanciado). Selecciona alumnos adheridos y administra la ejecución.
+	Máx. 2 SSU asesorados por semestre. Hasta 3h/semana de carga no lectiva RSU.
+	Director de Escuela Profesional
+	Filtro de pertinencia técnica con Ingeniería de Sistemas y no duplicidad. Emite Ficha F-M03.01-RSU-005.
+	Filtro de pertinencia curricular (articulación con sílabos y cursos del ciclo). Emite Proveído.
+	V°B° Académico de Escuela.
+	Dir. / Comité RS Facultad
+	Compila expediente, controla no duplicidad geográfica en Cañete y activa proyecto tras recibir Ficha RSU.
+	Verifica disponibilidad en techo presupuestal del 2% RSU de la Escuela de Sistemas (si es financiado) y activa tras Res. VRA.
+	V°B° Técnico/Presupuestal de Facultad.
+	Decano de Facultad
+	Representación institucional (no revisa contenido línea por línea). Presiona un botón para generar y exportar el PDF prellenado del Oficio de Elevación.
+	Representación institucional. Presiona un botón para generar y exportar el PDF prellenado del Oficio de Elevación a DRSU Central.
+	Exportación de Oficio de Elevación (PDF con QR/Firma digital).
+	Director(a) de RSU Central (DRSU)
+	Evalúa expediente elevado y firma formalmente la Ficha de Aprobación del Proyecto SSU.
+	Emite Informe Técnico Favorable y eleva a la Vicepresidencia Académica.
+	Ficha de Aprobación de Proyecto SSU (sin resolución individual).
+	Vicepresidencia Académica (VPA)
+	No interviene individualmente por cada grupo de SSU.
+	Emite la Resolución de Vicerrectorado Académico (Res. VRA) que aprueba formalmente el PEP y su presupuesto.
+	Resolución VRA (PEP Financiados y Autofinanciados).
+	3. Flujo Completo: Servicio Social Universitario (SSU)
+1. Formulación Inicial (Estudiante): Ingresa a la plataforma (`estudiante@undc.edu.pe`), registra integrantes (2 a 5), problemática, ODS, cronograma (60h mín.) y selecciona un Docente Asesor. Genera el Formato F-M03.01-RSU-001. Estado: Enviado a Docente Asesor.
+2. Bucle de Aceptación del Docente Asesor:
+   * CAMINO 1 (Rechazo de Asesoría): El docente presiona "Rechazar". El proyecto pasa a Observado por Docente. La plataforma CONGELA todo el contenido técnico (título, problemática, cronograma) y SOLO habilita la selección de un Nuevo Docente Asesor. Se repite el bucle hasta obtener aceptación.
+   * CAMINO BUENO (Aceptación): El sistema valida que el docente tenga menos de 2 SSU en el ciclo. El docente firma el Compromiso F-M03.01-RSU-016. Estado: Aceptado por Asesor - Enviado a Escuela.
+3. Filtro de Pertinencia Técnica (Director de Escuela): Evalúa alineación a Sistemas y no duplicidad. Si observa (CAMINO 2), otorga 10 días hábiles para subsanar. Si aprueba, emite la Ficha F-M03.01-RSU-005 (15-18 pts). Estado: Aprobado por Escuela - Enviado a Facultad.
+4. Conformidad Institucional y Exportación de Oficio (Facultad): El Comité RSU de Facultad valida el expediente y el Decano presiona "Aprobar y Elevar", exportando el PDF del Oficio de Elevación de Decanato. Se tramita externamente por Mesa de Partes a DRSU Central. Estado: Aprobado por Facultad - Elevado a DRSU Central.
+5. Emisión de Ficha de Aprobación (DRSU Central): La DRSU Central revisa el expediente y el/la Director(a) de Responsabilidad Social Universitaria de la UNDC firma la Ficha de Aprobación del Proyecto SSU.
+6. Recepción, Carga y Activación (Facultad): La Ficha firmada regresa a Decanato por canal oficial y se deriva al Responsable de RS de Facultad. Este busca el proyecto en el sistema, presiona "Activar Proyecto" y adjunta el PDF. Estado automático: EN EJECUCIÓN (desbloquea informes de avance, evidencias GPS y horas).
+4. Flujo Completo: Proyectos de Escuelas Profesionales (PEP)
+1. Formulación Inicial (Docente Responsable / Comité): Registra el Esquema Anexo 3 / F-M03-RSU-001.
+   * PEP Financiado: Presentado mín. 15 días antes de clases con cuadro de presupuesto del 2% RSU asignado a la Escuela de Sistemas.
+   * PEP Autofinanciado: Presentado en cualquier momento con recursos propios/donaciones.
+Estado: PEP Registrado - Enviado a Escuela.
+2. Filtro de Pertinencia Curricular (Director de Escuela): Evalúa articulación con asignaturas y sílabos. Si observa (CAMINO 2), otorga 10 días hábiles. Si aprueba, emite Proveído de Conformidad Curricular. Estado: Conforme por Escuela - Enviado a Facultad.
+3. Filtro Presupuestal y Exportación de Oficio (Facultad): Dir. RS de Facultad valida disponibilidad en el fondo del 2% RSU de la Escuela de Sistemas (si excede, aplica rebote presupuestal de 5 días hábiles). Decano presiona "Aprobar y Elevar", exportando el Oficio de Elevación (PDF) hacia DRSU Central. Estado: Aprobado por Facultad - Elevado a DRSU Central.
+4. Aprobación Central y Acto Resolutivo (DRSU Central y VPA): DRSU emite Informe Técnico y la Vicepresidencia Académica emite la Resolución VRA (ej. Res. VRA N° 0008-2026-UNDC/VRA).
+5. Recepción, Carga y Activación de Convocatoria (Facultad): Llega la Resolución VRA a la Facultad. El Responsable de RS ingresa al sistema, adjunta el PDF e ingresa N° y fecha. Estado automático: CONVOCATORIA ABIERTA.
+6. Adhesión de Estudiantes e Inicio: El PEP se publica en el Catálogo de la Facultad. Estudiantes solicitan inscripción, el docente selecciona el equipo y el sistema genera el Padrón Oficial de Alumnos Adheridos. Estado automático: EN EJECUCIÓN.
+5. Matriz de Caminos de Retorno y Rebote (Excepciones)
+Tipo de Rebote
+	Disparador / Causa
+	Comportamiento en la Plataforma
+	Plazo / Regla
+ 
+	CAMINO 1: Rechazo de Asesoría (Exclusivo SSU)
+	Docente presiona "Rechazar Asesoría".
+	CONGELA todo el contenido del proyecto (título, problemática, cronograma). Habilita ÚNICAMENTE la lista desplegable para seleccionar a un Nuevo Docente Asesor.
+	Sin límite de reintentos hasta asignación.
+	CAMINO 2: Observación Técnica / Curricular / Presupuestal
+	Director de Escuela o Dir. RS Facultad presiona "Observar" escribiendo caja de comentarios.
+	Desbloquea los campos indicados para edición del estudiante o docente. Activa temporizador de la plataforma.
+	10 días hábiles (Escuela) / 5 días hábiles (Ajuste Presupuestal).
+	CAMINO 3: Desestimación o Cancelación Automática
+	Vencimiento del temporizador sin respuesta o duplicidad/inviabilidad absoluta.
+	Pasa a estado Archivado por Vencimiento o Desestimado. Libera cupos del docente y permite a los alumnos iniciar nueva propuesta o inscribirse a PEP.
+	Automático por timer del sistema.
+	6. Resumen de Documentos Requeridos y Emitidos
+* SSU - Formulario Inicial: Formato F-M03.01-RSU-001 (Generado por el Sistema).
+* SSU - Compromiso de Asesoría: Formato F-M03.01-RSU-016 (Aceptación Digital Docente).
+* SSU - Pertinencia Técnica: Ficha F-M03.01-RSU-005 (Emitida por Director de Escuela).
+* SSU - Documento de Elevación: Oficio de Elevación de Decanato (Exportación PDF con QR).
+* SSU - Documento de Aprobación Final: Ficha de Aprobación de Proyecto SSU firmada por Director(a) de RSU Central (PDF Adjunto).
+* PEP - Formulario Inicial: Esquema Anexo 3 / F-M03-RSU-001 (Generado por el Sistema).
+* PEP - Pertinencia Curricular: Proveído de Conformidad Curricular (Emitido por Director de Escuela).
+* PEP - Documento de Elevación: Oficio de Elevación de Decanato (Exportación PDF con QR).
+* PEP - Documento de Aprobación Final: Resolución de Vicerrectorado Académico - Res. VRA (PDF Adjunto).
+* PEP - Conformación de Equipo: Padrón Oficial de Estudiantes Adheridos al PEP (Generado por el Sistema).

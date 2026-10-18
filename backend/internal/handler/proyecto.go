@@ -16,6 +16,10 @@ import (
 
 type ProyectoHandler struct{ svc *service.ProyectoService; db *gorm.DB }
 func NewProyectoHandler(db *gorm.DB) *ProyectoHandler { return &ProyectoHandler{svc: service.NewProyectoService(db), db: db} }
+
+// Svc expone el servicio de proyecto para los handlers de la Fase 1
+// (HU-F1), que comparten el mismo servicio de dominio.
+func (h *ProyectoHandler) Svc() *service.ProyectoService { return h.svc }
 // Crear proyecto RSU en BORRADOR (valida ciclo mínimo)
 // @Tags		Proyectos
 // @Accept		json
