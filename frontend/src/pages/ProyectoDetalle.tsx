@@ -62,6 +62,11 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
   const [submitting,setSubmitting]=useState(false)
   const [actMsg,setActMsg]=useState<Msg>(null)
 
+  // ── Fase 2 · Aprobación: oficio de elevación y activación (opción C) ──
+  const [fase2Busy,setFase2Busy]=useState(false)
+  const [fase2Msg,setFase2Msg]=useState<Msg>(null)
+  const [fase2DocId,setFase2DocId]=useState('')
+
   // ── HU-060: transferencia de liderazgo ──
   const [liderOpen,setLiderOpen]=useState(false)
   const [liderNuevo,setLiderNuevo]=useState('')
@@ -230,8 +235,43 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
     }finally{ setLiderBusy(false) }
   }
   const reloadBeneficiarios = async ()=>{
-    try{ const b:any = await api.get(`/api/v1/proyectos/${id}/beneficiarios`); setBeneficiarios(asArray(b.data)); setBeneficiariosError('') }
+    try{ const b:any = await api.get(`/api/v1/beneficiarios`); setBeneficiarios(asArray(b.data)); setBeneficiariosError('') }
     catch(ex:any){ setBeneficiariosError(ex?.message||'No se pudieron cargar los beneficiarios') }
+  }
+
+  // ── Fase 2 · Aprobación (HU-F2-04..06) ──
+  // El oficio lo genera el Decano (o ADMIN) en EN_DICTAMEN_CONSEJO: construye
+  // el PDF con membrete y datos del expediente, lo registra y queda listo para
+  // imprimir, firmar y subir el escaneado. La activación la resuelve la
+  // Dirección RS de Facultad (opción C): 7→8 y 8→9 con el sustento DRSU.
+  const generarOficio = async ()=>{
+    setFase2Busy(true); setFase2Msg(null)
+    try{
+      await api.post(`/api/v1/proyectos/${id}/oficio-elevacion`, {})
+      setFase2Msg({type:'ok', text:'Oficio de Elevación generado. Imprímelo, fírmalo al pie y sube el escaneado como sustento del expediente.'})
+      await load()
+    }catch(ex:any){ setFase2Msg({type:'err', text: mensajeError(ex, 'No se pudo generar el oficio')}) }
+    finally{ setFase2Busy(false) }
+  }
+  const descargarOficio = async ()=>{
+    setFase2Busy(true); setFase2Msg(null)
+    try{ await api.download(`/api/v1/proyectos/${id}/oficio-elevacion/descargar`, `oficio-elevacion-${p.codigo_proyecto}.pdf`) }
+    catch(ex:any){ setFase2Msg({type:'err', text: mensajeError(ex, 'No se pudo descargar el oficio')}) }
+    finally{ setFase2Busy(false) }
+  }
+  const activarProyecto = async ()=>{
+    const idDoc = Number(fase2DocId)
+    if(!Number.isInteger(idDoc) || idDoc<=0){
+      setFase2Msg({type:'err', text:'Registra primero el documento de sustento y anota su ID (pestaña Entregables/Documentos).'})
+      return
+    }
+    setFase2Busy(true); setFase2Msg(null)
+    try{
+      await api.post(`/api/v1/proyectos/${id}/activar`, { id_documento_sustento: idDoc })
+      setFase2Msg({type:'ok', text:'Proyecto activado: quedó en ejecución y se notificó al líder y al asesor.'})
+      await load()
+    }catch(ex:any){ setFase2Msg({type:'err', text: mensajeError(ex, 'No se pudo activar el proyecto')}) }
+    finally{ setFase2Busy(false) }
   }
   const reloadSolicitudes = async ()=>{
     try{
@@ -537,6 +577,14 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
   const nombreEstado = (idEstado:any)=> estadosCat.find((e:any)=> Number(e.id_estado)===Number(idEstado))?.nombre || `Estado ${idEstado}`
   const codigoEstado = (idEstado:any)=> estadosCat.find((e:any)=> Number(e.id_estado)===Number(idEstado))?.codigo || String(idEstado)
 
+  // ── Fase 2 · Aprobación: quién puede hacer qué ──
+  // E1 (opción C): el Decano genera el oficio cuando el expediente está en
+  // dictamen; la Dirección RS de Facultad activa el proyecto con el sustento.
+  const esDecanoUI = ['DECANO','ADMIN'].includes(user?.rol_actor||'')
+  const esRSFUI = ['DIR_RS_FACULTAD','ADMIN'].includes(user?.rol_actor||'')
+  const puedeGenerarOficio = esDecanoUI && codigo==='EN_DICTAMEN_CONSEJO'
+  const puedeActivar = esRSFUI && codigo==='EN_ASIGNACION_CARGA'
+
   return (
     <div className="space-y-5">
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
@@ -581,6 +629,47 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
             {isDocente && codigo==='EN_EJECUCION' && <Button onClick={()=>openModal('monitoreo')} className="bg-emerald-600 hover:bg-emerald-700" leftIcon={<ClipboardCheck size={14}/>}>Registrar monitoreo</Button>}
             {isDirectivo && tieneLane(codigo) && <Button onClick={()=>openModal('transicion')} className="bg-amber-600 hover:bg-amber-700" leftIcon={<Gavel size={14}/>}>Revisar y dictaminar</Button>}
           </div>
+
+          {/* ── Fase 2 · Oficio de elevación (lo genera el Decano) ── */}
+          {(p.numero_oficio || puedeGenerarOficio || puedeActivar || fase2Msg) && (
+            <div className="mt-2 rounded-xl border border-indigo-200 bg-indigo-50/60 p-3 space-y-2">
+              <div className="text-xs font-bold uppercase tracking-wide text-indigo-700">Fase 2 · Ejecución y activación</div>
+              {p.numero_oficio && (
+                <div className="text-sm text-slate-700">
+                  <span className="font-mono">{p.numero_oficio}</span>
+                  {p.fecha_elevacion && <> · elevado el {new Date(p.fecha_elevacion).toLocaleDateString('es-PE')}</>}
+                  <button disabled={fase2Busy} onClick={descargarOficio} className="ml-2 inline-flex items-center gap-1 px-2 py-1 bg-white border border-indigo-200 rounded-lg text-xs font-semibold text-indigo-700 hover:bg-indigo-100 disabled:opacity-50">
+                    <Download size={12}/> Descargar oficio (PDF)
+                  </button>
+                </div>
+              )}
+              {puedeGenerarOficio && (
+                <div>
+                  <button disabled={fase2Busy} onClick={generarOficio} className="inline-flex items-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold disabled:opacity-60">
+                    <FileText size={14}/> {fase2Busy ? 'Generando…' : 'Generar Oficio de Elevación'}
+                  </button>
+                  <div className="text-[11px] text-slate-500 mt-1">El PDF sale con membrete, datos del expediente y espacios para firma y sello del Decano.</div>
+                </div>
+              )}
+              {puedeActivar && (
+                <div>
+                  <div className="text-[11px] font-semibold text-slate-600">La resolución es documento externo: súbela en Documentos y anota su ID (HU-F2-F: se carga, nunca se genera).</div>
+                  <div className="flex gap-2 items-center mt-1">
+                    <input
+                      value={fase2DocId}
+                      onChange={e=>setFase2DocId(e.target.value.replace(/\D/g,''))}
+                      placeholder="ID documento sustento"
+                      className="w-44 px-2 py-1.5 rounded-lg border border-slate-300 text-sm outline-none focus:border-indigo-600"
+                    />
+                    <button disabled={fase2Busy} onClick={activarProyecto} className="inline-flex items-center gap-2 px-3 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-bold disabled:opacity-60">
+                      <Check size={14}/> Activar proyecto
+                    </button>
+                  </div>
+                </div>
+              )}
+              {fase2Msg && <Alert variant={fase2Msg.type==='ok'?'success':'error'} className="text-xs">{fase2Msg.text}</Alert>}
+            </div>
+          )}
         </div>
       )}
 

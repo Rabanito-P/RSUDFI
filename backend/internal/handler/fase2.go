@@ -87,7 +87,7 @@ func (h *fase2Handler) DescargarOficio(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 
 	var doc domain.RSUDocumento
-	if err := h.db.Where("id_proyecto = ? AND nombre_archivo LIKE 'oficio-elevacion%' AND vigente = true", id).
+	if err := h.db.Where("id_proyecto = ? AND nombre_archivo LIKE '%oficio-elevacion%' AND vigente = true", id).
 		Order("fecha_subida DESC").First(&doc).Error; err != nil {
 		utils.Fail(c, 404, "El proyecto no tiene un Oficio de Elevación generado", nil)
 		return

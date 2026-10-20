@@ -101,4 +101,22 @@ export const api = {
     if (/^https?:\/\//i.test(u)) return u
     return `${BASE}${u.startsWith('/') ? u : `/${u}`}`
   },
+  // Descarga de archivos protegidos (el oficio de elevación exige token):
+  // pide la respuesta como blob y fuerza la descarga con el nombre dado.
+  download: async (path: string, filename: string) => {
+    const res = await fetch(`${BASE}${path}`, { headers: { ...authHeader() } })
+    if (!res.ok) {
+      const msg = await parseError(res)
+      throw new Error(msg ? `HTTP ${res.status}: ${msg}` : `HTTP ${res.status}: Error al descargar`)
+    }
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  },
 }

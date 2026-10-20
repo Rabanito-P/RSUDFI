@@ -31,11 +31,14 @@ const PASSWORD = 'undc2026'
 const presets: Preset[] = [
   { correo: 'estudiante@undc.edu.pe', label: 'Estudiante', rol: 'ESTUDIANTE', color: 'bg-sky-600', desc: 'Crea borrador · ejecuta · reporta horas', icon: <GraduationCap size={16} /> },
   { correo: 'ejecutor@undc.edu.pe', label: 'Estudiante ejecutor', rol: 'ESTUDIANTE', color: 'bg-sky-600', desc: 'Integra el equipo y sube evidencias', icon: <Users size={16} /> },
+  { correo: 'lider.voluntariado@undc.edu.pe', label: 'Líder de voluntariado', rol: 'ESTUDIANTE', color: 'bg-sky-600', desc: 'Lidera el SSU danza y folclore', icon: <Users size={16} /> },
+  { correo: 'publicacion@undc.edu.pe', label: 'Líder (proyecto publicado)', rol: 'ESTUDIANTE', color: 'bg-sky-600', desc: 'Proyecto aprobado en evaluación DRSU', icon: <Users size={16} /> },
   { correo: 'docente@undc.edu.pe', label: 'Docente Asesor', rol: 'DOCENTE', color: 'bg-emerald-600', desc: 'Asesora · acepta el SSU · verifica', icon: <Users size={16} /> },
+  { correo: 'rosa.mendoza@undc.edu.pe', label: 'Docente Asesora (voluntariado)', rol: 'DOCENTE', color: 'bg-emerald-600', desc: 'Asesora el SSU · verifica monitoreo', icon: <Users size={16} /> },
   { correo: 'colaborador@undc.edu.pe', label: 'Docente Responsable (PEP)', rol: 'DOCENTE', color: 'bg-emerald-600', desc: 'Crea el PEP · elige el equipo', icon: <Users size={16} /> },
   { correo: 'escuela@undc.edu.pe', label: 'Dir. Escuela Profesional', rol: 'DIRECTIVO', color: 'bg-amber-600', desc: 'Revisa → V°B° Escuela → conformidad', icon: <Shield size={16} /> },
-  { correo: 'rsfacultad@undc.edu.pe', label: 'Dir. RS Facultad', rol: 'DIRECTIVO', color: 'bg-violet-600', desc: 'Prioriza banco · registra lo de la DRSU', icon: <BarChart3 size={16} /> },
-  { correo: 'decano@undc.edu.pe', label: 'Decano de Facultad', rol: 'DIRECTIVO', color: 'bg-indigo-600', desc: 'Comité RSU · Aprobar y Elevar', icon: <Vote size={16} /> },
+  { correo: 'rsfacultad@undc.edu.pe', label: 'Dir. RS Facultad', rol: 'DIRECTIVO', color: 'bg-violet-600', desc: 'Eleva · activa con resolución externa', icon: <BarChart3 size={16} /> },
+  { correo: 'decano@undc.edu.pe', label: 'Decano de Facultad', rol: 'DIRECTIVO', color: 'bg-indigo-600', desc: 'Comité RSU · Aprobar y Generar oficio', icon: <Vote size={16} /> },
   { correo: 'admin@undc.edu.pe', label: 'Administrador', rol: 'ADMIN', color: 'bg-slate-900', desc: 'Usuarios, módulos y permisos', icon: <UserCog size={16} /> },
 ]
 

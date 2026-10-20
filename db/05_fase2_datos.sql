@@ -15,6 +15,12 @@
 SET client_min_messages = warning;
 BEGIN;
 
+-- ── 0. Tipo de documento propio para el Oficio de Elevación ─────────────────
+-- evita que las cargas de otros tipos invaliden el oficio vigente del proyecto.
+INSERT INTO "RSU_Tipo_Documento" ("nombre","etapa","obligatorio","activo")
+SELECT 'Oficio de Elevación','FORMULACION',false,true
+WHERE NOT EXISTS (SELECT 1 FROM "RSU_Tipo_Documento" WHERE "nombre" = 'Oficio de Elevación');
+
 -- ── 1. Estudiantes adicionales para equipos completos ──────────────────────
 INSERT INTO public."Estudiante"
   ("id_estudiante","codigo_estudiante","dni","nombres","apellidos","correo_institucional","id_escuela","estado","fecha_ingreso")
@@ -33,15 +39,15 @@ ON CONFLICT DO NOTHING;
 -- no tenían usuario; Rosa Mendoza (docente 5) tampoco. Sin cuenta no se puede
 -- entrar a revisar el flujo.
 INSERT INTO public."RSU_Usuario"
-  ("id_usuario","correo","nombre","password_hash","rol","tipo_usuario","id_persona","activo")
+  ("correo","nombre","password_hash","rol","tipo_usuario","id_persona","activo")
 VALUES
-  (16,'lider.voluntariado@undc.edu.pe','Diego Vargas',
+  ('lider.voluntariado@undc.edu.pe','Diego Vargas',
    '$2a$10$6as1j3fRrRguoNVZjssnFuwY4UzDW0K4mIbcI.gpy8tdYp1WX9nOG','ESTUDIANTE_PROP','ESTUDIANTE',3,true),
-  (17,'publicacion@undc.edu.pe','Fiorella Gutiérrez',
+  ('publicacion@undc.edu.pe','Fiorella Gutiérrez',
    '$2a$10$6as1j3fRrRguoNVZjssnFuwY4UzDW0K4mIbcI.gpy8tdYp1WX9nOG','ESTUDIANTE_PROP','ESTUDIANTE',4,true),
-  (18,'rosa.mendoza@undc.edu.pe','Rosa Mendoza',
+  ('rosa.mendoza@undc.edu.pe','Rosa Mendoza',
    '$2a$10$6as1j3fRrRguoNVZjssnFuwY4UzDW0K4mIbcI.gpy8tdYp1WX9nOG','DOCENTE_RESP','DOCENTE',5,true)
-ON CONFLICT DO NOTHING;
+ON CONFLICT (correo) DO NOTHING;
 
 -- ── 3. Módulos (capa 1 · VER) de las cuentas nuevas ────────────────────────
 -- Estudiantes: solo lo del proyecto y sus trámites.
@@ -49,7 +55,7 @@ INSERT INTO "RSU_Usuario_Permiso" (id_usuario, modulo)
 SELECT u.id_usuario, m.clave
 FROM "RSU_Usuario" u
 CROSS JOIN (VALUES
-    ('proyectos'),('evidencias'),('entregables'),('encuestas'),
+    ('proyectos'),('bandeja'),('evidencias'),('entregables'),('encuestas'),
     ('documentos'),('catalogos')
 ) AS m(clave)
 WHERE u.correo IN ('lider.voluntariado@undc.edu.pe','publicacion@undc.edu.pe')

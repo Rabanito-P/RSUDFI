@@ -205,7 +205,43 @@ func (h *ProyectoHandler) Get(c *gin.Context) {
 		utils.Fail(c, 404, "Proyecto no encontrado", nil)
 		return
 	}
+	// Control de acceso por objeto (OWASP A01): un estudiante solo lee su
+	// proyecto (líder o miembro). Excepción HU-064: un PEP abierto se puede
+	// ver de todos modos — es la vista previa para pedir unirse al equipo.
+	// La excepción se evalúa SIEMPRE contra la DB, no contra el body.
+	if !puedeVerProyecto(h.db, c, p.ID) {
+		if !esPEPAbierto(h.db, uint(id)) {
+			utils.Fail(c, 404, "Proyecto no encontrado", nil)
+			return
+		}
+	}
 	utils.Success(c, p, "OK")
+}
+
+// esPEPAbierto (HU-064): true si el proyecto es PEP y no alcanzó un estado
+// final, por lo que queda abierto a la vista previa de no miembros.
+func esPEPAbierto(db *gorm.DB, idProyecto uint) bool {
+	var row struct {
+		Modalidad string
+		Codigo    string
+	}
+	err := db.Table("RSU_Proyecto").
+		Select(`"RSU_Proyecto"."modalidad" AS "modalidad", "RSU_Estado_Proyecto"."codigo" AS "codigo"`).
+		Joins(`JOIN "RSU_Estado_Proyecto" ON "RSU_Estado_Proyecto"."id_estado" = "RSU_Proyecto"."id_estado_actual"`).
+		Where(`"RSU_Proyecto"."id_proyecto" = ?`, idProyecto).
+		Scan(&row).Error
+	if err != nil || row.Codigo == "" {
+		return false
+	}
+	if !strings.HasPrefix(strings.ToUpper(row.Modalidad), "PEP") {
+		return false
+	}
+	for _, f := range []string{"CERRADO", "REPORTADO_SUNEDU", "EVALUACION_VALIDADA", "ARCHIVADO_VENCIMIENTO", "RECHAZADO"} {
+		if row.Codigo == f {
+			return false
+		}
+	}
+	return true
 }
 
 // Actualizar proyecto

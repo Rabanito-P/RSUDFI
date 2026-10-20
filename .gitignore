@@ -30,3 +30,8 @@ logs/
 .idea/
 .DS_Store
 Thumbs.db
+# Playwright (generados)
+frontend/test-results/
+frontend/playwright-report/
+backend/docs/
+
