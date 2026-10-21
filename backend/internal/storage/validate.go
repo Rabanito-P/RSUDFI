@@ -22,14 +22,14 @@ type Kind string
 
 const (
 	KindPDF    Kind = "pdf"    // %PDF — 32MB (R13)
-	KindImagen Kind = "imagen" // JPEG/PNG — 5MB (R13, HU-012)
+	KindImagen Kind = "imagen" // JPEG/PNG — 2MB (R13, HU-012)
 	KindOffice Kind = "office" // docx/xlsx (ZIP) — 32MB
 	KindMixto  Kind = "mixto"  // pdf/docx/xlsx — 32MB (documentos del proyecto)
 )
 
 var tamanos = map[Kind]int64{
 	KindPDF:    32 << 20, // 32MB
-	KindImagen: 5 << 20,  // 5MB
+	KindImagen: 2 << 20,  // 2MB
 	KindOffice: 32 << 20,
 	KindMixto:  32 << 20,
 }

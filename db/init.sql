@@ -207,7 +207,7 @@ CREATE TABLE "RSU_Participante_Estudiante" (
   "id_participante" SERIAL PRIMARY KEY, "id_proyecto" INT NOT NULL REFERENCES "RSU_Proyecto"("id_proyecto") ON DELETE CASCADE,
   "id_estudiante" INT NOT NULL REFERENCES "Estudiante"("id_estudiante"), "id_rol_proyecto" INT NOT NULL REFERENCES "RSU_Rol_Proyecto"("id_rol_proyecto"),
   "horas_acumuladas" NUMERIC(5,2) DEFAULT 0,
-  "fecha_inscripcion" DATE NOT NULL, "estado_participacion" VARCHAR(20) DEFAULT 'INSCRITO' CHECK ("estado_participacion" IN ('INSCRITO','ACTIVO','RETIRADO','FINALIZADO')),
+  "fecha_inscripcion" DATE NOT NULL, "estado_participacion" VARCHAR(20) DEFAULT 'INSCRITO' CHECK ("estado_participacion" IN ('INSCRITO','ACTIVO','RETIRADO','FINALIZADO','EXPULSADO')),
   "validacion_ciclo" BOOLEAN DEFAULT FALSE
 );
 
@@ -250,7 +250,7 @@ CREATE TABLE "RSU_Monitoreo" ("id_monitoreo" SERIAL PRIMARY KEY, "id_proyecto" I
 -- MÓDULO 8B: Beneficiarios
 CREATE TABLE "RSU_Beneficiario" ("id_beneficiario" SERIAL PRIMARY KEY, "tipo_beneficiario" VARCHAR(20) NOT NULL DEFAULT 'PERSONA_NATURAL', "dni" VARCHAR(8) UNIQUE, "nombres" VARCHAR(150), "apellidos" VARCHAR(150), "fecha_nacimiento" DATE, "sexo" VARCHAR(10), "ruc" VARCHAR(11), "razon_social" VARCHAR(200), "representante_legal" VARCHAR(200), "celular" VARCHAR(15), "telefono_fijo" VARCHAR(15), "correo_electronico" VARCHAR(150), "direccion" VARCHAR(255), "distrito" VARCHAR(100), "provincia" VARCHAR(100) DEFAULT 'Cañete', "departamento" VARCHAR(100) DEFAULT 'Lima', "ocupacion" VARCHAR(150), "nivel_educativo" VARCHAR(20), "condicion_vulnerabilidad" VARCHAR(200), "activo" BOOLEAN DEFAULT TRUE, "fecha_registro" TIMESTAMPTZ DEFAULT NOW(), "id_usuario_registro" INT NULL);
 CREATE TABLE "RSU_Proyecto_Beneficiario" ("id_vinculacion" SERIAL PRIMARY KEY, "id_proyecto" INT NOT NULL REFERENCES "RSU_Proyecto"("id_proyecto") ON DELETE CASCADE, "id_beneficiario" INT NOT NULL REFERENCES "RSU_Beneficiario"("id_beneficiario"), "fecha_incorporacion" DATE NOT NULL, "rol_en_proyecto" VARCHAR(100), "observaciones" TEXT, "activo" BOOLEAN DEFAULT TRUE, UNIQUE ("id_proyecto","id_beneficiario"));
-CREATE TABLE "RSU_Asistencia_Beneficiario" ("id_asistencia" SERIAL PRIMARY KEY, "id_actividad" INT NOT NULL REFERENCES "RSU_Actividad_Campo"("id_actividad") ON DELETE CASCADE, "id_beneficiario" INT NOT NULL REFERENCES "RSU_Beneficiario"("id_beneficiario"), "firma_url" VARCHAR(500), "observaciones" VARCHAR(255));
+CREATE TABLE "RSU_Asistencia_Beneficiario" ("id_asistencia" SERIAL PRIMARY KEY, "id_actividad" INT NOT NULL REFERENCES "RSU_Actividad_Campo"("id_actividad") ON DELETE CASCADE, "id_beneficiario" INT NOT NULL REFERENCES "RSU_Beneficiario"("id_beneficiario"), "firma_url" VARCHAR(500), "observaciones" VARCHAR(255), CONSTRAINT uq_asistencia_actividad_beneficiario UNIQUE ("id_actividad", "id_beneficiario"));
 
 -- MÓDULO 9: Presupuesto
 CREATE TABLE "RSU_Presupuesto_Movimiento" ("id_movimiento" SERIAL PRIMARY KEY, "id_proyecto" INT NOT NULL REFERENCES "RSU_Proyecto"("id_proyecto") ON DELETE CASCADE, "id_facultad" INT NOT NULL REFERENCES "Facultad"("id_facultad"), "tipo" VARCHAR(20) NOT NULL, "monto" NUMERIC(12,2) NOT NULL, "fecha" DATE NOT NULL, "id_documento_sustento" INT NULL REFERENCES "RSU_Documento"("id_documento"), "id_usuario_registro" INT NOT NULL, "observaciones" TEXT);

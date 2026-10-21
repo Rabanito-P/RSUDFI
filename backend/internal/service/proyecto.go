@@ -94,6 +94,103 @@ func (s *ProyectoService) idUsuarioDePersona(tipoUsuario string, idPersona *uint
 	return &u.ID
 }
 
+// ── HU-070: expulsión de integrantes por causales (faltas/tardanzas) ─────
+//
+// Quien observa (`EN_MONITOREO`, HU-018) es la Dirección RS de Facultad; esa
+// misma autoridad decide expulsar al integrante problemático con causal y
+// motivo registrados, sin tocar el flujo de aprobación (HU-060 sigue siendo
+// el único camino para cambiar de líder).
+
+// CausalExpulsionValida: enum cerrado del motivo rápido del retiro.
+func CausalExpulsionValida(causal string) bool {
+	switch causal {
+	case "FALTAS", "TARDANZAS", "CONDUCTA", "OTRO":
+		return true
+	}
+	return false
+}
+
+// PuedeQuedarEquipo garantiza que la expulsión no diluya el equipo SSU/
+// VOLUNTARIADO por debajo de 2 integrantes activos (R09/R10). Los PEP no
+// exigen ese mínimo porque están dirigidos por un docente responsable.
+func PuedeQuedarEquipo(modalidad string, quedanActivos int) error {
+	switch modalidad {
+	case "SSU", "VOLUNTARIADO":
+		if quedanActivos < 2 {
+			return fmt.Errorf("el equipo %s queda con %d integrante(s), por debajo del mínimo de 2 (R09): transfiere el liderazgo a otro miembro antes de expulsar", modalidad, quedanActivos)
+		}
+		return nil
+	case "PEP_FINANCIADO", "PEP_AUTOFINANCIADO", "PUBLICACION_CIENTIFICA":
+		return nil
+	default:
+		// Modalidad desconocida (dato sucio): rechazar por prudencia.
+		return fmt.Errorf("modalidad de proyecto desconocida (%q): revisa el registro antes de expulsar", modalidad)
+	}
+}
+
+// ExpulsarEstudiante aplica el retiro y la trazabilidad. Reglas:
+//  - objetivo = participante INSCRITO/ACTIVO del proyecto (si no, error);
+//  - NUNCA al líder: primero cambia el liderazgo (HU-060);
+//  - el equipo SSU conserva el mínimo de 2 activos tras el retiro;
+//  - el registro pasa a EXPULSADO conservando horas_acumuladas (constancias);
+//  - notifica al expulsado (id_usuario dirigido), al docente y al líder.
+func (s *ProyectoService) ExpulsarEstudiante(idProyecto uint, req dto.ExpulsionReq) (*domain.RSUParticipanteEstudiante, error) {
+	if !CausalExpulsionValida(req.Causal) {
+		return nil, fmt.Errorf("causal invalida (FALTAS, TARDANZAS, CONDUCTA, OTRO)")
+	}
+	proj, err := s.proyectoRepo.FindByID(idProyecto)
+	if err != nil {
+		return nil, fmt.Errorf("proyecto no encontrado")
+	}
+	var part domain.RSUParticipanteEstudiante
+	if err := s.db.
+		Where(`id_proyecto = ? AND id_estudiante = ? AND estado_participacion IN ('INSCRITO','ACTIVO')`,
+			idProyecto, req.IDEstudiante).First(&part).Error; err != nil {
+		return nil, fmt.Errorf("el estudiante no es miembro activo de este proyecto")
+	}
+	if proj.IDEstudianteLider != nil && *proj.IDEstudianteLider == req.IDEstudiante {
+		return nil, fmt.Errorf("no se puede expulsar al lider del proyecto: transfiere el liderazgo (HU-060)")
+	}
+	var activos int64
+	s.db.Model(&domain.RSUParticipanteEstudiante{}).
+		Where(`id_proyecto = ? AND estado_participacion IN ('INSCRITO','ACTIVO')`, idProyecto).
+		Count(&activos)
+	if err := PuedeQuedarEquipo(proj.Modalidad, int(activos)-1); err != nil {
+		return nil, err
+	}
+	if err := s.db.Model(&part).Update("estado_participacion", "EXPULSADO").Error; err != nil {
+		return nil, fmt.Errorf("no se pudo registrar la expulsion: %v", err)
+	}
+	part.EstadoParticipacion = "EXPULSADO"
+
+	// Nombre real del expulsado para los mensajes.
+	var nombreEst string
+	s.db.Model(&domain.Estudiante{}).
+		Select("nombres || ' ' || apellidos").
+		Where("id_estudiante = ?", part.IDEstudiante).Scan(&nombreEst)
+	if strings.TrimSpace(nombreEst) == "" {
+		nombreEst = fmt.Sprintf("Estudiante #%d", part.IDEstudiante)
+	}
+
+	// Notificación al expulsado (dirigida por id_usuario), docente y líder.
+	msgExpulsado := fmt.Sprintf("Fuiste EXPULSADO del proyecto %s por %s: %s", proj.CodigoProyecto, req.Causal, req.Motivo)
+	if idUsu := s.idUsuarioDePersona("ESTUDIANTE", &part.IDEstudiante); idUsu != nil {
+		s.pushNotificacion("ESTUDIANTE_EJEC", "EXPULSION", "Expulsión del proyecto "+proj.CodigoProyecto, &msgExpulsado, &idProyecto, idUsu)
+	}
+	msgDocente := fmt.Sprintf("%s fue expulsado del proyecto %s por %s: %s", nombreEst, proj.CodigoProyecto, req.Causal, req.Motivo)
+	if proj.IDDocenteAsesor != nil {
+		if idUsu := s.idUsuarioDePersona("DOCENTE", proj.IDDocenteAsesor); idUsu != nil {
+			s.pushNotificacion("DOCENTE_RESP", "EXPULSION", "Integrante expulsado", &msgDocente, &idProyecto, idUsu)
+		}
+	}
+	if proj.IDEstudianteLider != nil {
+		if idUsu := s.idUsuarioDePersona("ESTUDIANTE", proj.IDEstudianteLider); idUsu != nil {
+			s.pushNotificacion("ESTUDIANTE_PROP", "EXPULSION", "Integrante expulsado", &msgDocente, &idProyecto, idUsu)
+		}
+	}
+	return &part, nil
+}
+
 func (s *ProyectoService) Create(req dto.CreateProyectoReq) (*domain.RSUProyecto, error) {
 	// HU-069: modalidad explícita con default SSU + regla por rol.
 	modalidad := strings.ToUpper(strings.TrimSpace(req.Modalidad))

@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -52,6 +53,17 @@ func (h *JustificacionHandler) Create(c *gin.Context) {
 		utils.Fail(c, http.StatusBadRequest, "fecha_ausencia inválida (usa YYYY-MM-DD)", err.Error())
 		return
 	}
+	// La actividad debe existir y pertenecer al equipo del solicitante:
+	// la justificación es de una falta EN campo, no un trámite abstracto.
+	var act domain.RSUActividadCampo
+	if err := h.db.First(&act, "id_actividad = ?", idAct).Error; err != nil {
+		utils.Fail(c, http.StatusBadRequest, "la actividad indicada no existe", nil)
+		return
+	}
+	if !puedeEditarEvidencias(h.db, c, act.IDProyecto) {
+		utils.Fail(c, http.StatusForbidden, "solo un miembro activo del proyecto justifica faltas de esa actividad", nil)
+		return
+	}
 	// R11: máximo 2 justificaciones por estudiante (solo las que ocupan cupo).
 	activas, err := h.repo.CountActivas(uint(idEst))
 	if err != nil {
@@ -65,14 +77,9 @@ func (h *JustificacionHandler) Create(c *gin.Context) {
 	// La evidencia PDF se guarda como documento del proyecto de la actividad,
 	// así hereda el id_proyecto correcto (FK obligatoria en RSU_Documento).
 	var idDoc *uint
-	if file, err := c.FormFile("archivo"); err == nil {
+	if file, err := c.FormFile("archivo"); err == nil && file.Size > 0 {
 		if file.Size > 32<<20 {
 			utils.Fail(c, http.StatusBadRequest, "la evidencia excede 32MB", nil)
-			return
-		}
-		var act domain.RSUActividadCampo
-		if err := h.db.First(&act, "id_actividad = ?", idAct).Error; err != nil {
-			utils.Fail(c, http.StatusBadRequest, "la actividad indicada no existe", err.Error())
 			return
 		}
 		// Evidencia de la falta: proyectos/<id>/evidencias/.
@@ -83,7 +90,8 @@ func (h *JustificacionHandler) Create(c *gin.Context) {
 		}
 		sz := saved.Size
 		doc := &domain.RSUDocumento{
-			IDProyecto: act.IDProyecto, IDTipoDoc: 5, TamanoBytes: &sz,
+			IDProyecto: act.IDProyecto, IDTipoDoc: tipoDocIDPorNombre(h.db, "Justificación de Falta", 5),
+			TamanoBytes: &sz,
 			IDUsuarioSubida: uint(idEst), NombreArchivo: saved.Filename,
 			URLArchivo: saved.URL, HashArchivo: &saved.Hash,
 			Version: 1, Vigente: true,
@@ -155,7 +163,10 @@ func (h *JustificacionHandler) UpdateEstado(c *gin.Context) {
 	utils.Success(c, nil, "Justificación actualizada")
 }
 
+// normEstadoJust normaliza el estado del PATCH (espacios y mayúsculas) y
+// devuelve "" si no pertenece al ciclo de la justificación.
 func normEstadoJust(s string) string {
+	s = strings.ToUpper(strings.TrimSpace(s))
 	switch s {
 	case "PENDIENTE", "REVISADO", "APROBADO", "RECHAZADO", "OBSERVADO":
 		return s

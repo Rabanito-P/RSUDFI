@@ -44,6 +44,8 @@ type RSUAsistenciaBeneficiario struct {
 	ID             uint             `gorm:"primaryKey;column:id_asistencia" json:"id_asistencia"`
 	IDActividad    uint             `gorm:"column:id_actividad" json:"id_actividad"`
 	IDBeneficiario uint             `gorm:"column:id_beneficiario" json:"id_beneficiario"`
+	FirmaURL       *string          `gorm:"column:firma_url" json:"firma_url,omitempty"`
+	Observaciones  *string          `gorm:"column:observaciones" json:"observaciones,omitempty"`
 	Beneficiario   *RSUBeneficiario `gorm:"foreignKey:IDBeneficiario" json:"beneficiario,omitempty"`
 }
 

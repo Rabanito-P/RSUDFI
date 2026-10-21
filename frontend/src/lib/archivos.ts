@@ -3,7 +3,7 @@
 // (tamaño, extensión y contenido) — esto es la primera capa amable.
 
 export const MAX_PDF_MB = 32
-export const MAX_FOTO_MB = 5
+export const MAX_FOTO_MB = 2
 export const MAX_OFFICE_MB = 32
 
 type Regla = {

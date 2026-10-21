@@ -15,12 +15,12 @@ import (
 // ── Actividad Handler ────────────────────────────────────────
 
 type ActividadHandler struct {
-	repo     *repository.ActividadRepo
-	fotoRepo *gorm.DB
+	repo *repository.ActividadRepo
+	db   *gorm.DB
 }
 
 func NewActividadHandler(db *gorm.DB) *ActividadHandler {
-	return &ActividadHandler{repo: repository.NewActividadRepo(db), fotoRepo: db}
+	return &ActividadHandler{repo: repository.NewActividadRepo(db), db: db}
 }
 
 // Registrar actividad de campo (miembro del equipo)
@@ -41,6 +41,12 @@ func (h *ActividadHandler) Create(c *gin.Context) {
 	estado := req.Estado
 	if estado == "" {
 		estado = "PROGRAMADA"
+	}
+	// R33/R46: solo miembros activos del equipo, docente asesor o gestión
+	// registran actividades (una cuenta con módulo habilitado no basta).
+	if !puedeEditarEvidencias(h.db, c, req.IDProyecto) {
+		utils.Fail(c, 403, "no puedes registrar actividades en este proyecto: exige ser miembro activo, docente asesor o dirección RSU", nil)
+		return
 	}
 	act := &domain.RSUActividadCampo{
 		IDProyecto: req.IDProyecto, IDEntregable: req.IDEntregable,
@@ -97,6 +103,32 @@ func (h *ActividadHandler) ByProyecto(c *gin.Context) {
 	utils.Success(c, list, "OK")
 }
 
+// transicionesActividad especifica el ciclo de vida de una actividad de campo:
+// PROGRAMADA → EN_EJECUCION → EJECUTADA | SUSPENDIDA; SUSPENDIDA → EN_EJECUCION;
+// EJECUTADA es terminal. Probable en actividad_test.go.
+func transicionesActividad() map[string][]string {
+	return map[string][]string{
+		"PROGRAMADA":   {"EN_EJECUCION"},
+		"EN_EJECUCION": {"EJECUTADA", "SUSPENDIDA"},
+		"SUSPENDIDA":   {"EN_EJECUCION"},
+		"EJECUTADA":    {},
+	}
+}
+
+// puedeTransicionarActividad valida el mapa anterior. El PATCH al MISMO estado
+// es idempotente (el handler lo omite). Estados desconocidos nunca transicionan.
+func puedeTransicionarActividad(de, a string) bool {
+	if de == a {
+		return true
+	}
+	for _, permitido := range transicionesActividad()[de] {
+		if permitido == a {
+			return true
+		}
+	}
+	return false
+}
+
 // Cambiar estado de actividad
 // @Tags		Ejecución
 // @Accept		json
@@ -121,30 +153,14 @@ func (h *ActividadHandler) UpdateEstado(c *gin.Context) {
 		utils.Fail(c, 404, "No encontrada", nil)
 		return
 	}
-	// Validar transiciones de estado permitidas
-	// PROGRAMADA → EN_EJECUCION → EJECUTADA | SUSPENDIDA
-	// EN_EJECUCION → EJECUTADA | SUSPENDIDA
-	// SUSPENDIDA → EN_EJECUCION
-	// EJECUTADA terminal
-	validos := map[string][]string{
-		"PROGRAMADA":   {"EN_EJECUCION"},
-		"EN_EJECUCION": {"EJECUTADA", "SUSPENDIDA"},
-		"SUSPENDIDA":   {"EN_EJECUCION"},
-		"EJECUTADA":    {},
+	// R33/R46: el estado de la actividad del proyecto solo lo mueve el equipo.
+	if !puedeEditarEvidencias(h.db, c, act.IDProyecto) {
+		utils.Fail(c, 403, "no puedes actualizar la actividad: exige ser miembro activo, docente asesor o dirección RSU", nil)
+		return
 	}
-	if act.Estado != body.Estado {
-		permitidos := validos[act.Estado]
-		ok := false
-		for _, p := range permitidos {
-			if p == body.Estado {
-				ok = true
-				break
-			}
-		}
-		if !ok {
-			utils.Fail(c, 400, "transición de estado no permitida: "+act.Estado+" → "+body.Estado, nil)
-			return
-		}
+	if !puedeTransicionarActividad(act.Estado, body.Estado) {
+		utils.Fail(c, 400, "transición de estado no permitida: "+act.Estado+" → "+body.Estado, nil)
+		return
 	}
 	act.Estado = body.Estado
 	if err := h.repo.Update(act); err != nil {

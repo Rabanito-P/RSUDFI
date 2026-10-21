@@ -49,6 +49,7 @@ func Setup(db *gorm.DB) *gin.Engine {
 	justH := handler.NewJustificacionHandler(db)
 	modH := handler.NewModificacionHandler(db)
 	planH := handler.NewPlanificacionHandler(db)
+	asisH := handler.NewAsistenciaHandler(db)
 	// Nuevos módulos (V1.1): roles dinámicos, comité RSU, configuración, auditoría
 	prH := handler.NewProyectoRolHandler(db)
 	comiteH := handler.NewComiteRSUHandler(db)
@@ -168,6 +169,7 @@ func Setup(db *gorm.DB) *gin.Engine {
 		// puede aprobar en nombre de una autoridad.
 		api.POST("/proyectos/:id/transicion", verBandeja, middleware.RateLimit(20, time.Minute), projH.Transicion)
 		api.POST("/proyectos/:id/lider", verProyectos, projH.CambiarLider) // HU-060 cambio de líder
+		api.POST("/proyectos/:id/expulsar", verBandeja, projH.Expulsar)   // HU-070 expulsión por causales (DIR_RS_FACULTAD)
 		api.GET("/proyectos/:id/historial", verProyectos, projH.Historial)
 		// HU: estudiante ve su proyecto sea líder o miembro equipo; docente solo sus asesorados
 		api.GET("/estudiantes/:id/proyectos", verProyectos, projH.ListByEstudiante)
@@ -204,6 +206,9 @@ func Setup(db *gorm.DB) *gin.Engine {
 		api.POST("/actividades/fotos", verEvidencias, middleware.RateLimit(30, time.Minute), fotoH.Upload)
 		api.GET("/actividades/:id/fotos", verEvidencias, fotoH.ByActividad)
 		api.GET("/actividades/del-dia", verEvidencias, fotoH.DelDia)
+		// HU-013: asistencia real de beneficiarios (checks + firma escaneada).
+		api.POST("/actividades/:id/asistencia", verEvidencias, middleware.RateLimit(30, time.Minute), asisH.Create)
+		api.GET("/actividades/:id/asistencia", verEvidencias, asisH.ByActividad)
 
 		// monitoreo
 		api.POST("/monitoreos", verMonitoreo, monH.Create)

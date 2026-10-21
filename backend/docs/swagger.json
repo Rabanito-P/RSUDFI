@@ -1,4 +1,4 @@
-﻿{
+{
     "schemes": [
         "http"
     ],
@@ -63,6 +63,189 @@
                 }
             }
         },
+        "/api/v1/actividades/del-dia": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Actividades"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID del proyecto",
+                        "name": "id_proyecto",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Fecha YYYY-MM-DD (por defecto hoy)",
+                        "name": "fecha",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/actividades/planificacion": {
+            "post": {
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Actividades"
+                ],
+                "responses": {}
+            }
+        },
+        "/api/v1/actividades/planificacion/preview": {
+            "post": {
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Actividades"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID del proyecto",
+                        "name": "id_proyecto",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Excel de planificación (.xlsx)",
+                        "name": "archivo",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Actividades interpretadas",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/actividades/plantilla-planificacion": {
+            "get": {
+                "produces": [
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                ],
+                "tags": [
+                    "Actividades"
+                ],
+                "responses": {}
+            }
+        },
+        "/api/v1/actividades/{id}/asistencia": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ejecución"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID de la actividad de campo",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/undc-rsu_backend_internal_domain.RSUAsistenciaBeneficiario"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ejecución"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID de la actividad de campo",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "IDs repetidos de beneficiarios asistentes",
+                        "name": "beneficiarios",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Firma escaneada JPG/PNG (≤2MB)",
+                        "name": "firma",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Resumen: registradas/duplicadas",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Sin beneficiarios o no vinculados",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "No es miembro activo",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/actividades/{id}/estado": {
             "patch": {
                 "consumes": [
@@ -113,6 +296,45 @@
                             "type": "object",
                             "additionalProperties": true
                         }
+                    }
+                }
+            }
+        },
+        "/api/v1/archivos": {
+            "get": {
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "Archivos"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Key/URL del archivo registrado en BD",
+                        "name": "key",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Archivo",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "302": {
+                        "description": "Redirección (local)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "403": {
+                        "description": "Archivo no registrado"
+                    },
+                    "404": {
+                        "description": "No encontrado"
                     }
                 }
             }
@@ -260,12 +482,12 @@
                 ],
                 "parameters": [
                     {
-                        "description": "Cuerpo JSON",
+                        "description": "Credenciales",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object"
+                            "$ref": "#/definitions/undc-rsu_backend_internal_dto.LoginReq"
                         }
                     }
                 ],
@@ -273,8 +495,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/undc-rsu_backend_internal_dto.LoginResp"
                         }
                     },
                     "400": {
@@ -285,7 +506,7 @@
                         }
                     },
                     "401": {
-                        "description": "No autorizado",
+                        "description": "Credenciales inválidas",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -308,49 +529,6 @@
                 "responses": {
                     "200": {
                         "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Error de validación",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "No autorizado",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/auth/oauth/info": {
-            "get": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Error de validación",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1221,6 +1399,60 @@
                 }
             }
         },
+        "/api/v1/constancias": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Constancias"
+                ],
+                "parameters": [
+                    {
+                        "description": "Cuerpo JSON",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Creada",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Error de validación",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "No autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Ya existe solicitud pendiente",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/dashboard/kpis": {
             "get": {
                 "consumes": [
@@ -1249,6 +1481,50 @@
                     },
                     "401": {
                         "description": "No autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/dashboard/trazabilidad": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Seguimiento"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Máximo de registros (por defecto 10)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "No autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Error de servidor",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1330,6 +1606,42 @@
                     },
                     "401": {
                         "description": "No autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/docentes/asesores": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Personas"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID de escuela",
+                        "name": "escuela",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Texto a buscar",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Docentes aptos para asesorar",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1464,6 +1776,42 @@
                 }
             }
         },
+        "/api/v1/documentos/{id}/archivo": {
+            "get": {
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "Documentos"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID documento",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Archivo (B2)",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "302": {
+                        "description": "Redirección al archivo (local)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Documento no encontrado"
+                    }
+                }
+            }
+        },
         "/api/v1/encuestas/beneficiario": {
             "post": {
                 "consumes": [
@@ -1503,6 +1851,46 @@
                     },
                     "401": {
                         "description": "No autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/encuestas/docente": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Encuestas"
+                ],
+                "parameters": [
+                    {
+                        "description": "Cuerpo JSON",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Creado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Error de validación",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1888,6 +2276,51 @@
                 }
             }
         },
+        "/api/v1/estudiantes/{id}/constancias": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Constancias"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID estudiante",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "No autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/estudiantes/{id}/proyectos": {
             "get": {
                 "consumes": [
@@ -1918,6 +2351,41 @@
                     },
                     "400": {
                         "description": "Error de validación",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "No autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/estudiantes/{id}/solicitudes-union": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SolicitudesUnión"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID estudiante",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2146,6 +2614,66 @@
                     },
                     "401": {
                         "description": "No autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/formatos/drsu": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Formatos"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Catálogo DRSU de Fase 1",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/formatos/drsu/{codigo}": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Formatos"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Código del formato DRSU",
+                        "name": "codigo",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Formato",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Formato no encontrado",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -2518,6 +3046,26 @@
                 }
             }
         },
+        "/api/v1/plantillas/{archivo}": {
+            "get": {
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "Actividades"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nombre del archivo de plantilla",
+                        "name": "archivo",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
         "/api/v1/presupuesto/movimientos": {
             "post": {
                 "consumes": [
@@ -2642,6 +3190,24 @@
                             "type": "object",
                             "additionalProperties": true
                         }
+                    }
+                }
+            }
+        },
+        "/api/v1/proyectos/:id/participantes": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Asignaciones"
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Participante inscrito"
                     }
                 }
             }
@@ -2779,6 +3345,61 @@
                 }
             }
         },
+        "/api/v1/proyectos/{id}/activar": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proyectos"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID proyecto",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "ID del documento recibido de la DRSU",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Proyecto activado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Error de validación",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permisos",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/proyectos/{id}/actividades": {
             "get": {
                 "consumes": [
@@ -2869,6 +3490,60 @@
                 }
             }
         },
+        "/api/v1/proyectos/{id}/decision-asesor": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proyectos"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID proyecto",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Decisión y motivo",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/undc-rsu_backend_internal_service.DecisionAsesorReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Decisión registrada",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Error de validación",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permisos",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/proyectos/{id}/docentes": {
             "get": {
                 "consumes": [
@@ -2951,6 +3626,34 @@
                     },
                     "401": {
                         "description": "No autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/proyectos/{id}/duplicidad": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proyectos"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID proyecto",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Proyectos similares",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -3127,6 +3830,60 @@
                 }
             }
         },
+        "/api/v1/proyectos/{id}/enviar-asesor": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proyectos"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID proyecto",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Asesor y comentario",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/undc-rsu_backend_internal_service.EnviarAsesorReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Propuesta enviada al asesor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Error de validación",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permisos",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/proyectos/{id}/es-miembro/{estudianteId}": {
             "get": {
                 "consumes": [
@@ -3276,6 +4033,88 @@
                 }
             }
         },
+        "/api/v1/proyectos/{id}/evaluar-vencimiento": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proyectos"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID proyecto",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Resultado de la evaluación",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/proyectos/{id}/expulsar": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proyectos"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID proyecto",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Causal (FALTAS/TARDANZAS/CONDUCTA/OTRO) y motivo",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/undc-rsu_backend_internal_dto.ExpulsionReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Expulsión registrada",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Causal/motivo/objetivo inválidos o cupo mínimo",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Solo DIR_RS_FACULTAD",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/proyectos/{id}/historial": {
             "get": {
                 "consumes": [
@@ -3366,6 +4205,49 @@
                 }
             }
         },
+        "/api/v1/proyectos/{id}/lider": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proyectos"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID proyecto",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Nuevo líder y motivo",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/undc-rsu_backend_internal_dto.CambioLiderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permisos para transferir el liderazgo"
+                    }
+                }
+            }
+        },
         "/api/v1/proyectos/{id}/monitoreos": {
             "get": {
                 "consumes": [
@@ -3411,6 +4293,82 @@
                 }
             }
         },
+        "/api/v1/proyectos/{id}/oficio-elevacion": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proyectos"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID proyecto",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Oficio generado y registrado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Error de validación",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permisos",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/proyectos/{id}/oficio-elevacion/descargar": {
+            "get": {
+                "produces": [
+                    "application/pdf"
+                ],
+                "tags": [
+                    "Proyectos"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID proyecto",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PDF del oficio",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "404": {
+                        "description": "Oficio no encontrado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/proyectos/{id}/presupuesto": {
             "get": {
                 "consumes": [
@@ -3448,6 +4406,79 @@
                     },
                     "401": {
                         "description": "No autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/proyectos/{id}/presupuesto-disponible": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proyectos"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID proyecto",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Disponibilidad del fondo RSU",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/proyectos/{id}/reactivar": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proyectos"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID proyecto",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Proyecto reactivado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Sin cupo libre del asesor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Sin permisos",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -3605,6 +4636,99 @@
                 }
             }
         },
+        "/api/v1/proyectos/{id}/solicitudes-union": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SolicitudesUnión"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID proyecto",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "PENDIENTE, ACEPTADA, RECHAZADA, CANCELADA",
+                        "name": "estado",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "No autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SolicitudesUnión"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID proyecto PEP",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Cuerpo JSON",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Error de validación",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "No autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/proyectos/{id}/transicion": {
             "post": {
                 "consumes": [
@@ -3657,6 +4781,383 @@
                         }
                     }
                 }
+            }
+        },
+        "/api/v1/public/flujo-resumen": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Seguimiento"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Error de servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/registro/estudiante": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Perfil creado"
+                    },
+                    "400": {
+                        "description": "Datos inválidos"
+                    },
+                    "409": {
+                        "description": "El correo ya está registrado"
+                    }
+                }
+            }
+        },
+        "/api/v1/solicitudes-union/{id}": {
+            "delete": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SolicitudesUnión"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID solicitud",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Cuerpo JSON",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Error de validación",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "No autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/solicitudes-union/{id}/aceptar": {
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SolicitudesUnión"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID solicitud",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Cuerpo JSON",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Error de validación",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "No autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/solicitudes-union/{id}/rechazar": {
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SolicitudesUnión"
+                ],
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID solicitud",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Cuerpo JSON",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Error de validación",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "No autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/storage/b2": {
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Archivos"
+                ],
+                "parameters": [
+                    {
+                        "description": "Credenciales B2 (vacío = mantener la actual)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Credenciales inválidas"
+                    },
+                    "403": {
+                        "description": "Solo administrador"
+                    }
+                }
+            }
+        },
+        "/api/v1/storage/estado": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Archivos"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/usuarios": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Usuarios"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "No autorizado"
+                    },
+                    "403": {
+                        "description": "Solo administradores"
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Usuarios"
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Creado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/usuarios/modulos-disponibles": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Usuarios"
+                ],
+                "responses": {}
+            }
+        },
+        "/api/v1/usuarios/roles-disponibles": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Usuarios"
+                ],
+                "responses": {}
+            }
+        },
+        "/api/v1/usuarios/{id}": {
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Usuarios"
+                ],
+                "responses": {}
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Usuarios"
+                ],
+                "responses": {}
+            }
+        },
+        "/api/v1/usuarios/{id}/permisos": {
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Usuarios"
+                ],
+                "responses": {}
             }
         },
         "/api/v1/usuarios/{tipo}/{id}/roles": {
@@ -3744,6 +5245,217 @@
                             "additionalProperties": true
                         }
                     }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "undc-rsu_backend_internal_domain.RSUAsistenciaBeneficiario": {
+            "type": "object",
+            "properties": {
+                "beneficiario": {
+                    "$ref": "#/definitions/undc-rsu_backend_internal_domain.RSUBeneficiario"
+                },
+                "firma_url": {
+                    "type": "string"
+                },
+                "id_actividad": {
+                    "type": "integer"
+                },
+                "id_asistencia": {
+                    "type": "integer"
+                },
+                "id_beneficiario": {
+                    "type": "integer"
+                },
+                "observaciones": {
+                    "type": "string"
+                }
+            }
+        },
+        "undc-rsu_backend_internal_domain.RSUBeneficiario": {
+            "type": "object",
+            "properties": {
+                "activo": {
+                    "type": "boolean"
+                },
+                "apellidos": {
+                    "type": "string"
+                },
+                "celular": {
+                    "type": "string"
+                },
+                "condicion_vulnerabilidad": {
+                    "type": "string"
+                },
+                "correo_electronico": {
+                    "type": "string"
+                },
+                "departamento": {
+                    "type": "string"
+                },
+                "direccion": {
+                    "type": "string"
+                },
+                "distrito": {
+                    "type": "string"
+                },
+                "dni": {
+                    "type": "string"
+                },
+                "fecha_registro": {
+                    "type": "string"
+                },
+                "id_beneficiario": {
+                    "type": "integer"
+                },
+                "nombres": {
+                    "type": "string"
+                },
+                "provincia": {
+                    "type": "string"
+                },
+                "razon_social": {
+                    "type": "string"
+                },
+                "ruc": {
+                    "type": "string"
+                },
+                "sexo": {
+                    "type": "string"
+                },
+                "tipo_beneficiario": {
+                    "type": "string"
+                }
+            }
+        },
+        "undc-rsu_backend_internal_dto.CambioLiderReq": {
+            "type": "object",
+            "required": [
+                "id_nuevo_lider",
+                "motivo"
+            ],
+            "properties": {
+                "id_nuevo_lider": {
+                    "type": "integer"
+                },
+                "motivo": {
+                    "type": "string",
+                    "maxLength": 500
+                }
+            }
+        },
+        "undc-rsu_backend_internal_dto.ExpulsionReq": {
+            "type": "object",
+            "required": [
+                "causal",
+                "id_estudiante",
+                "motivo"
+            ],
+            "properties": {
+                "causal": {
+                    "type": "string",
+                    "enum": [
+                        "FALTAS",
+                        "TARDANZAS",
+                        "CONDUCTA",
+                        "OTRO"
+                    ]
+                },
+                "id_estudiante": {
+                    "type": "integer"
+                },
+                "motivo": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 10
+                }
+            }
+        },
+        "undc-rsu_backend_internal_dto.LoginReq": {
+            "type": "object",
+            "required": [
+                "correo",
+                "password"
+            ],
+            "properties": {
+                "correo": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "undc-rsu_backend_internal_dto.LoginResp": {
+            "type": "object",
+            "properties": {
+                "correo": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "nombre": {
+                    "type": "string"
+                },
+                "persona_id": {
+                    "type": "integer"
+                },
+                "rol": {
+                    "type": "string"
+                },
+                "rol_actor": {
+                    "type": "string"
+                },
+                "rol_actor_id": {
+                    "type": "integer"
+                },
+                "tipo_actor": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "undc-rsu_backend_internal_service.DecisionAsesorReq": {
+            "type": "object",
+            "required": [
+                "decision",
+                "id_proyecto"
+            ],
+            "properties": {
+                "decision": {
+                    "type": "string",
+                    "enum": [
+                        "ACEPTAR",
+                        "RECHAZAR"
+                    ]
+                },
+                "id_proyecto": {
+                    "type": "integer"
+                },
+                "motivo": {
+                    "description": "Rechazar exige motivo (regla R26 vigente, conservada).",
+                    "type": "string"
+                }
+            }
+        },
+        "undc-rsu_backend_internal_service.EnviarAsesorReq": {
+            "type": "object",
+            "required": [
+                "id_proyecto"
+            ],
+            "properties": {
+                "comentario": {
+                    "type": "string"
+                },
+                "id_docente_asesor": {
+                    "type": "integer"
+                },
+                "id_proyecto": {
+                    "type": "integer"
                 }
             }
         }

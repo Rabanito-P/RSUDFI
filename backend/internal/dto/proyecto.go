@@ -61,3 +61,12 @@ type CambioLiderReq struct {
 	IDNuevoLider uint   `json:"id_nuevo_lider" binding:"required"`
 	Motivo       string `json:"motivo" binding:"required,max=500"`
 }
+
+// ExpulsionReq (HU-070): la Dirección RS de Facultad retira a un integrante
+// por causal observada en la ejecución (faltas, tardanzas, conducta). El
+// motivo libre es obligatorio (R26) y se notifica al equipo.
+type ExpulsionReq struct {
+	IDEstudiante uint   `json:"id_estudiante" binding:"required"`
+	Causal       string `json:"causal" binding:"required,oneof=FALTAS TARDANZAS CONDUCTA OTRO"`
+	Motivo       string `json:"motivo" binding:"required,min=10,max=500"`
+}

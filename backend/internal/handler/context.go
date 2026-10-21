@@ -120,6 +120,22 @@ func puedeVerProyecto(db *gorm.DB, c *gin.Context, idProyecto uint) bool {
 	return false
 }
 
+// tipoDocIDPorNombre resuelve el id de RSU_Tipo_Documento por su nombre en el
+// catálogo. Los inserts históricos usaban ids hardcodeados (5 = Acta de
+// Compromiso), con lo que evidencias de faltas o sustentos de modificación
+// quedaban mal etiquetados; si el catálogo no trae el nombre, cae al fallback
+// por compatibilidad.
+func tipoDocIDPorNombre(db *gorm.DB, nombre string, fallback uint) uint {
+	var id int64
+	db.Model(&domain.RSUTipoDocumento{}).
+		Select("id_tipo_doc").Where("nombre = ?", nombre).
+		Order("id_tipo_doc").Limit(1).Scan(&id)
+	if id > 0 {
+		return uint(id)
+	}
+	return fallback
+}
+
 // isPDF valida la extensión del archivo recibido.
 func isPDF(name string) bool {
 	return len(name) > 4 && name[len(name)-4:] == ".pdf"

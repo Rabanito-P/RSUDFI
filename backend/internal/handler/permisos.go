@@ -61,6 +61,43 @@ func puedeVerificarEntregable(db *gorm.DB, c *gin.Context, idProyecto uint) bool
 	return n > 0
 }
 
+// puedeEditarEvidencias (R33/R46, fase de ejecución): escribir actividades de
+// campo, fotos o asistencia exige ser miembro ACTIVO/INSCRITO del equipo, el
+// docente asesor del proyecto (o un docente con rol dinámico RSU_Proyecto_Rol)
+// o un rol de gestión. Es la capa 2 de autorización: el módulo habilitado
+// (capa 1) por sí solo no basta para escribir en proyectos ajenos.
+func puedeEditarEvidencias(db *gorm.DB, c *gin.Context, idProyecto uint) bool {
+	if idProyecto == 0 {
+		return false
+	}
+	if esGestion(c) {
+		return true
+	}
+	u := usuarioDeToken(db, c)
+	if u == nil || !u.Activo {
+		return false
+	}
+	persona := personaIDFromToken(db, c)
+	switch u.TipoUsuario {
+	case "DOCENTE":
+		return puedeVerificarEntregable(db, c, idProyecto)
+	case "ESTUDIANTE":
+		var n int64
+		// Líder del proyecto.
+		db.Model(&domain.RSUProyecto{}).
+			Where("id_proyecto = ? AND id_estudiante_lider = ?", idProyecto, persona).Count(&n)
+		if n > 0 {
+			return true
+		}
+		// Participante inscrito o activo (un EXPULSADO ya no registra).
+		db.Model(&domain.RSUParticipanteEstudiante{}).
+			Where(`id_proyecto = ? AND id_estudiante = ? AND estado_participacion IN ('INSCRITO','ACTIVO')`,
+				idProyecto, persona).Count(&n)
+		return n > 0
+	}
+	return false
+}
+
 // uintPtrU devuelve un *uint o nil cuando el valor es 0, para no persistir
 // un id de persona inexistente en lugar de NULL.
 func uintPtrU(n int) *uint {

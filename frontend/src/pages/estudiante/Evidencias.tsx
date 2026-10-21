@@ -13,8 +13,8 @@ import {
   CheckCircle2, X, Timer, Play, Square, MapPin, Users, CalendarDays,
 } from 'lucide-react'
 
-const MAX_FOTOS = 5
-const MAX_MB = 5
+const MAX_FOTOS = 7
+const MAX_MB = 2
 
 // Capturas que exige una actividad: inicio, 3 en el intervalo y cierre.
 // Si la actividad dura pocos minutos se permiten igual (el equipo decide).

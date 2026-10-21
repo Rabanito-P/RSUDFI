@@ -56,7 +56,14 @@ func (h *PresupuestoHandler) CreateMov(c *gin.Context) {
 		utils.Fail(c, 400, "Error", err.Error())
 		return
 	}
-	utils.Created(c, m, "Movimiento registrado")
+	// HU-016: el movimiento queda registrado; recalcula el monto ejecutado
+	// (suma de EJECUCION). Si el recálculo falla el movimiento ya está en BD:
+	// avisa sin deshacer.
+	if err := h.repo.RecalcularMontoEjecutado(req.IDProyecto); err != nil {
+		utils.Created(c, m, "Movimiento registrado (monto_ejecutado pendiente de recalcular)")
+		return
+	}
+	utils.Created(c, m, "Movimiento registrado · monto_ejecutado actualizado")
 }
 
 // Movimientos de presupuesto del proyecto

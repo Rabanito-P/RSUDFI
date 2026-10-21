@@ -74,6 +74,14 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
   const [liderBusy,setLiderBusy]=useState(false)
   const [liderMsg,setLiderMsg]=useState<Msg>(null)
 
+  // ── HU-070: expulsión por causales — solo Dirección RS de Facultad ──
+  const [expOpen,setExpOpen]=useState(false)
+  const [expSel,setExpSel]=useState('')
+  const [expCausal,setExpCausal]=useState('')
+  const [expMotivo,setExpMotivo]=useState('')
+  const [expBusy,setExpBusy]=useState(false)
+  const [expMsg,setExpMsg]=useState<Msg>(null)
+
   const [modal,setModal]=useState<''|'edit'|'monitoreo'|'transicion'|'entregable'|'vincular'|'fotos'>('')
   const [modalMsg,setModalMsg]=useState<Msg>(null)
   const [modalBusy,setModalBusy]=useState(false)
@@ -206,6 +214,13 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
     (esLiderActual || ['DIR_RS_FACULTAD','ADMIN','DIRECTIVO','DIR_ESCUELA'].includes(user?.rol||''))
   // Candidatos: miembros del equipo (nunca el líder actual).
   const candidatosLider = miembros.filter((m:any)=> m.id_estudiante !== p.id_estudiante_lider)
+  // HU-070: la expulsión la autoriza la Dirección RS de Facultad (ADMIN por soporte).
+  const puedeExpulsar = ['DIR_RS_FACULTAD','ADMIN'].includes(user?.rol||'') && !ESTADOS_FINALES.includes(codigo)
+  // Expulsables: participantes activos/inscritos; el líder no se expulsa — se
+  // transfiere el liderazgo primero (HU-060).
+  const expulsables = miembros.filter((m:any)=>
+    m.id_estudiante !== p.id_estudiante_lider &&
+    ['INSCRITO','ACTIVO'].includes((m.estado_participacion||'').toUpperCase()))
   const estadoInfo = estadosBpmn.find((e: any) => e.codigo === codigo)
 
   const totalEnt = entregables.length
@@ -233,6 +248,22 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
     }catch(ex:any){
       setLiderMsg({type:'err', text: mensajeError(ex, 'No se pudo transferir el liderazgo')})
     }finally{ setLiderBusy(false) }
+  }
+
+  // HU-070: expulsar a un integrante con causal y motivo. El backend valida el
+  // rol del token, el cupo del equipo y notifica a docente, expulsado y líder.
+  const expulsarMiembro = async ()=>{
+    if(!expSel){ setExpMsg({type:'err', text:'Elige al integrante que será expulsado.'}); return }
+    if(!['FALTAS','TARDANZAS','CONDUCTA','OTRO'].includes(expCausal)){ setExpMsg({type:'err', text:'Selecciona la causal de la expulsión.'}); return }
+    if(expMotivo.trim().length < 10){ setExpMsg({type:'err', text:'Describe el hecho observado (mínimo 10 caracteres).'}); return }
+    setExpBusy(true); setExpMsg(null)
+    try{
+      await api.post(`/api/v1/proyectos/${id}/expulsar`, { id_estudiante: Number(expSel), causal: expCausal, motivo: expMotivo.trim() })
+      setExpMsg({type:'ok', text:'Expulsión registrada. Se notificó al estudiante, al docente y al líder. Actualizando...'})
+      setTimeout(()=> window.location.reload(), 2200)
+    }catch(ex:any){
+      setExpMsg({type:'err', text: mensajeError(ex, 'No se pudo registrar la expulsión')})
+    }finally{ setExpBusy(false) }
   }
   const reloadBeneficiarios = async ()=>{
     try{ const b:any = await api.get(`/api/v1/beneficiarios`); setBeneficiarios(asArray(b.data)); setBeneficiariosError('') }
@@ -502,8 +533,8 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
     setModalMsg(null)
     if(!fotosForm.id_actividad){ setModalMsg({type:'err', text:'Selecciona la actividad'}); return }
     if(!fotosForm.archivos.length){ setModalMsg({type:'err', text:'Selecciona al menos una foto (JPG/PNG)'}); return }
-    // Validación cliente del lote: JPG/PNG, 5MB c/u, máximo 5 (R12/R13).
-    const errLote = validarLote(fotosForm.archivos, 'foto', 5)
+    // Validación cliente del lote: JPG/PNG, 2MB c/u, máximo 7 (R12/R13).
+    const errLote = validarLote(fotosForm.archivos, 'foto', 7)
     if(errLote){ setModalMsg({type:'err', text: errLote}); return }
     setModalBusy(true)
     try{
@@ -695,6 +726,15 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
                   Transferir liderazgo
                 </Button>
                 <span className="text-xs text-slate-400">Decide el equipo o la Dirección RSU de Facultad (HU-060). Se notifica por correo a los dos líderes.</span>
+              </div>
+            )}
+            {puedeExpulsar && (
+              <div className="mt-3 flex items-center gap-3 flex-wrap">
+                <Button variant="outline" size="sm" className="text-red-700 border-red-200 hover:bg-red-50" leftIcon={<Gavel size={14}/>}
+                  onClick={()=>{ setExpSel(''); setExpCausal(''); setExpMotivo(''); setExpMsg(null); setExpOpen(true) }}>
+                  Expulsar integrante
+                </Button>
+                <span className="text-xs text-slate-400">HU-070: solo Dirección RS de Facultad. Requiere causal y motivo; el líder se sustituye con HU-060.</span>
               </div>
             )}
             <div className="mt-4 overflow-x-auto">
@@ -932,7 +972,7 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
 
           <div className="bg-white rounded-2xl border border-slate-200 p-6">
             <h3 className="font-bold text-sm">Capturar Evidencia</h3>
-            <p className="text-xs text-slate-500 mt-1">Sube hasta 5 fotos JPG/PNG por actividad (máx 5MB c/u). Las evidencias quedan visibles para el docente y directores.</p>
+            <p className="text-xs text-slate-500 mt-1">Sube hasta 7 fotos JPG/PNG por actividad (máx 2MB c/u). Las evidencias quedan visibles para el docente y directores.</p>
             <div className="mt-3 border-2 border-dashed border-slate-200 rounded-xl p-6 text-center">
               <div className="text-sm text-slate-500">Adjunta las fotos de cada actividad registrada</div>
               <Button size="sm" variant="outline" className="mt-2" onClick={()=>openModal('fotos')} disabled={actividades.length===0} leftIcon={<Camera size={14}/>}>Seleccionar fotos</Button>
@@ -1057,6 +1097,53 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
               <Button type="button" variant="outline" onClick={()=>setLiderOpen(false)} disabled={liderBusy}>Cancelar</Button>
               <Button onClick={transferirLider} disabled={liderBusy} leftIcon={<Crown size={14}/>}>
                 {liderBusy?'Transfiriendo...':'Transferir y notificar'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* ── HU-070: expulsión por causales (Dirección RS de Facultad) ── */}
+      <Modal open={expOpen} busy={expBusy} onClose={()=>setExpOpen(false)}
+             title="Expulsar integrante" desc={`Retiro disciplinario documentado para ${p?.codigo_proyecto||'el proyecto'}. Se notifica al estudiante, al docente y al líder.`}>
+        {expMsg && <Alert variant={expMsg.type==='ok'?'success':'error'} className="text-xs mb-3">{expMsg.text}</Alert>}
+        {expulsables.length===0 ? (
+          <Alert variant="warning">No hay integrantes expulsables: el líder se retira con cambio de liderazgo (HU-060) y los inscritos/activos aparecen aquí.</Alert>
+        ) : (
+          <div className="space-y-3">
+            <div>
+              <Label required>Integrante</Label>
+              <Select value={expSel} onChange={e=>setExpSel(e.target.value)}>
+                <option value="">-- elegir integrante --</option>
+                {expulsables.map((m:any)=>(
+                  <option key={m.id_estudiante} value={m.id_estudiante}>
+                    {m.estudiante ? `${m.estudiante.nombres} ${m.estudiante.apellidos}` : `#${m.id_estudiante}`}
+                    {m.estudiante?.codigo_estudiante ? ` — ${m.estudiante.codigo_estudiante}` : ''}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <Label required>Causal de la expulsión</Label>
+              <Select value={expCausal} onChange={e=>setExpCausal(e.target.value)}>
+                <option value="">-- elegir causal --</option>
+                <option value="FALTAS">FALTAS — inasistencias sin justificar</option>
+                <option value="TARDANZAS">TARDANZAS — llegadas tarde reiteradas</option>
+                <option value="CONDUCTA">CONDUCTA — indisciplina o conducta inapropiada</option>
+                <option value="OTRO">OTRO — otro hecho observado</option>
+              </Select>
+            </div>
+            <div>
+              <Label required>Motivo del retiro</Label>
+              <Textarea rows={3} value={expMotivo} maxLength={500}
+                        onChange={e=>setExpMotivo(e.target.value)}
+                        placeholder="Ej. Acumula 3 faltas injustificadas en actividades del 02, 09 y 16 de octubre..."/>
+              <div className="text-xs text-slate-400 text-right">{expMotivo.trim().length}/500</div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={()=>setExpOpen(false)} disabled={expBusy}>Cancelar</Button>
+              <Button onClick={expulsarMiembro} disabled={expBusy} className="bg-red-600 hover:bg-red-700" leftIcon={<Gavel size={14}/>}>
+                {expBusy?'Procesando...':'Expulsar y notificar'}
               </Button>
             </div>
           </div>
@@ -1198,7 +1285,7 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
           </div>
           <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center">
             <Camera className="mx-auto text-slate-400" size={22}/>
-            <div className="text-sm font-semibold mt-1">JPG / PNG (máx 20MB c/u)</div>
+            <div className="text-sm font-semibold mt-1">JPG / PNG (máx 2MB c/u, hasta 7 por actividad)</div>
             <input type="file" accept=".jpg,.jpeg,.png" multiple onChange={e=>setFotosForm({...fotosForm, archivos: Array.from(e.target.files||[])})} className="mt-2 text-xs w-full"/>
             {fotosForm.archivos.length>0 && <div className="text-xs text-slate-500 mt-1">{fotosForm.archivos.length} archivo(s): {fotosForm.archivos.map(f=>f.name).join(', ')}</div>}
           </div>

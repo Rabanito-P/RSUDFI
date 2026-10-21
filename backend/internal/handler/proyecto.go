@@ -355,6 +355,39 @@ func (h *ProyectoHandler) CambiarLider(c *gin.Context) {
 	utils.Success(c, updated, "Liderazgo transferido; se notificó al líder saliente y al nuevo")
 }
 
+// Expulsar retira del equipo a un integrante con causal y motivo (HU-070).
+// Solo lo autoriza la Dirección RS de Facultad (y el Administrador por soporte);
+// el registro pasa a EXPULSADO, se notifica al equipo y el flujo BPMN no cambia:
+// el retiro no sustituye al cambio de líder (HU-060).
+// @Tags		Proyectos
+// @Accept		json
+// @Produce	json
+// @Param		id path int true "ID proyecto"
+// @Param		body body dto.ExpulsionReq true "Causal (FALTAS/TARDANZAS/CONDUCTA/OTRO) y motivo"
+// @Success	200 {object} map[string]any "Expulsión registrada"
+// @Failure	400 {object} map[string]any "Causal/motivo/objetivo inválidos o cupo mínimo"
+// @Failure	403 {object} map[string]any "Solo DIR_RS_FACULTAD"
+// @Router		/api/v1/proyectos/{id}/expulsar [post]
+func (h *ProyectoHandler) Expulsar(c *gin.Context) {
+	rol := c.GetString("rol_actor")
+	if rol != "DIR_RS_FACULTAD" && rol != "ADMIN" {
+		utils.Fail(c, 403, "solo la Dirección RS de Facultad puede expulsar integrantes", nil)
+		return
+	}
+	id, _ := strconv.Atoi(c.Param("id"))
+	var req dto.ExpulsionReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ValidationFail(c, err.Error())
+		return
+	}
+	part, err := h.svc.ExpulsarEstudiante(uint(id), req)
+	if err != nil {
+		utils.Fail(c, 400, err.Error(), nil)
+		return
+	}
+	utils.Success(c, part, "Integrante expulsado; se notificó al equipo y al docente")
+}
+
 // Trazabilidad del flujo de aprobación del proyecto
 // @Tags		Proyectos
 // @Accept		json

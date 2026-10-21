@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -60,7 +61,8 @@ func (h *ModificacionHandler) Create(c *gin.Context) {
 	}
 	{
 		doc := &domain.RSUDocumento{
-			IDProyecto: uint(idProj), IDTipoDoc: 5, TamanoBytes: intPtr(saved.Size),
+			IDProyecto: uint(idProj), IDTipoDoc: tipoDocIDPorNombre(h.db, "Informe Inicial", 5),
+			TamanoBytes: intPtr(saved.Size),
 			IDUsuarioSubida: uint(idUser), NombreArchivo: saved.Filename,
 			URLArchivo: saved.URL, HashArchivo: &saved.Hash,
 			Version: 1, Vigente: true,
@@ -123,7 +125,10 @@ func (h *ModificacionHandler) Update(c *gin.Context) {
 	utils.Success(c, nil, "Modificación actualizada")
 }
 
+// normEstadoMod normaliza el estado del PATCH de modification (espacios y
+// mayúsculas) y devuelve "" si no pertenece al ciclo de la solicitud.
 func normEstadoMod(s string) string {
+	s = strings.ToUpper(strings.TrimSpace(s))
 	switch s {
 	case "PENDIENTE", "REVISADO", "APROBADO", "OBSERVADO", "RECHAZADO":
 		return s

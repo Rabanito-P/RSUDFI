@@ -30,19 +30,26 @@ func (h *FotoHandler) Upload(c *gin.Context) {
 		utils.Fail(c, 404, "Actividad no encontrada", nil)
 		return
 	}
+	// R33/R46: la evidencia la captura el equipo que ejecuta (miembros activos,
+	// docente asesor o gestión); el módulo habilitado por sí solo no basta.
+	if !puedeEditarEvidencias(h.db, c, act.IDProyecto) {
+		utils.Fail(c, 403, "no puedes subir evidencias de esta actividad: exige ser miembro activo, docente asesor o dirección RSU", nil)
+		return
+	}
 	file, err := c.FormFile("archivo")
 	if err != nil {
 		utils.Fail(c, 400, "archivo requerido", err.Error())
 		return
 	}
-	// R12: máximo 5 fotos por actividad (una por etapa del cronograma).
+	// R12: máximo 7 fotos por actividad (cubre todas las etapas del cronómetro
+	// INICIO/SEGUIMIENTO_n/FIN con margen para repetir capturas borrosas).
 	var nFotos int64
 	h.db.Model(&domain.RSUActividadFoto{}).Where("id_actividad = ?", idAct).Count(&nFotos)
-	if nFotos >= 5 {
-		utils.Fail(c, 409, "la actividad ya tiene 5 fotos (máximo por actividad, R12)", nil)
+	if nFotos >= 7 {
+		utils.Fail(c, 409, "la actividad ya tiene 7 fotos (máximo por actividad, R12)", nil)
 		return
 	}
-	// Validación robusta: 5MB (R13), jpg/jpeg/png con contenido verificado.
+	// Validación robusta: 2MB (R13), jpg/jpeg/png con contenido verificado.
 	// Carpeta por proyecto: proyectos/<id>/evidencias/.
 	saved, err := storage.GuardarSeguro(file, storage.KindImagen, storage.PrefijoProyecto(act.IDProyecto)+"/evidencias")
 	if err != nil {

@@ -1,0 +1,354 @@
+================================================================================
+UNIVERSIDAD NACIONAL DE CAÑETE (UNDC)
+FACULTAD DE INGENIERÍA - ESCUELA PROFESIONAL DE INGENIERÍA DE SISTEMAS
+SISTEMA DE GESTIÓN INTERNO DE RESPONSABILIDAD SOCIAL UNIVERSITARIA ("MINI-RSU")
+--------------------------------------------------------------------------------
+ESPECIFICACIÓN TÉCNICA: ÉPICA 2 — FASE DE EJECUCIÓN (HU-010..HU-018)
+                        Y SALIDA A CIERRE (HU-019..HU-021)
+VERSIÓN 1.0 — Reemplaza la V0.4. Formato de historias de usuario (HU)
+              alineado a la implementación real (routes, tablas, estados BPMN)
+================================================================================
+
+## 1. MARCO NORMATIVO Y PRINCIPIOS DE LA FASE DE EJECUCIÓN
+
+- Ley Universitaria N° 30220:
+  * Art. 124 y 125: Gestión ética del impacto universitario y presupuesto del 2% RSU.
+  * Art. 130: Servicio Social Universitario (SSU) obligatorio; requisito
+    indispensable para el Grado Académico de Bachiller.
+- Reglamento de RSU de la UNDC (Res. CO N° 299-2026-UNDC/CO):
+  * 60 horas efectivas mínimas para SSU.
+  * Hasta 3 horas semanales de carga no lectiva RSU para docentes (se acreditan
+    por revisar/observar/aprobar avances en plataforma — R02, Art.79/86).
+- Diferencia de validez académica por modalidad:
+  * SSU: SÍ vale para el Bachiller.
+  * PEP: NO vale para el Bachiller (solo constancia de proyección; se cierra
+    con Resolución VRA).
+
+## 2. ACTIVACIÓN DE LA FASE (entrada BPMN)
+
+El proyecto entra a ejecución por la transición:
+    REGISTRADO_OFICIAL → EN_EJECUCION   (rol actor: DIR_RS_FACULTAD)
+Al activarse el sistema desbloquea: cronograma/planificación, actividades de
+campo, fotos con GPS, asistencia, justificaciones, movimientos de presupuesto
+y monitoreo. Condiciones previas al arranque:
+- `Acta de Compromiso` firmada subida (tipo documento etapa EJECUCION, obligatorio).
+- Equipo activo: líder ESTUDIANTE_PROP + miembros ESTUDIANTE_EJEC + docente
+  DOCENTE_RESP con carga no lectiva asignada (HU-008, fase de aprobación).
+
+## 3. ÉPICA 2: EJECUCIÓN (HU-010..HU-018)
+
+### HU-010 — Coordinar cronograma de campo (planificación desde plantilla Excel)
+| Actor | DOCENTE_RESP / ESTUDIANTE_PROP y miembros con módulo `evidencias` |
+| Pantalla | `ProyectoDetalle → Evidencias → Planificación` |
+| Ruta | `GET /actividades/plantilla-planificacion` · `POST /actividades/planificacion/preview` (20/min) · `POST /actividades/planificacion` (10/min) |
+| Tabla | `RSU_Actividad_Campo` |
+
+**CA:**
+- El docente/el líder descarga la plantilla oficial, la llena (fase, fecha,
+  actividad, horario, lugar, duración en minutos) y la sube.
+- `preview` interpreta el Excel y muestra las actividades leídas ANTES de
+  guardar; `guardar` crea las actividades como `PROGRAMADA`.
+- No duplica: si ya existe una actividad con mismo nombre + fecha, la omite.
+- Estructura por fases: F1 Diagnóstico e Inducción (10-15%), F2 Talleres y
+  Ejecución (75-80%), F3 Evaluación y Cierre (10%). Carga sugerida 4-8 h
+  semanales por alumno; meta 60 h efectivas (SSU).
+
+### HU-011 — Registrar actividad de campo (cualquier miembro)
+| Actor | ESTUDIANTE_EJEC / ESTUDIANTE_PROP / DOCENTE_RESP (miembro ACTIVO, módulo `evidencias`) |
+| Pantalla | `Registro de Evidencias → Nueva Actividad` |
+| Ruta | `POST /actividades` · `GET /proyectos/:id/actividades` · `GET /actividades/del-dia?id_proyecto=&fecha=` · `PATCH /actividades/:id/estado` |
+| Tabla | `RSU_Actividad_Campo` (+ vincula `RSU_Entregable.id_entregable`) |
+
+**CA:**
+- Fecha de ejecución NO futura (se registra lo realizado, no lo por venir).
+- Si envía `hora_inicio` y `hora_fin`, exige fin > inicio; dura `minutos`.
+- Descripción y lugar; `nro_beneficiarios` registrado en campo.
+- Estados de la actividad (transiciones validadas en backend):
+  `PROGRAMADA → EN_EJECUCION → EJECUTADA | SUSPENDIDA`; `SUSPENDIDA → EN_EJECUCION`;
+  `EJECUTADA` es terminal.
+- Pantalla "Actividades del día": lista por fecha con horario/duración leídos
+  del Excel, `total_fotos` y `etapas_capturadas` por actividad.
+
+### HU-012 — Subir fotos con geolocalización (GPS HTML5)
+| Actor | Cualquier miembro del equipo |
+| Pantalla | `Modal: Subir Fotografías` (con cronómetro de sesión en pantalla) |
+| Ruta | `POST /actividades/fotos` (rate limit 30/min) · `GET /actividades/:id/fotos` |
+| Tabla | `RSU_Actividad_Foto` |
+
+**CA:**
+- Solo JPG/JPEG/PNG ≤ 2 MB (R13); máximo 7 fotos por actividad (R12).
+- Etapa de captura obligatoria tomada del cronómetro: `INICIO`,
+  `SEGUIMIENTO_n`, `FIN`; registra `minutos_transcurridos` desde el inicio.
+- Previsualización + drag&drop en el frontend antes de enviar.
+- Captura web directa: el navegador pide la API de geolocalización HTML5
+  (móvil o PC) y adjunta latitud/longitud en tiempo real.
+- Mecanismo de excepción por fallo de GPS (zonas rurales de Cañete): botón
+  `[Reportar Falla de Ubicación / GPS]` → el estudiante redacta la incidencia y
+  adjunta OBLIGATORIAMENTE el padrón/lista de asistencia firmada por los
+  beneficiarios; el Docente Asesor evalúa y aprueba el registro por excepción.
+- Almacenamiento: `proyectos/<id>/evidencias/` en el bucket B2 privado
+  (descarga por `GET /api/v1/archivos?key=` con control de acceso — R45/R46).
+
+### HU-013 — Registrar asistencia de beneficiarios
+| Actor | ESTUDIANTE (miembro INSCRITO/ACTIVO) / DOCENTE_RESP / GESTIÓN — misma caja de autorización que actividad (R33/R46) |
+| Pantalla | `Ejecución → Asistencia` (modal de checkboxes + firma) |
+| Ruta | `POST /actividades/:id/asistencia` (30/min, multipart) · `GET /actividades/:id/asistencia` |
+| Tabla | `RSU_Asistencia_Beneficiario` (id_actividad, id_beneficiario, firma_url, observaciones) |
+
+**CA:**
+- `UNIQUE (id_actividad, id_beneficiario)`: un beneficiario cuenta solo una vez
+  por actividad; el backend deduplica y reintentar no duplica.
+- El cliente envía el campo repetido `beneficiarios` (o `beneficiarios_json`);
+  solo se aceptan beneficiarios con vinculación activa en
+  `RSU_Proyecto_Beneficiario` (los no vinculados se reportan en
+  `sin_vinculacion`; los duplicados en `omitidas_duplicadas`).
+- Firma del registro escaneada opcional (JPG/PNG, 2 MB — R13/R14) guardada en
+  `firma_url` vía `GuardarSeguro` (R45).
+- La lista canónica queda expuesta por el `GET` y el front pre-marca a los ya
+  registrados al abrir la actividad.
+- Ficha de Asistencia PDF obligatoria (tipo documento etapa EJECUCION; PDF,
+  R14) subida por `POST /documentos/upload` — se mantiene como evidencia
+  complementaria.
+
+### HU-014 — Justificar falta (máx 2 por estudiante)
+| Actor | ESTUDIANTE (evita perder horas efectivas) |
+| Pantalla | `Justificación de Faltas` (mis solicitudes) · revisión en `Bandeja` |
+| Ruta | `POST /justificaciones` · `GET /estudiantes/:id/justificaciones` · `PATCH /justificaciones/:id` (rol bandeja) |
+| Tabla | `RSU_Justificacion_Falta` |
+
+**CA:**
+- Máximo 2 justificaciones por estudiante (R11); vinculadas a `id_actividad`
+  transcurrida con `fecha_ausencia` y horas/horas de actividad (`hora_inicio_actividad`, `hora_fin_actividad`).
+- `motivo` obligatorio + documento sustento (opcional) por
+  `id_documento_evidencia` (`Justificación de Falta`, etapa TRANSVERSAL).
+- Estados normalizados en el backend (TrimSpace + ToUpper):
+  `PENDIENTE → APROBADO | RECHAZADO` por el docente en bandeja
+  (`id_verificador`, `fecha_verificacion`, `observaciones`). OBSERVADO/
+  RECHAZADO exigen `observaciones` (R26).
+- Al aprobar, las horas justificadas no se descuentan del contador de 60 h.
+
+### HU-015 — Modificación de informe
+| Actor | ESTUDIANTE (miembro) |
+| Pantalla | `Documentos → Modificar Informe` |
+| Ruta | `POST /modificaciones-informe` · `PATCH /modificaciones-informe/:id` (bandeja) |
+| Tabla | `RSU_Modificacion_Informe` |
+
+**CA:**
+- El equipo solicita modificar el informe inicial presentado, adjuntando el
+  documento sustento; la solicitud se resuelve en bandeja (aprobar/rechazar
+  la modificación) y queda en trazabilidad.
+
+### HU-016 — Ejecutar presupuesto (movimientos)
+| Actor | DIR_RS_FACULTAD / UNIDAD_ABAST (roles de gestión, `presupuesto`) |
+| Pantalla | `Presupuesto → Movimientos` |
+| Ruta | `POST /presupuesto/movimientos` · `GET /proyectos/:id/presupuesto` |
+| Tabla | `RSU_Presupuesto_Movimiento` |
+
+**CA:**
+- Tipos de movimiento: `ASIGNACION | EJECUCION | TRANSFERENCIA | DEVOLUCION`.
+- Tras cada movimiento el backend recalcula
+  `monto_ejecutado = SUM(monto) WHERE tipo = 'EJECUCION'`
+  (`repository.RecalcularMontoEjecutado`) y actualiza `RSU_Proyecto`;
+  si el recálculo falla el movimiento queda guardado y se avisa en la
+  respuesta. El `porcentaje_avance` lo mantiene el monitoreo (HU-018, R30,
+  R06).
+- Sustento con Pecosa/Factura (tipo documento `Pecosa / Rendición`, etapa
+  EJECUCION). Fondo del 2% RSU (Art. 124-125).
+
+### HU-017 — Voucher de pago
+| Actor | UNIDAD_ABAST |
+| Pantalla | `Presupuesto → Vouchers` |
+| Tabla | `RSU_Pago_Voucher` |
+
+**CA:**
+- Registra `numero_operacion`, `banco`, `monto`, `fecha_pago` y el documento
+  voucher (`id_documento_voucher`); estados `REGISTRADO` →
+  `VERIFICADO_FACULTAD` con `id_verificador` + `fecha_verificacion`.
+- Endpoint dedicado pendiente; hoy el sustento entra por
+  `POST /documentos/upload` con tipo `Voucher de Pago`.
+
+### HU-018 — Monitorear in situ
+| Actor | DIR_RS_FACULTAD (módulo `monitoreo`) · DOCENTE_RESP dispara el estado |
+| Pantalla | `Monitoreo` (mapa georreferenciado de Cañete) |
+| Ruta | `POST /monitoreos` · `GET /proyectos/:id/monitoreos` |
+| Tabla | `RSU_Monitoreo` |
+
+**CA:**
+- BPMN: `EN_EJECUCION → EN_MONITOREO` (DOCENTE_RESP).
+- Registra `fecha_monitoreo`, `id_monitor` (Docente), `porcentaje_avance`
+  0-100 (R30), `hitos_cumplidos`, `observaciones` y `resultado`
+  (ej. `SATISFACTORIO`), vinculado a su Informe de Monitoreo Intermedio.
+- El monitor valida el reporte geolocalizado contra las fotos/etapas subidas.
+
+### HU-070 — Expulsar integrante del equipo (control disciplinario)
+| Actor | DIR_RS_FACULTAD (ADMIN por soporte — capa 2, token verificado en handler) |
+| Pantalla | `Proyecto → Equipo → Expulsar integrante` |
+| Ruta | `POST /proyectos/:id/expulsar` |
+| Tabla | `RSU_Participante_Estudiante` (estado pasa a `EXPULSADO`, conserva `horas_acumuladas` para constancias) |
+
+**CA:**
+- Objetivo válido: participante `INSCRITO | ACTIVO` del proyecto (si no existe
+  o ya no está activo, rechaza).
+- NUNCA al líder: si el rol objetivo es `ESTUDIANTE_PROP` → 400 con
+  redirección a HU-060 (primero transfiere el liderazgo).
+- `causal` obligatoria con whitelist:
+  `FALTAS | TARDANZAS | CONDUCTA | OTRO`; el `motivo` libre es obligatorio
+  (10-500 caracteres, R26) y queda en `observaciones` del participante.
+- Cupo mínimo del equipo (R09): SSU/VOLUNTARIADO exige ≥ 2 activos restantes;
+  PEP/Publicación sin mínimo (modalidad no reconocida → rechazo).
+- Notificación automática (R16) a expulsado (`id_usuario` dirigido, si lo
+  tiene), docente responsable y líder; `pushNotificacion` + correo del panel.
+- No participa del flujo BPMN: no dispara transición de estado del proyecto.
+
+## 4. SALIDA A CIERRE (HU-019..HU-021)
+
+### HU-019 — Informe final
+| Actor | ESTUDIANTE_EJEC (miembro) |
+| Ruta | `POST /proyectos/:id/transicion` (BPMN `EN_MONITOREO → INFORME_FINAL_PRESENTADO`) + `POST /documentos/upload` |
+
+**CA:**
+- Sube el Informe Final de Ejecución (SSU: formato F-M03.01-RSU-003;
+  PEP Financiado: adjunta además la pre-liquidación digital de gastos del 2%
+  RSU con comprobantes — facturas, boletas, DJ).
+- Con 60 h alcanzadas (SSU) o 100% del cronograma (PEP) se bloquea la bitácora.
+
+### HU-020 — Conformidad de Escuela
+| Actor | DIR_ESCUELA |
+| Ruta | `POST /proyectos/:id/transicion` (BPMN `INFORME_FINAL_PRESENTADO → CON_CONFORMIDAD_ESCUELA`) |
+
+**CA:**
+- Otorga el V°B° técnico-académico con checklist en `RSU_Verificacion`.
+
+### HU-021 — Cierre con Resolución
+| Actor | CONSEJO_FACULTAD |
+| Ruta | `POST /proyectos/:id/transicion` (BPMN `CON_CONFORMIDAD_ESCUELA → CERRADO`) + `RSU_Resolucion` |
+
+**CA:**
+- Emite la Resolución de Cierre (único órgano con validez legal, R28) y el
+  sistema genera constancias automáticas (HU-036, `RSU_Solicitud_Constancia`).
+- Posterior: `EN_EVALUACION_IMPACTO` (COMITE_CALIDAD) → `EVALUACION_VALIDADA`
+  (CONSEJO_FACULTAD) → `REPORTADO_SUNEDU` (DIR_CENTRAL_RS).
+
+Cierre externo (fuera del flujo BPMN, gestionado por DRSU Central / VPA):
+- SSU: al tener conformidad, la DRSU Central certifica en su portal oficial
+  100% EXTERNO; el Mini-RSU consume la URL y muestra un VISOR PDF INTERNO de
+  la Constancia de Cumplimiento (60 h) en el perfil del estudiante y del
+  proyecto → estado `CERTIFICADO Y CULMINADO`.
+- PEP: Decanato eleva el informe con Oficio a DRSU Central; la VPA emite la
+  Resolución VRA de Cierre; el responsable adjunta el PDF → `PEP CULMINADO`.
+
+## 5. REGLAS PARAMÉTRICAS DE LA FASE DE EJECUCIÓN
+
+1. **Horas efectivas**: mínimo 60 h SSU dentro del calendario lectivo del
+   semestre; el contador oficial suma solo al validar cada avance (0 → 60).
+2. **Estructura del cronograma**: Fase 1 Diagnóstico e Inducción 10-15%;
+   Fase 2 Talleres y Ejecución 75-80%; Fase 3 Evaluación y Cierre 10%.
+   Sugerencia de carga: 4 a 8 horas semanales por alumno.
+3. **Reprogramación de actividades**: ante imprevistos (clima, paros, eventos
+   del colegio), el estudiante solicita "Reprogramación de Fecha" con
+   justificación en el sistema; requiere V°B° digital del Docente Asesor
+   dentro del plazo configurable (p. ej. 5 días hábiles). Operativamente hoy:
+   la actividad vuelve a `PROGRAMADA` desde la planificación con nueva fecha,
+   dejando trazas en las fotos/etapas ya capturadas.
+4. **Bucle de revisión y observaciones en ejecución (plazo 3 días)**: si el
+   Docente Asesor observa un avance (fotos borrosas, falta de firmas),
+   marca el avance como observado y otorga 3 días hábiles al estudiante para
+   corregir o resubir la evidencia SIN perder el registro de la sesión ni las
+   horas ya acumuladas.
+5. **Plazos extemporáneos y prórrogas (tema a tratar)**: se contempla el
+   estado `EN_PRORROGA / EXTEMPORANEO` para grupos que alcancen entre 45 y
+   55 horas al término del ciclo lectivo; la extensión la autoriza la
+   Facultad (DIR_RS_FACULTAD) y queda documentada en el monitoreo.
+6. **Acreditación docente**: la plataforma acredita automáticamente hasta
+   3 h/semana de carga no lectiva al docente por cada proyecto que revisa
+   (respeta el tope `carga_no_lectiva_max`, Art. 79/86 — R02).
+7. **Expulsión de integrantes (HU-070, R48)**: solo la Dirección RS de
+   Facultad expulsa por causales observadas durante la ejecución
+   (`FALTAS/TARDANZAS/CONDUCTA/OTRO` + motivo 10-500). Nunca al líder
+   (redirigir a HU-060). El equipo SSU/VOLUNTARIADO queda con mínimo 2
+   activos; PEP/Publicación sin mínimo. El estado `EXPULSADO` de
+   `RSU_Participante_Estudiante` conserva `horas_acumuladas` y dispara
+   notificación al estudiante, docente y líder — no cambia el estado BPMN.
+
+## 6. MAPEO HU → ENDPOINTS (Épica 2 Ejecución)
+
+| HU | Descripción | Backend endpoint : tabla | Estado |
+|---|---|---|---|
+| HU-010 | Cronograma (plantilla Excel) | `POST /actividades/planificacion[/preview]` · plantilla `GET /actividades/plantilla-planificacion` : `RSU_Actividad_Campo` | OK |
+| HU-011 | Registrar actividad de campo | `POST /actividades` · `GET /proyectos/:id/actividades` · `GET /actividades/del-dia` · `PATCH /actividades/:id/estado` : `RSU_Actividad_Campo` | OK |
+| HU-012 | Fotos con GPS HTML5 | `POST /actividades/fotos` (30/min) · `GET /actividades/:id/fotos` : `RSU_Actividad_Foto` | OK (excepción GPS por flujo manual) |
+| HU-013 | Asistencia beneficiarios | `POST /actividades/:id/asistencia` (30/min) · `GET /actividades/:id/asistencia` : `RSU_Asistencia_Beneficiario` (UNIQUE par) + `POST /documentos/upload` (Ficha PDF) | OK |OK |
+| HU-014 | Justificar falta máx 2 | `POST /justificaciones` · `GET /estudiantes/:id/justificaciones` · `PATCH /justificaciones/:id` : `RSU_Justificacion_Falta` | OK |
+| HU-015 | Modificación de informe | `POST /modificaciones-informe` · `PATCH /modificaciones-informe/:id` : `RSU_Modificacion_Informe` | OK |
+| HU-016 | Movimientos de presupuesto | `POST /presupuesto/movimientos` · `GET /proyectos/:id/presupuesto` : `RSU_Presupuesto_Movimiento` | OK |
+| HU-017 | Voucher | tabla `RSU_Pago_Voucher` (estado REGISTRADO→VERIFICADO_FACULTAD) | parcial (endpoint dedicado pendiente) |
+| HU-018 | Monitoreo in situ | `POST /monitoreos` · `GET /proyectos/:id/monitoreos` : `RSU_Monitoreo` | OK |
+| HU-019 | Informe final | `POST /proyectos/:id/transicion` → `INFORME_FINAL_PRESENTADO` + upload PDF | OK |
+| HU-020 | Conformidad Escuela | `POST /proyectos/:id/transicion` → `CON_CONFORMIDAD_ESCUELA` + `RSU_Verificacion` | OK |
+| HU-021 | Cierre + constancias | `POST /proyectos/:id/transicion` → `CERRADO` + `RSU_Resolucion` + `POST /constancias` (solo en CERRADO) | OK |
+| HU-070 | Expulsar integrante | `POST /proyectos/:id/expulsar` (DIR_RS_FACULTAD) : `RSU_Participante_Estudiante` estado `EXPULSADO` + notificaciones | OK |icación externa fuera del sistema) |
+
+## 7. MATRIZ DE ESTADOS EN EJECUCIÓN
+
+**Estado del proyecto (BPMN, `RSU_Transicion_Estado`):**
+
+| Estado | Disparador | Acción del sistema |
+|---|---|---|
+| `REGISTRADO_OFICIAL → EN_EJECUCION` | DIR_RS_FACULTAD | Desbloquea cronograma, evidencias, asistencia, presupuesto |
+| `EN_EJECUCION` | Equipo registra actividades/fotos/asistencia | Cronómetro + contador 0-60 h; alarma de avances no cargados |
+| `EN_EJECUCION → EN_MONITOREO` | DOCENTE_RESP | Habilita fichas de monitoreo del DIR_RS_FACULTAD |
+| `EN_MONITOREO → INFORME_FINAL_PRESENTADO` | ESTUDIANTE_EJEC | Subida del informe final PDF (+ pre-liquidación si PEP Financiado) |
+| `INFORME_FINAL_PRESENTADO → CON_CONFORMIDAD_ESCUELA` | DIR_ESCUELA | V°B° checklist en `RSU_Verificacion` |
+| `CON_CONFORMIDAD_ESCUELA → CERRADO` | CONSEJO_FACULTAD | Resolución de cierre + constancias por solicitud (`POST /constancias`, exige CERRADO) |
+
+**Estados internos de soporte:**
+
+| Entidad | Estados |
+|---|---|
+| `RSU_Actividad_Campo` | `PROGRAMADA → EN_EJECUCION → EJECUTADA / SUSPENDIDA` (EJECUTADA terminal) |
+| `RSU_Actividad_Foto` | etapa `INICIO` / `SEGUIMIENTO_n` / `FIN` + `minutos_transcurridos` |
+| `RSU_Asistencia_Beneficiario` | registro único por `(id_actividad, id_beneficiario)` — UNIQUE (HU-013) |
+| `RSU_Justificacion_Falta` | `PENDIENTE → APROBADO / RECHAZADO` (estados masculinos normalizados) |
+| `RSU_Pago_Voucher` | `REGISTRADO` → `VERIFICADO_FACULTAD` |
+| `RSU_Participante_Estudiante` | `INSCRITO/ACTIVO → RETIRADO/FINALIZADO/EXPULSADO` (expulsión HU-070, conserva horas) |
+| `RSU_Monitoreo` | resultado `SATISFACTORIO` / con observaciones, % avance 0-100 |
+
+**Estado contemplado (arquitectura):** `EN_PRORROGA / EXTEMPORANEO` para
+extensiones registradas por la Facultad (45-55 h alcanzadas al cierre del ciclo).
+
+## 8. REGLAS DE NEGOCIO APLICADAS EN ESTA FASE
+
+| ID | Regla | Validación |
+|----|-------|------------|
+| R02 | Carga no lectiva docente | `SUM(horas_asignadas) <= carga_no_lectiva_max`; hasta 3 h/semana acreditadas por proyecto revisado |
+| R06 | Porcentajes | `porcentaje_avance` del monitoreo 0-100 |
+| R11 | Máx justificaciones | 2 por estudiante |
+| R12 | Máx fotos | 7 por actividad (409 al exceder) |
+| R13 | Tamaño archivo | PDF ≤ 32 MB, fotos ≤ 2 MB |
+| R14 | Formato | Solo PDF para fichas/informes; fotos JPG/PNG |
+| R16 | Notificación | Disparo automático en `Create` y `Transicion` (`RSU_Notificacion`, campana 30 s) |
+| R20 | Timezone | America/Lima |
+| R28 | Resolución | Solo CONSEJO_FACULTAD cierra con validez legal |
+| R30 | Monitoreo | % avance 0-100 por `POST /monitoreos` |
+| R33 | Equipo completo | Cualquier miembro ACTIVO registra actividad/fotos/asistencia |
+| R45 | Archivos por carpeta | `proyectos/<id>/evidencias/` en B2; descarga `GET /api/v1/archivos?key=` |
+| R46 | Acceso a archivos | Miembros del equipo, docente asesor y roles de gestión; cualquier miembro sube |
+| R47 | Seguridad OWASP | Rate limit: fotos 30/min, planificación 10-20/min, transiciones 20/min; errores 5XX sin detalle interno en producción |
+| R48 | Expulsión disciplinaria | Solo `DIR_RS_FACULTAD` (o ADMIN); `causal` whitelisted + motivo 10-500; nunca el líder; cupo mínimo 2 en SSU/VOLUNTARIADO (HU-070) |
+| R50 | Presupuesto ejecutado | `monto_ejecutado = SUM(monto) WHERE tipo='EJECUCION'` recalculado en cada movimiento (HU-016) |
+
+## 9. ROLES Y ATRIBUCIONES EN EJECUCIÓN (resumen)
+
+| Rol | durante Ejecución |
+|---|---|
+| Estudiante (líder/miembros) | Cronograma, bitácora, fotos GPS, asistencia, 60 h SSU, justifica faltas (máx 2) |
+| Docente Asesor (SSU) / Responsable (PEP) | Evalúa avances (ventana ~5 días hábiles), observa con plazo de corrección 3 días, acredita 3 h/semana de carga no lectiva; PEP Financiado: registra informe final + pre-liquidación 2% |
+| Director de Escuela | Supervisa cronogramas académicos; otorga V°B° al informe final (HU-020) |
+| Dir. / Comité RS Facultad | Monitoreo georreferenciado (mapa Cañete), valida pre-liquidación, gestiona cierre; activa `EN_EJECUCION`; expulsa integrante por causales (HU-070, R48) |
+| Decano / Consejo Facultad | Oficio de elevación; Resolución de cierre (HU-021) |
+| DRSU Central (externo) | Certifica SSU en portal oficial (constancia 60 h con visor interno) |
+| VPA (externo) | Resolución VRA de cierre exclusivamente para PEP |
+
+================================================================================
+FIN DEL DOCUMENTO TÉCNICO V1.0 — ÉPICA 2: FASE DE EJECUCIÓN (RSU UNDC)
+================================================================================

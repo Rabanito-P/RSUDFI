@@ -39,6 +39,12 @@ export default function Actividades(){
   const [benef,setBenef]=useState<any[]>([])
   const [benError,setBenError]=useState('')
   const [benLoading,setBenLoading]=useState(false)
+  // HU-013: asistencia real — asistentes marcados (checkbox), firma escaneada
+  // opcional y dedup del backend (reintentar no duplica).
+  const [asistSel,setAsistSel]=useState<number[]>([])
+  const [asistMsg,setAsistMsg]=useState<Msg>(null)
+  const [asistBusy,setAsistBusy]=useState(false)
+  const [firmaFile,setFirmaFile]=useState<File|null>(null)
 
   useEffect(()=>{
     if(!user) return
@@ -102,13 +108,47 @@ export default function Actividades(){
   }
 
   const verAsistencia = async(a:any)=>{
-    setActSel(a); setModal('asistencia'); setBenef([]); setBenError(''); setFichaFile(null); setFichaMsg(null); setBenLoading(true)
+    setActSel(a); setModal('asistencia'); setBenef([]); setBenError(''); setAsistSel([]); setFirmaFile(null); setAsistMsg(null); setFichaFile(null); setFichaMsg(null); setBenLoading(true)
     const pid = a.id_proyecto || proyectoId
     try{
       const r:any = await api.get(`/api/v1/proyectos/${pid}/beneficiarios`)
-      setBenef(asArray(r.data))
+      const lista = asArray(r.data)
+      setBenef(lista)
+      // Pre-marcados: los que ya tienen registro en RSU_Asistencia_Beneficiario.
+      const a2:any = await api.get(`/api/v1/actividades/${a.id_actividad}/asistencia`)
+      const yaMarcados = (asArray(a2.data) as any[]).map((x)=> x.id_beneficiario)
+      setAsistSel(yaMarcados)
     }catch(ex:any){ setBenef([]); setBenError(ex?.message||'No se pudieron cargar los beneficiarios') }
     finally{ setBenLoading(false) }
+  }
+
+  const toggleAsist = (id:number)=>{
+    setAsistSel(prev=> prev.includes(id) ? prev.filter(x=>x!==id) : [...prev, id])
+  }
+
+  const guardarAsistencia = async ()=>{
+    if(!actSel) return
+    if(asistSel.length===0){ setAsistMsg({type:'err', text:'Marca al menos un beneficiario asistente'}); return }
+    if(firmaFile){
+      const errFirma = validarArchivo(firmaFile, 'foto')
+      if(errFirma){ setAsistMsg({type:'err', text: errFirma}); return }
+    }
+    setAsistBusy(true); setAsistMsg(null)
+    try{
+      const fd = new FormData()
+      asistSel.forEach(id=> fd.append('beneficiarios', String(id)))
+      if(firmaFile) fd.append('firma', firmaFile)
+      const r:any = await api.upload(`/api/v1/actividades/${actSel.id_actividad}/asistencia`, fd)
+      const d = r.data||{}
+      // La lista canónica la devuelve el GET de asistencia.
+      const a2:any = await api.get(`/api/v1/actividades/${actSel.id_actividad}/asistencia`)
+      const ya = (asArray(a2.data) as any[]).map((x)=> x.id_beneficiario)
+      setAsistSel(ya)
+      setFirmaFile(null)
+      setAsistMsg({type:'ok', text:`Asistencia guardada ✓ ${d.registradas??0} nueva(s)${d.omitidas_duplicadas? ` · ${d.omitidas_duplicadas} ya registrada(s)`:''}${d.sin_vinculacion? ` · ${d.sin_vinculacion} sin vinculación`:''}`})
+      load()
+    }catch(ex:any){ setAsistMsg({type:'err', text: ex?.message||'No se pudo guardar la asistencia'}) }
+    finally{ setAsistBusy(false) }
   }
 
   const subirFicha = async ()=>{
@@ -236,33 +276,52 @@ export default function Actividades(){
           )
         }
         <div className="mt-4 border-2 border-dashed border-slate-200 rounded-xl p-3 text-center">
-          <div className="text-xs text-slate-500">Ficha de asistencia firmada o foto (JPG/PNG, máx 20MB)</div>
+          <div className="text-xs text-slate-500">Ficha de asistencia firmada o foto (JPG/PNG, máx 2MB)</div>
           <input type="file" accept=".jpg,.jpeg,.png" onChange={e=>setFichaFile(e.target.files?.[0]||null)} className="mt-2 text-xs w-full"/>
           {fichaFile && <div className="text-[11px] text-slate-500 mt-1">{fichaFile.name}</div>}
         </div>
         {fichaMsg && <Alert variant={fichaMsg.type==='ok'?'success':'error'} className="text-xs mt-3">{fichaMsg.text}</Alert>}
       </Modal>
 
-      <Modal open={modal==='asistencia'} onClose={()=>setModal(null)} title={actSel? `Asistencia — ${actSel.nombre}` : 'Asistencia'} desc="Beneficiarios vinculados al proyecto (GET /api/v1/proyectos/:id/beneficiarios)" width="max-w-xl"
-        footer={<Button variant="outline" onClick={()=>setModal(null)}>Cerrar</Button>}>
+      <Modal open={modal==='asistencia'} onClose={()=>setModal(null)} title={actSel? `Asistencia — ${actSel.nombre}` : 'Asistencia'} desc="Marca a los beneficiarios asistentes (RSU_Asistencia_Beneficiario)" width="max-w-xl"
+        footer={
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={()=>setModal(null)}>Cerrar</Button>
+            <Button onClick={guardarAsistencia} disabled={asistBusy || benLoading}>{asistBusy? 'Guardando…' : 'Guardar asistencia'}</Button>
+          </div>
+        }>
         {benLoading ? <Skeleton className="h-32 w-full"/> :
           benError ? <Alert variant="error" className="text-xs">{benError}</Alert> :
           benef.length===0 ? <Empty title="Sin beneficiarios" description="Vincula beneficiarios al proyecto para registrar su asistencia."/> :
           (
-            <div className="space-y-2 max-h-[260px] sm:max-h-[360px] overflow-y-auto pr-1">
-              {benef.map(b=>(
-                <div key={b.id_beneficiario} className="border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-3 text-sm">
-                  <div className="min-w-0">
-                    <div className="font-semibold truncate">{b.razon_social || `${b.apellidos||''}, ${b.nombres||''}`}</div>
-                    <div className="text-xs text-slate-500">{b.dni||b.ruc||'S/D'} · {b.distrito||'—'}</div>
-                  </div>
-                  <Badge color="#0ea5e9" variant="soft" size="sm">{b.tipo_beneficiario}</Badge>
-                </div>
-              ))}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs text-slate-500">
+                <span>Asistentes: <b className="text-undc-700">{asistSel.length}</b> de {benef.length}</span>
+                <button type="button" onClick={()=>setAsistSel(asistSel.length===benef.length? [] : benef.map(b=>b.id_beneficiario))} className="underline hover:text-undc-700">
+                  {asistSel.length===benef.length? 'Desmarcar todos':'Marcar todos'}
+                </button>
+              </div>
+              <div className="space-y-2 max-h-[260px] sm:max-h-[360px] overflow-y-auto pr-1">
+                {benef.map(b=>(
+                  <label key={b.id_beneficiario} className="border border-slate-200 rounded-xl p-3 flex items-center gap-3 text-sm cursor-pointer hover:bg-slate-50">
+                    <input type="checkbox" checked={asistSel.includes(b.id_beneficiario)} onChange={()=>toggleAsist(b.id_beneficiario)} className="h-4 w-4 accent-[#4338ca]"/>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold truncate">{b.razon_social || `${b.apellidos||''}, ${b.nombres||''}`}</div>
+                      <div className="text-xs text-slate-500">{b.dni||b.ruc||'S/D'} · {b.distrito||'—'}</div>
+                    </div>
+                    <Badge color="#0ea5e9" variant="soft" size="sm">{b.tipo_beneficiario}</Badge>
+                  </label>
+                ))}
+              </div>
+              <div className="border-2 border-dashed border-slate-200 rounded-xl p-3 text-center">
+                <div className="text-xs text-slate-500">Firma del registro escaneada (opcional, JPG/PNG, máx 2MB)</div>
+                <input type="file" accept=".jpg,.jpeg,.png" onChange={e=>setFirmaFile(e.target.files?.[0]||null)} className="mt-2 text-xs w-full"/>
+                {firmaFile && <div className="text-[11px] text-slate-500 mt-1">{firmaFile.name}</div>}
+              </div>
+              {asistMsg && <Alert variant={asistMsg.type==='ok'?'success':'error'} className="text-xs">{asistMsg.text}</Alert>}
             </div>
           )
         }
-        <Alert variant="info" className="text-xs mt-3">Sube la ficha firmada desde el modal “Ver fotos”: queda como evidencia de asistencia en RSU_Actividad_Foto.</Alert>
       </Modal>
     </div>
   )

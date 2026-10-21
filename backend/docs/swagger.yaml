@@ -1,4 +1,146 @@
-﻿host: localhost:8080
+definitions:
+  undc-rsu_backend_internal_domain.RSUAsistenciaBeneficiario:
+    properties:
+      beneficiario:
+        $ref: '#/definitions/undc-rsu_backend_internal_domain.RSUBeneficiario'
+      firma_url:
+        type: string
+      id_actividad:
+        type: integer
+      id_asistencia:
+        type: integer
+      id_beneficiario:
+        type: integer
+      observaciones:
+        type: string
+    type: object
+  undc-rsu_backend_internal_domain.RSUBeneficiario:
+    properties:
+      activo:
+        type: boolean
+      apellidos:
+        type: string
+      celular:
+        type: string
+      condicion_vulnerabilidad:
+        type: string
+      correo_electronico:
+        type: string
+      departamento:
+        type: string
+      direccion:
+        type: string
+      distrito:
+        type: string
+      dni:
+        type: string
+      fecha_registro:
+        type: string
+      id_beneficiario:
+        type: integer
+      nombres:
+        type: string
+      provincia:
+        type: string
+      razon_social:
+        type: string
+      ruc:
+        type: string
+      sexo:
+        type: string
+      tipo_beneficiario:
+        type: string
+    type: object
+  undc-rsu_backend_internal_dto.CambioLiderReq:
+    properties:
+      id_nuevo_lider:
+        type: integer
+      motivo:
+        maxLength: 500
+        type: string
+    required:
+    - id_nuevo_lider
+    - motivo
+    type: object
+  undc-rsu_backend_internal_dto.ExpulsionReq:
+    properties:
+      causal:
+        enum:
+        - FALTAS
+        - TARDANZAS
+        - CONDUCTA
+        - OTRO
+        type: string
+      id_estudiante:
+        type: integer
+      motivo:
+        maxLength: 500
+        minLength: 10
+        type: string
+    required:
+    - causal
+    - id_estudiante
+    - motivo
+    type: object
+  undc-rsu_backend_internal_dto.LoginReq:
+    properties:
+      correo:
+        type: string
+      password:
+        type: string
+    required:
+    - correo
+    - password
+    type: object
+  undc-rsu_backend_internal_dto.LoginResp:
+    properties:
+      correo:
+        type: string
+      id:
+        type: integer
+      nombre:
+        type: string
+      persona_id:
+        type: integer
+      rol:
+        type: string
+      rol_actor:
+        type: string
+      rol_actor_id:
+        type: integer
+      tipo_actor:
+        type: string
+      token:
+        type: string
+    type: object
+  undc-rsu_backend_internal_service.DecisionAsesorReq:
+    properties:
+      decision:
+        enum:
+        - ACEPTAR
+        - RECHAZAR
+        type: string
+      id_proyecto:
+        type: integer
+      motivo:
+        description: Rechazar exige motivo (regla R26 vigente, conservada).
+        type: string
+    required:
+    - decision
+    - id_proyecto
+    type: object
+  undc-rsu_backend_internal_service.EnviarAsesorReq:
+    properties:
+      comentario:
+        type: string
+      id_docente_asesor:
+        type: integer
+      id_proyecto:
+        type: integer
+    required:
+    - id_proyecto
+    type: object
+host: localhost:8080
 info:
   contact:
     name: UNDC Cañete — RSU
@@ -41,6 +183,63 @@ paths:
             type: object
       tags:
       - Ejecución
+  /api/v1/actividades/{id}/asistencia:
+    get:
+      parameters:
+      - description: ID de la actividad de campo
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/undc-rsu_backend_internal_domain.RSUAsistenciaBeneficiario'
+            type: array
+      tags:
+      - Ejecución
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: ID de la actividad de campo
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: IDs repetidos de beneficiarios asistentes
+        in: formData
+        name: beneficiarios
+        required: true
+        type: string
+      - description: Firma escaneada JPG/PNG (≤2MB)
+        in: formData
+        name: firma
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'Resumen: registradas/duplicadas'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Sin beneficiarios o no vinculados
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: No es miembro activo
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Ejecución
   /api/v1/actividades/{id}/estado:
     patch:
       consumes:
@@ -77,6 +276,94 @@ paths:
             type: object
       tags:
       - Ejecución
+  /api/v1/actividades/del-dia:
+    get:
+      parameters:
+      - description: ID del proyecto
+        in: query
+        name: id_proyecto
+        required: true
+        type: integer
+      - description: Fecha YYYY-MM-DD (por defecto hoy)
+        in: query
+        name: fecha
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Actividades
+  /api/v1/actividades/planificacion:
+    post:
+      consumes:
+      - multipart/form-data
+      produces:
+      - application/json
+      responses: {}
+      tags:
+      - Actividades
+  /api/v1/actividades/planificacion/preview:
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: ID del proyecto
+        in: formData
+        name: id_proyecto
+        required: true
+        type: integer
+      - description: Excel de planificación (.xlsx)
+        in: formData
+        name: archivo
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Actividades interpretadas
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Actividades
+  /api/v1/actividades/plantilla-planificacion:
+    get:
+      produces:
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      responses: {}
+      tags:
+      - Actividades
+  /api/v1/archivos:
+    get:
+      parameters:
+      - description: Key/URL del archivo registrado en BD
+        in: query
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: Archivo
+          schema:
+            type: file
+        "302":
+          description: Redirección (local)
+          schema:
+            type: string
+        "403":
+          description: Archivo no registrado
+        "404":
+          description: No encontrado
+      tags:
+      - Archivos
   /api/v1/asignaciones/docente:
     post:
       consumes:
@@ -168,27 +455,26 @@ paths:
       consumes:
       - application/json
       parameters:
-      - description: Cuerpo JSON
+      - description: Credenciales
         in: body
         name: body
         required: true
         schema:
-          type: object
+          $ref: '#/definitions/undc-rsu_backend_internal_dto.LoginReq'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/undc-rsu_backend_internal_dto.LoginResp'
         "400":
           description: Error de validación
           schema:
             additionalProperties: true
             type: object
         "401":
-          description: No autorizado
+          description: Credenciales inválidas
           schema:
             additionalProperties: true
             type: object
@@ -203,35 +489,6 @@ paths:
       responses:
         "200":
           description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Error de validación
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: No autorizado
-          schema:
-            additionalProperties: true
-            type: object
-      tags:
-      - Auth
-  /api/v1/auth/oauth/info:
-    get:
-      consumes:
-      - application/json
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Error de validación
           schema:
             additionalProperties: true
             type: object
@@ -812,6 +1069,42 @@ paths:
             type: object
       tags:
       - Configuración
+  /api/v1/constancias:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Creada
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Ya existe solicitud pendiente
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Constancias
   /api/v1/dashboard/kpis:
     get:
       consumes:
@@ -831,6 +1124,35 @@ paths:
             type: object
         "401":
           description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Seguimiento
+  /api/v1/dashboard/trazabilidad:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Máximo de registros (por defecto 10)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Error de servidor
           schema:
             additionalProperties: true
             type: object
@@ -950,6 +1272,52 @@ paths:
             type: object
       tags:
       - Proyectos
+  /api/v1/docentes/asesores:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID de escuela
+        in: query
+        name: escuela
+        type: integer
+      - description: Texto a buscar
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Docentes aptos para asesorar
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Personas
+  /api/v1/documentos/{id}/archivo:
+    get:
+      parameters:
+      - description: ID documento
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: Archivo (B2)
+          schema:
+            type: file
+        "302":
+          description: Redirección al archivo (local)
+          schema:
+            type: string
+        "404":
+          description: Documento no encontrado
+      tags:
+      - Documentos
   /api/v1/documentos/upload:
     post:
       consumes:
@@ -1000,6 +1368,32 @@ paths:
             type: object
         "401":
           description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Encuestas
+  /api/v1/encuestas/docente:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Creado
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
           schema:
             additionalProperties: true
             type: object
@@ -1258,6 +1652,36 @@ paths:
             type: object
       tags:
       - Personas
+  /api/v1/estudiantes/{id}/constancias:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID estudiante
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Error
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Constancias
   /api/v1/estudiantes/{id}/proyectos:
     get:
       consumes:
@@ -1288,6 +1712,29 @@ paths:
             type: object
       tags:
       - Proyectos
+  /api/v1/estudiantes/{id}/solicitudes-union:
+    get:
+      parameters:
+      - description: ID estudiante
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - SolicitudesUnión
   /api/v1/facultades:
     get:
       consumes:
@@ -1436,6 +1883,45 @@ paths:
             type: object
       tags:
       - Estructura
+  /api/v1/formatos/drsu:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Catálogo DRSU de Fase 1
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Formatos
+  /api/v1/formatos/drsu/{codigo}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Código del formato DRSU
+        in: path
+        name: codigo
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Formato
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Formato no encontrado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Formatos
   /api/v1/indicadores:
     post:
       consumes:
@@ -1678,6 +2164,19 @@ paths:
             type: object
       tags:
       - Notificaciones
+  /api/v1/plantillas/{archivo}:
+    get:
+      parameters:
+      - description: Nombre del archivo de plantilla
+        in: path
+        name: archivo
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses: {}
+      tags:
+      - Actividades
   /api/v1/presupuesto/movimientos:
     post:
       consumes:
@@ -1763,6 +2262,17 @@ paths:
             type: object
       tags:
       - Proyectos
+  /api/v1/proyectos/:id/participantes:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Participante inscrito
+      tags:
+      - Asignaciones
   /api/v1/proyectos/{id}:
     get:
       consumes:
@@ -1828,6 +2338,43 @@ paths:
             type: object
       tags:
       - Proyectos
+  /api/v1/proyectos/{id}/activar:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ID del documento recibido de la DRSU
+        in: body
+        name: body
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Proyecto activado
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Sin permisos
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Proyectos
   /api/v1/proyectos/{id}/actividades:
     get:
       consumes:
@@ -1888,6 +2435,42 @@ paths:
             type: object
       tags:
       - Beneficiarios
+  /api/v1/proyectos/{id}/decision-asesor:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Decisión y motivo
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/undc-rsu_backend_internal_service.DecisionAsesorReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Decisión registrada
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Sin permisos
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Proyectos
   /api/v1/proyectos/{id}/docentes:
     get:
       consumes:
@@ -1948,6 +2531,24 @@ paths:
             type: object
       tags:
       - Documentos
+  /api/v1/proyectos/{id}/duplicidad:
+    get:
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Proyectos similares
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Proyectos
   /api/v1/proyectos/{id}/encuestas:
     get:
       consumes:
@@ -2062,6 +2663,42 @@ paths:
       tags:
       - Seguimiento
       - Seguimiento
+  /api/v1/proyectos/{id}/enviar-asesor:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Asesor y comentario
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/undc-rsu_backend_internal_service.EnviarAsesorReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Propuesta enviada al asesor
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Sin permisos
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Proyectos
   /api/v1/proyectos/{id}/es-miembro/{estudianteId}:
     get:
       consumes:
@@ -2162,6 +2799,60 @@ paths:
             type: object
       tags:
       - Asignaciones
+  /api/v1/proyectos/{id}/evaluar-vencimiento:
+    post:
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Resultado de la evaluación
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Proyectos
+  /api/v1/proyectos/{id}/expulsar:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Causal (FALTAS/TARDANZAS/CONDUCTA/OTRO) y motivo
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/undc-rsu_backend_internal_dto.ExpulsionReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Expulsión registrada
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Causal/motivo/objetivo inválidos o cupo mínimo
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Solo DIR_RS_FACULTAD
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Proyectos
   /api/v1/proyectos/{id}/historial:
     get:
       consumes:
@@ -2222,6 +2913,34 @@ paths:
             type: object
       tags:
       - Seguimiento
+  /api/v1/proyectos/{id}/lider:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Nuevo líder y motivo
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/undc-rsu_backend_internal_dto.CambioLiderReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Sin permisos para transferir el liderazgo
+      tags:
+      - Proyectos
   /api/v1/proyectos/{id}/monitoreos:
     get:
       consumes:
@@ -2252,6 +2971,56 @@ paths:
             type: object
       tags:
       - Seguimiento
+  /api/v1/proyectos/{id}/oficio-elevacion:
+    post:
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Oficio generado y registrado
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Sin permisos
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Proyectos
+  /api/v1/proyectos/{id}/oficio-elevacion/descargar:
+    get:
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/pdf
+      responses:
+        "200":
+          description: PDF del oficio
+          schema:
+            type: file
+        "404":
+          description: Oficio no encontrado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Proyectos
   /api/v1/proyectos/{id}/presupuesto:
     get:
       consumes:
@@ -2282,6 +3051,54 @@ paths:
             type: object
       tags:
       - Presupuesto
+  /api/v1/proyectos/{id}/presupuesto-disponible:
+    get:
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Disponibilidad del fondo RSU
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Proyectos
+  /api/v1/proyectos/{id}/reactivar:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Proyecto reactivado
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Sin cupo libre del asesor
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Sin permisos
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Proyectos
   /api/v1/proyectos/{id}/roles:
     delete:
       consumes:
@@ -2382,6 +3199,68 @@ paths:
             type: object
       tags:
       - Roles dinámicos
+  /api/v1/proyectos/{id}/solicitudes-union:
+    get:
+      parameters:
+      - description: ID proyecto
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: PENDIENTE, ACEPTADA, RECHAZADA, CANCELADA
+        in: query
+        name: estado
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - SolicitudesUnión
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID proyecto PEP
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - SolicitudesUnión
   /api/v1/proyectos/{id}/transicion:
     post:
       consumes:
@@ -2442,6 +3321,238 @@ paths:
             type: object
       tags:
       - Proyectos
+  /api/v1/public/flujo-resumen:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Error de servidor
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Seguimiento
+  /api/v1/registro/estudiante:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Perfil creado
+        "400":
+          description: Datos inválidos
+        "409":
+          description: El correo ya está registrado
+      tags:
+      - Auth
+  /api/v1/solicitudes-union/{id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID solicitud
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - SolicitudesUnión
+  /api/v1/solicitudes-union/{id}/aceptar:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID solicitud
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - SolicitudesUnión
+  /api/v1/solicitudes-union/{id}/rechazar:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID solicitud
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Cuerpo JSON
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Error de validación
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - SolicitudesUnión
+  /api/v1/storage/b2:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Credenciales B2 (vacío = mantener la actual)
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Credenciales inválidas
+        "403":
+          description: Solo administrador
+      tags:
+      - Archivos
+  /api/v1/storage/estado:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Archivos
+  /api/v1/usuarios:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: No autorizado
+        "403":
+          description: Solo administradores
+      tags:
+      - Usuarios
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Creado
+          schema:
+            additionalProperties: true
+            type: object
+      tags:
+      - Usuarios
+  /api/v1/usuarios/{id}:
+    delete:
+      produces:
+      - application/json
+      responses: {}
+      tags:
+      - Usuarios
+    put:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses: {}
+      tags:
+      - Usuarios
+  /api/v1/usuarios/{id}/permisos:
+    put:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses: {}
+      tags:
+      - Usuarios
   /api/v1/usuarios/{tipo}/{id}/roles:
     get:
       consumes:
@@ -2477,6 +3588,20 @@ paths:
             type: object
       tags:
       - Roles dinámicos
+  /api/v1/usuarios/modulos-disponibles:
+    get:
+      produces:
+      - application/json
+      responses: {}
+      tags:
+      - Usuarios
+  /api/v1/usuarios/roles-disponibles:
+    get:
+      produces:
+      - application/json
+      responses: {}
+      tags:
+      - Usuarios
   /health:
     get:
       consumes:
@@ -2505,7 +3630,8 @@ schemes:
 - http
 securityDefinitions:
   BearerAuth:
-    description: 'JWT: Bearer <token> obtenido de POST /api/v1/auth/login (password seed: undc2026)'
+    description: 'JWT: "Bearer <token>" obtenido de POST /api/v1/auth/login (password
+      seed: undc2026)'
     in: header
     name: Authorization
     type: apiKey
