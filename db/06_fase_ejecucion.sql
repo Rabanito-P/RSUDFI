@@ -20,27 +20,17 @@ END $$;
 
 -- ── 2. EXPULSADO pasa a ser un estado válido de participación ─────────
 -- La CHECK original (init.sql) solo admitía INSCRITO/ACTIVO/RETIRADO/FINALIZADO
--- y llevaba nombre autogenerado por Postgres. Se elimina si existe y se recrea
--- con el nuevo dominio.
+-- y llevaba el nombre autogenerado
+-- rsu_participante_estudiante_estado_participacion_check. Se elimina con
+-- IF EXISTS y se recrea con el nuevo dominio.
 DO $$
 BEGIN
-  IF NOT EXISTS (
+  IF EXISTS (
     SELECT 1 FROM pg_constraint
-    WHERE conname = 'ck_participante_estado_participacion'
+    WHERE conname = 'rsu_participante_estudiante_estado_participacion_check'
   ) THEN
-    -- Nombre autogenerado típico del init.sql; ignorar 42704 si difiere.
-    IF EXISTS (
-      SELECT 1 FROM pg_constraint
-      WHERE conrelid = '"RSU_Participante_Estudiante"'::regclass
-        AND conname LIKE '%estado_participacion%'
-    ) THEN
-      EXECUTE 'ALTER TABLE "RSU_Participante_Estudiante" DROP CONSTRAINT '
-              || (SELECT conname FROM pg_constraint
-                  WHERE conrelid = '"RSU_Participante_Estudiante"'::regclass
-                    AND contype = 'c'
-                    AND pg_get_constraintdef(oid) LIKE '%estado_participacion%'
-                  LIMIT 1);
-    END IF;
+    ALTER TABLE "RSU_Participante_Estudiante"
+      DROP CONSTRAINT "rsu_participante_estudiante_estado_participacion_check";
   END IF;
 END $$;
 

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"strconv"
 	"strings"
 
@@ -110,6 +111,11 @@ func (h *AsistenciaHandler) Create(c *gin.Context) {
 			FirmaURL:       firmaURL,
 		}
 		if err := h.db.Create(row).Error; err != nil {
+			// Carrera concurrente: otro request insertó el mismo par después
+			// del pre-check. La UNIQUE lo registra; no es error del usuario.
+			if errors.Is(err, gorm.ErrDuplicatedKey) {
+				continue
+			}
 			utils.Fail(c, 500, "No se pudo registrar la asistencia", err.Error())
 			return
 		}
@@ -126,15 +132,27 @@ func (h *AsistenciaHandler) Create(c *gin.Context) {
 }
 
 // PorActividad lista los asistentes de la actividad con su beneficiario.
+// La respuesta expone datos personales (DNI, celular, correo), así que exige
+// pertenencia: equipo del proyecto, docente asesor o gestión (R46, capa 2).
 // @Tags		Ejecución
 // @Produce	json
 // @Param		id path int true "ID de la actividad de campo"
 // @Success	200 {object} []domain.RSUAsistenciaBeneficiario
+// @Failure	403 {object} map[string]any "No es miembro del proyecto"
 // @Router		/api/v1/actividades/{id}/asistencia [get]
 func (h *AsistenciaHandler) ByActividad(c *gin.Context) {
 	idAct, _ := strconv.Atoi(c.Param("id"))
 	if idAct == 0 {
 		utils.Fail(c, 400, "id de actividad inválido", nil)
+		return
+	}
+	var act domain.RSUActividadCampo
+	if err := h.db.Select("id_actividad, id_proyecto").First(&act, "id_actividad = ?", idAct).Error; err != nil {
+		utils.Fail(c, 404, "Actividad no encontrada", nil)
+		return
+	}
+	if !puedeEditarEvidencias(h.db, c, act.IDProyecto) {
+		utils.Fail(c, 403, "solo el equipo del proyecto, el docente asesor o la dirección RSU consultan la asistencia", nil)
 		return
 	}
 	var rows []domain.RSUAsistenciaBeneficiario

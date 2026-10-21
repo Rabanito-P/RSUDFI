@@ -169,7 +169,9 @@ func Setup(db *gorm.DB) *gin.Engine {
 		// puede aprobar en nombre de una autoridad.
 		api.POST("/proyectos/:id/transicion", verBandeja, middleware.RateLimit(20, time.Minute), projH.Transicion)
 		api.POST("/proyectos/:id/lider", verProyectos, projH.CambiarLider) // HU-060 cambio de líder
-		api.POST("/proyectos/:id/expulsar", verBandeja, projH.Expulsar)   // HU-070 expulsión por causales (DIR_RS_FACULTAD)
+		// HU-070 expulsión por causales (DIR_RS_FACULTAD): acción punitiva de
+		// alta sensibilidad — se limita a 10/min y el rol se verifica en el handler.
+		api.POST("/proyectos/:id/expulsar", verBandeja, middleware.RateLimit(10, time.Minute), projH.Expulsar)
 		api.GET("/proyectos/:id/historial", verProyectos, projH.Historial)
 		// HU: estudiante ve su proyecto sea líder o miembro equipo; docente solo sus asesorados
 		api.GET("/estudiantes/:id/proyectos", verProyectos, projH.ListByEstudiante)
