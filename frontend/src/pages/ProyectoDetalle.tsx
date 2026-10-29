@@ -244,7 +244,7 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
     try{
       await api.post(`/api/v1/proyectos/${id}/lider`, { id_nuevo_lider: Number(liderNuevo), motivo: liderMotivo.trim() })
       setLiderMsg({type:'ok', text:'Liderazgo transferido. Se avisó por correo al líder saliente y al nuevo líder. Actualizando...'})
-      setTimeout(()=> window.location.reload(), 2200)
+      setTimeout(()=>{ load() }, 900)
     }catch(ex:any){
       setLiderMsg({type:'err', text: mensajeError(ex, 'No se pudo transferir el liderazgo')})
     }finally{ setLiderBusy(false) }
@@ -260,7 +260,7 @@ const { flujo, estados: estadosBpmn, tieneLane, loading: catLoading } = useCatal
     try{
       await api.post(`/api/v1/proyectos/${id}/expulsar`, { id_estudiante: Number(expSel), causal: expCausal, motivo: expMotivo.trim() })
       setExpMsg({type:'ok', text:'Expulsión registrada. Se notificó al estudiante, al docente y al líder. Actualizando...'})
-      setTimeout(()=> window.location.reload(), 2200)
+      setTimeout(()=>{ load() }, 900)
     }catch(ex:any){
       setExpMsg({type:'err', text: mensajeError(ex, 'No se pudo registrar la expulsión')})
     }finally{ setExpBusy(false) }

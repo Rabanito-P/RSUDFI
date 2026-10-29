@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { api } from '../../api/client'
 import { validarArchivo } from '../../lib/archivos'
@@ -24,7 +24,15 @@ export default function Ejecucion(){
   const [msg,setMsg]=useState('')
   const [msgErr,setMsgErr]=useState(false)
 
-  const flash = (t:string, err=false)=>{ setMsg(t); setMsgErr(err); setTimeout(()=>setMsg(''),4000) }
+  const flashTimer = useRef<number|null>(null)
+  // Evita llamar setState si el componente ya se desmonto (warning de React y
+  // trabajo perdido): el temporizador se cancela al salir de la pantalla.
+  useEffect(()=>()=>{ if(flashTimer.current) window.clearTimeout(flashTimer.current) },[])
+  const flash = (t:string, err=false)=>{
+    setMsg(t); setMsgErr(err)
+    if(flashTimer.current) window.clearTimeout(flashTimer.current)
+    flashTimer.current = window.setTimeout(()=>setMsg(''),4000)
+  }
 
   const cargar = async (idProyecto:number)=>{
     try{ const y:any=await api.get(`/api/v1/proyectos/${idProyecto}/entregables`); setEnt(y.data||[]) }catch{ setEnt([]) }
