@@ -17,7 +17,9 @@ export class ErrorBoundary extends React.Component<Props, State> {
             <div className="w-12 h-12 rounded-xl bg-red-100 text-red-600 grid place-items-center mx-auto">!</div>
             <h2 className="text-lg font-black text-slate-900 mt-3">Algo se rompió</h2>
             <p className="text-sm text-slate-600 mt-1">Ocurrió un error inesperado en el frontend. Los datos nulos ya están normalizados en el backend.</p>
-            <pre className="text-xs text-left bg-slate-900 text-slate-100 rounded-xl p-3 mt-3 overflow-auto max-h-40">{String(this.state.error?.message ?? this.state.error)}</pre>
+            {import.meta.env.PROD ? null : (
+              <pre className="text-xs text-left bg-slate-900 text-slate-100 rounded-xl p-3 mt-3 overflow-auto max-h-40">{String(this.state.error?.message ?? this.state.error)}</pre>
+            )}
             <div className="flex gap-2 justify-center mt-4">
               <button onClick={()=> location.reload()} className="px-4 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold">Recargar</button>
               <button onClick={()=> { (this.setState as any)({hasError:false, error:null}); location.href='/'}} className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold">Ir al inicio</button>
