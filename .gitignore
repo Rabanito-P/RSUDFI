@@ -1,4 +1,5 @@
 # Secrets / env — .env se versiona intencionalmente
+.env
 .env.local
 .env.*.local
 *.pem

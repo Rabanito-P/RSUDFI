@@ -1,8 +1,15 @@
 ﻿# ==============================================================================
 # UNDC — Sistema de Gestión RSU · Docker Compose — PostgreSQL 18
 # Ley 30220 Art.124-125 · SUNEDU Ind.29 · SINEACE Est.25 — Cañete, Lima
-# Stack: postgres:18-alpine + Go 1.22 (Gin/GORM) + Node 20 / Nginx 1.27
+# Stack: postgres:18-alpine + Go 1.24 (Gin/GORM) + Node 20 / Nginx 1.27
 # Uso: docker compose up --build -d  →  http://localhost:5173  +  http://localhost:8080/health
+#
+# NOTAS DE PRODUCCIÓN (Dokploy):
+# - JWT_SECRET es OBLIGATORIA (32+ chars): se configura en el panel de entorno
+#   de Dokploy; si falta, el deploy falla con mensaje explícito.
+# - PostgreSQL NO publica puertos al host: backend y DB se hablan por la red
+#   interna (postgres:5432). Para inspeccionar la BD:
+#   docker compose exec postgres psql -U undc -d undc_rsu
 # ==============================================================================
 name: undc-rsu
 
@@ -20,8 +27,6 @@ services:
       PGTZ: America/Lima
       # Tuning liviano para dev
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql
       - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
@@ -49,9 +54,10 @@ services:
       postgres:
         condition: service_healthy
     env_file:
+      # Solo el .env del proyecto (local). En Dokploy las variables llegan por
+      # el panel de entorno; backend/.env.example quedó fuera porque inyectaba
+      # un JWT_SECRET débil que sobrescribía el real.
       - path: ./.env
-        required: false
-      - path: ./backend/.env.example
         required: false
     environment:
       PORT: 8080
@@ -61,9 +67,13 @@ services:
       DB_USER: ${POSTGRES_USER:-undc}
       DB_PASS: ${POSTGRES_PASSWORD:-undc2026}
       DB_NAME: ${POSTGRES_DB:-undc_rsu}
-      JWT_SECRET: ${JWT_SECRET:-undc-rsu-super-secret-2026}
+      # SIN valor por defecto: si falta, el despliegue muere con mensaje claro
+      # (y el backend falla el arranque si tiene < 32 caracteres en release).
+      JWT_SECRET: ${JWT_SECRET:?Configura JWT_SECRET (32+ chars) en el entorno de Dokploy}
       UPLOAD_DIR: /app/uploads
       TZ: America/Lima
+      # Orígenes CORS del navegador (vacío = aceptar cualquiera, solo dev).
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
       # Almacenamiento: local (volumen) o b2 (Backblaze B2 nativo, bucket privado)
       STORAGE_DRIVER: ${STORAGE_DRIVER:-b2}
       B2_ACCOUNT_ID: ${B2_ACCOUNT_ID:-}
@@ -77,6 +87,7 @@ services:
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     volumes:
+      - backend_uploads:/app/uploads
       - backend_uploads:/app/uploads
       # Plantillas Word/Excel y el lector Python que interpreta la planificación.
       - ./documentos:/app/documentos:ro

@@ -1,6 +1,8 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"log"
 	"os"
 
@@ -38,8 +40,18 @@ func Load() *Config {
 		if cfg.GinMode == "release" {
 			log.Fatalf("[config] JWT_SECRET es obligatorio en producción (GIN_MODE=release)")
 		}
-		cfg.JWTSecret = "dev-secret-change-me"
-		log.Printf("[config] ADVERTENCIA: JWT_SECRET no definido, usando solo-desarrollo")
+		// Desarrollo: secreto EFÍMERO generado al azar (sin valores conocidos
+		// en el código). Los tokens se invalidan en cada reinicio, que es el
+		// comportamiento esperado sin configuración.
+		raw := make([]byte, 32)
+		if _, err := rand.Read(raw); err != nil {
+			log.Fatalf("[config] no se pudo generar el secreto de desarrollo: %v", err)
+		}
+		cfg.JWTSecret = base64.RawURLEncoding.EncodeToString(raw)
+		// Se exporta para que el middleware (que lee os.Getenv) firme con el
+		// mismo secreto en todo el proceso.
+		os.Setenv("JWT_SECRET", cfg.JWTSecret)
+		log.Printf("[config] ADVERTENCIA: JWT_SECRET no definido, usando secreto efímero solo-desarrollo")
 	}
 	if cfg.GinMode == "debug" {
 		log.Println("[config] Loaded env debug mode")
