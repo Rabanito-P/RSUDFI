@@ -13,11 +13,15 @@ export default {
       borderRadius: { '2xl':'1rem', '3xl':'1.5rem', '4xl':'2rem' },
       keyframes: {
         'fade-in': { '0%':{opacity:'0', transform:'translateY(4px)'}, '100%':{opacity:'1', transform:'translateY(0)'} },
-        'shimmer': { '0%':{transform:'translateX(-100%)'}, '100%':{transform:'translateX(100%)'} }
+        'shimmer': { '0%':{transform:'translateX(-100%)'}, '100%':{transform:'translateX(100%)'} },
+        /* Lluvia binaria del hero: la columna cae desde arriba y reaparece
+           desplazada; el ciclo es lineal e infinito. */
+        'bin-fall': { '0%':{transform:'translateY(-50%)'}, '100%':{transform:'translateY(0)'} }
       },
       animation: {
         'fade-in':'fade-in 0.3s ease-out',
-        'shimmer':'shimmer 1.5s infinite'
+        'shimmer':'shimmer 1.5s infinite',
+        'bin-fall':'bin-fall 18s linear infinite'
       }
     }
   },

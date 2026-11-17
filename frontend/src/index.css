@@ -9,6 +9,8 @@ html{
      de "no hay scroll" a "hay scroll" todo el contenido da un salto lateral. */
   scrollbar-gutter: stable;
   overscroll-behavior-y: none;
+  /* Anclas internas de la portada pública con desplazamiento suave. */
+  scroll-behavior: smooth;
 }
 body{ @apply bg-[#f8fafc] text-slate-800 leading-relaxed; }
 /* Barras discretas y consistentes en toda la app (contenido y paneles). */

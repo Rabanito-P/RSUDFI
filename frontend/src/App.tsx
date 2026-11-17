@@ -7,6 +7,8 @@ import { Header } from './components/layout/Header'
 import { RequireAuth, RequireRole } from './components/RoleGuard'
 import { Skeleton } from './components/ui/Skeleton'
 import Login from './pages/Login'
+import LoginFI from './pages/LoginFI'
+import Landing from './pages/Landing'
 import EstudianteDashboard from './pages/roles/EstudianteDashboard'
 import DocenteDashboard from './pages/roles/DocenteDashboard'
 import DirectivoDashboard from './pages/roles/DirectivoDashboard'
@@ -66,7 +68,13 @@ function AppShell(){
   // renderiza antes de tener el usuario, un F5 en una ruta profunda
   // (/administracion, /proyectos/3...) caía a "/" al resolverse el guard.
   if(!ready) return <RouteFallback/>
-  if(!user) return <Login/>
+  if(!user) {
+    // La portada pública vive en "/": un anónimo la ve ahí; cualquier ruta
+    // interna de la app lo manda al ingreso de la Plataforma RSU FI.
+    return window.location.pathname === '/'
+      ? <Landing/>
+      : <Navigate to="/p/login" replace/>
+  }
   return (
     /* Layout de aplicación: alto fijo, la barra lateral y la cabecera no se
        mueven y solo el contenido hace scroll. Antes el <main> llevaba
@@ -126,7 +134,11 @@ export default function App(){
       <LayoutProvider>
         <BrowserRouter>
           <Routes>
+            {/* Login demo histórico: se conserva, pero ya no recibe el botón
+                de acceso de la portada (ese ahora va al nuevo /p/login). */}
             <Route path="/login" element={<LoginWrapper/>}/>
+            {/* Nuevo ingreso de la Plataforma RSU FI. */}
+            <Route path="/p/login" element={<LoginFIWrapper/>}/>
             <Route path="/*" element={<RequireAuth><AppShell/></RequireAuth>}/>
           </Routes>
         </BrowserRouter>
@@ -138,4 +150,12 @@ function LoginWrapper(){
   const {user} = useAuth()
   if(user) return <Navigate to="/" replace/>
   return <Login/>
+}
+function LoginFIWrapper(){
+  const {user, ready} = useAuth()
+  // Igual que el gate del shell: sin `ready` no se decide nada, para no
+  // expulsar a un usuario con sesión tras un F5 en /p/login.
+  if(!ready) return <RouteFallback/>
+  if(user) return <Navigate to="/" replace/>
+  return <LoginFI/>
 }

@@ -30,3 +30,8 @@ logs/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Pruebas UI (playwright): capturas y reportes generados en local
+shot_*.png
+frontend/playwright-report/
+frontend/test-results/

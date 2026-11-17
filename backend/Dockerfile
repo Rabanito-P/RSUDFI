@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
-# ── UNDC RSU Backend — Go 1.23 + Gin + GORM + PostgreSQL 18 ──
-FROM golang:1.23-alpine AS builder
+# ── UNDC RSU Backend — Go 1.24 + Gin + GORM + PostgreSQL 18 ──
+FROM golang:1.24-alpine AS builder
 WORKDIR /src
 RUN apk add --no-cache git ca-certificates tzdata
 COPY go.mod go.sum ./

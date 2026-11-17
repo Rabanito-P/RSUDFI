@@ -16,7 +16,11 @@ LABEL maintainer="UNDC RSU <rsu@undc.edu.pe>"
 RUN apk add --no-cache curl tzdata && \
     rm -rf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# La conf es una PLANTILLA: el entrypoint oficial de nginx le aplica envsubst
+# (solo variables de entorno definidas) y escribe /etc/nginx/conf.d/default.conf.
+COPY nginx.conf /etc/nginx/templates/default.conf.template
+# Upstream del API por defecto (nombre del servicio en docker-compose.yml).
+ENV API_UPSTREAM=backend:8080
 # Permisos y healthcheck
 RUN chown -R nginx:nginx /usr/share/nginx/html && \
     chmod -R 755 /usr/share/nginx/html

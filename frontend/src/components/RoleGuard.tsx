@@ -9,7 +9,12 @@ export function RequireAuth({children}:{children:React.ReactNode}){
   // dejaba cualquier F5 o enlace directo (/administracion, /proyectos/3...)
   // rebotando a /login y de allí al Home en lugar de la página pedida.
   if(!ready) return <Skeleton className="h-screen w-full"/>
-  if(!user) return <Navigate to="/login" replace/>
+  if(!user) {
+    // La portada pública vive en "/": no se redirige — AppShell muestra el
+    // landing al anónimo y el sistema a quien ya inició sesión.
+    if (window.location.pathname === '/') return <>{children}</>
+    return <Navigate to="/p/login" replace/>
+  }
   return <>{children}</>
 }
 export function RequireRole({roles, children}:{roles:RolGlobal[], children:React.ReactNode}){
